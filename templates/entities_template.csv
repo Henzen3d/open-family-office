@@ -1,0 +1,6 @@
+entity_code,legal_name,trade_name,entity_type,tax_id_masked,jurisdiction,primary_currency,owner_principal,active,notes
+HOUSEHOLD_OSMAR,Osmar Henzen & Vera Henzen,Household Osmar & Vera,PERSONAL_INDIVIDUAL,***.123.456-**,BR,BRL,Osmar & Vera,true,Personal household accounts and assets
+FIX_SERVICOS,Osmar Henzen MEI,Fix Servicos,BUSINESS_MEI,**.123.456/0001-**,BR,BRL,Osmar Henzen,true,Core electrical services business (MEI 2026 cap R$ 81k)
+FACILITA_VISTORIAS,Vera Henzen MEI,Facilita Vistorias,BUSINESS_MEI,**.654.321/0001-**,BR,BRL,Vera Henzen,true,Validation inspection business (MEI in Vera name to avoid MEI co-partner conflict)
+GLOBAL_FREELANCE_LLC,Henzen Global Ventures LLC,Henzen Global,BUSINESS_LLC,**-*******,US,USD,Osmar Henzen,false,Future international consulting entity
+

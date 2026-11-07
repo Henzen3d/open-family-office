@@ -1,0 +1,15 @@
+category_code,name,scope,parent_category,is_essential,description
+REV.OPS,Operating Revenue,BUSINESS,,false,Gross revenue from client services and contracts
+EXP.COGS,Cost of Services Sold,BUSINESS,,false,Direct job materials tools and direct contractor costs
+EXP.OPEX,Operating Expenses,BUSINESS,,false,Software tools phone transportation and commercial subscriptions
+EXP.MKT,Marketing & Ads,BUSINESS,,false,Customer acquisition and advertising spend
+TAX.DAS,DAS MEI Monthly Tax,TAX,,true,Mandatory monthly federal MEI tax obligation
+TRF.OUT,Internal Transfer Out,TRANSFER,,false,Transfer leaving an account paired with an internal transfer in
+TRF.IN,Internal Transfer In,TRANSFER,,false,Transfer entering an account paired with an internal transfer out
+PER.HOUSING,Housing & Utilities,PERSONAL,,true,Rent mortgage electricity water and home maintenance
+PER.GROCERIES,Groceries & Food,PERSONAL,,true,Supermarket and essential household supplies
+PER.HEALTH,Healthcare & Pharmacy,PERSONAL,,true,Health insurance plans medications and medical appointments
+PER.LIFESTYLE,Leisure & Lifestyle,PERSONAL,,false,Discretionary leisure dining out travel and entertainment
+INV.EMERGENCY,Emergency Reserve Deposit,INVESTMENT,,true,Low-risk liquid treasury or daily liquidity savings
+INV.LONGTERM,Long-term Investments,INVESTMENT,,false,Bonds equities real estate funds for retirement
+

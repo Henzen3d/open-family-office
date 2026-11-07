@@ -1,0 +1,10 @@
+id,entity_code,account_name,date,amount,currency,raw_description,clean_description,category_code,counterparty,is_transfer,transfer_pair_id,reconciliation_status,notes
+tx-001,FIX_SERVICOS,Nubank PJ,2026-11-01,3500.00,BRL,PIX RECEBIDO CLIENTE ALFA,Electrical Installation - Client Alfa,REV.OPS,Alfa Engenharia,false,,CONFIRMED,Contract #104 Completed
+tx-002,FIX_SERVICOS,Nubank PJ,2026-11-02,-180.00,BRL,COMPRA ELETRICA SAO PAULO,Electrical Wiring Supplies,EXP.COGS,Eletro Sao Paulo,false,,CONFIRMED,Direct materials for job
+tx-003,FIX_SERVICOS,Nubank PJ,2026-11-05,-2000.00,BRL,PIX ENVIADO OSMAR HENZEN,Pro-labore Transfer to Osmar,TRF.OUT,Osmar Henzen,true,trf-p01,CONFIRMED,Monthly pro-labore withdrawal
+tx-004,HOUSEHOLD_OSMAR,Nubank PF,2026-11-05,2000.00,BRL,PIX RECEBIDO FIX SERVICOS,Pro-labore Received from Fix,TRF.IN,Fix Servicos,true,trf-p01,CONFIRMED,Personal income from business
+tx-005,HOUSEHOLD_OSMAR,Nubank PF,2026-11-06,-450.00,BRL,SUPERMERCADO PAO ACUCAR,Monthly Groceries,PER.GROCERIES,Pao de Acucar,false,,CONFIRMED,Essential family living expense
+tx-006,HOUSEHOLD_OSMAR,Nubank PF,2026-11-08,-75.00,BRL,PAGAMENTO DAS MEI FIX,DAS MEI Tax Payment Nov/2026,TAX.DAS,Receita Federal,false,,CONFIRMED,Corporate tax paid from personal (reimburse)
+tx-007,FACILITA_VISTORIAS,Inter PJ,2026-11-10,250.00,BRL,PIX RECEBIDO IMOBILIARIA BETA,Property Inspection - Beta,REV.OPS,Imobiliaria Beta,false,,CONFIRMED,Validation client #01
+tx-008,FACILITA_VISTORIAS,Inter PJ,2026-11-12,-120.00,BRL,GOOGLE ADS CAMPANHA VISTORIAS,Validation Ad Spend,EXP.MKT,Google Ads,false,,CONFIRMED,Part of R$ 2000 validation budget
+
