@@ -52,6 +52,12 @@ flowchart LR
   - `05_tax_compliance_mei.md`
   - `06_stewardship_succession.md`
   - `07_adversarial_auditor_goldfish.md`
+  - `08_receipt_ocr_parser.md` (Photo & NFC-e Vision Parser)
+- [x] Author Receipt Photo & NFC-e OCR Ingestion Specification ([`docs/RECEIPT_OCR_INGESTION_SPEC.md`](docs/RECEIPT_OCR_INGESTION_SPEC.md)).
+- [ ] Build the **Receipt Ingestion Engine**:
+  - Deterministic SEFAZ QR-Code / NFC-e decoder (100% exact itemized data for Brazilian retail).
+  - Multimodal Vision AI parser fallback for non-QR receipts (via local `qwen2-vl` or cloud APIs).
+- [ ] Implement **Receipt-to-Bank Matching**: automatically attaching itemized receipts to card transactions to eliminate duplicate expense entries.
 - [ ] Build CLI command `open-family-office briefing` to:
   1. Ingest monthly CSV/OFX records;
   2. Run the deterministic engine;
@@ -69,6 +75,7 @@ flowchart LR
 **Goal**: Provide a clean, accessible interface for family principals (Osmar & Vera) and streamline statement importing.
 
 - [ ] Lightweight web UI (FastAPI backend + clean modern web interface).
+- [ ] Mobile Photo Receipt Capture: Telegram / WhatsApp Bot integration and PWA mobile camera upload for instant on-the-go receipt submission.
 - [ ] OFX and PDF bank statement parser for Brazilian institutions (Nubank, Inter, Itaú, Bradesco, Caixa, Banco do Brasil) and international formats (OFX/QFX/CSV).
 - [ ] Visual Interactive Dashboard:
   - Tri-Perspective toggle (Cash Flow / Managerial Accrual / Family Net Worth).

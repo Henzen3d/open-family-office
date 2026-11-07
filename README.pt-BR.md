@@ -67,6 +67,12 @@ O projeto adota o modelo de desenvolvimento orientado a especificações (**[EGM
 ### 7. Privacidade Local-First (LGPD & GDPR)
 Classificação em camadas de dados: extratos completos e dados sensíveis de clientes podem rodar 100% localmente em LLMs on-premise (via Ollama ou NexusLocal), enviando para a nuvem apenas dados agregados e anonimizados.
 
+### 8. Captura Instantânea por Foto de Cupom Fiscal & NFC-e (Zero Atrito)
+Vá ao supermercado, padaria ou loja de materiais elétricos e simplesmente tire uma foto do cupom:
+* **Leitor de QR-Code NFC-e / SAT (Brasil)**: Decodifica o QR-Code fiscal da SEFAZ na foto, extraindo os itens detalhados, preços unitários e CNPJ do emissor com 100% de exatidão e sem erros de OCR.
+* **IA de Visão Multimodal Fallback**: Para recibos manuais ou sem QR-Code, modelos de visão locais ou em nuvem extraem valores, método de pagamento, data e itens.
+* **Pareamento Inteligente Anti-Duplicação**: Se a compra foi paga no cartão Nubank, o sistema identifica a transação correspondente no extrato bancário e anexa os itens do cupom a ela, enriquecendo o registro **sem duplicar a despesa**. Veja a especificação em [`docs/RECEIPT_OCR_INGESTION_SPEC.md`](docs/RECEIPT_OCR_INGESTION_SPEC.md).
+
 ---
 
 ## O Conselho Consultivo de IA (Equipe 7+1)

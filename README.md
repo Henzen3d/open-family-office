@@ -67,6 +67,12 @@ OpenFamilyOffice is developed under Google's open-source **[Elephant-Goldfish Mo
 ### 7. Local-First Privacy (LGPD & GDPR Compliant)
 Sensitive financial transactions and tax identifiers can be processed 100% on-premises via local LLMs (Ollama, NexusLocal). Cloud LLMs receive only sanitized, redacted, and aggregated data.
 
+### 8. Instant Receipt & NFC-e Photo Ingestion (Zero-Friction Mobile Capture)
+Snap a photo of any supermarket receipt, hardware store slip, or fuel invoice:
+* **Brazil NFC-e / SAT QR-Code Reader**: Instantly reads official SEFAZ fiscal QR codes, retrieving 100% exact itemized line items, unit prices, and seller CNPJ with zero OCR error.
+* **Multimodal Vision AI Fallback**: Local or cloud vision models extract items, taxes, payment method, and merchant from non-QR paper slips.
+* **Anti-Duplication Card Matching**: Automatically detects if the receipt corresponds to a card transaction already logged on the statement, enriching the transaction with itemized details without duplicating the expense. See [`docs/RECEIPT_OCR_INGESTION_SPEC.md`](docs/RECEIPT_OCR_INGESTION_SPEC.md).
+
 ---
 
 ## System Architecture

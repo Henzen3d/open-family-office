@@ -30,4 +30,5 @@ All prompts in this directory are governed by the invariants defined in [`docs/A
 | [`05_tax_compliance_mei.md`](./05_tax_compliance_mei.md) | **Tax & Compliance AI** | MEI / LC 238 Ceilings, DAS Calendar & Legal Bounds |
 | [`06_stewardship_succession.md`](./06_stewardship_succession.md) | **Stewardship & Succession AI** | Asset Shielding, Legal Firewalls & Insurance Audit |
 | [`07_adversarial_auditor_goldfish.md`](./07_adversarial_auditor_goldfish.md) | **Adversarial Auditor (Goldfish)** | Assumption Stress-Test & Plan Vulnerability Critique |
+| [`08_receipt_ocr_parser.md`](./08_receipt_ocr_parser.md) | **Receipt & Invoice Vision Parser** | Smartphone Photo OCR, NFC-e Extraction & JSON Mapping |
 

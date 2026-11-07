@@ -17,6 +17,7 @@ flowchart TD
         A2["Credit Card Invoices"]
         A3["Invoices & Contracts (Receivables)"]
         A4["Manual / Spreadsheet Entries"]
+        A5["Receipt & NFC-e Photos (OCR / QR-Code)"]
     end
 
     subgraph DataLayer["2. Central Financial Data Layer (SSOT)"]
@@ -237,6 +238,14 @@ Under **Lei Complementar nº 238, de 21 de outubro de 2026**, the annual gross r
 The controller maintains a running Year-to-Date (YTD) revenue tally for each MEI entity. If YTD revenue reaches:
 * **80% of annual limit**: Issues a Caution notice to prepare for Simples Nacional transition.
 * **100% of annual limit**: Issues a High-Severity alert regarding mandatory regime change and tax recalibration.
+
+### Rule 5: Receipt Photo Anti-Duplication & Bank Matching
+When a receipt photo (e.g., supermarket receipt, electrical supplier invoice) is ingested:
+1. The deterministic QR-Code decoder or Vision AI extracts Date, Merchant, Total Amount, and Payment Method.
+2. The controller checks whether a card or bank transaction with the matching amount exists within a $\pm 48\text{ hour}$ window.
+3. If matched, the receipt line items are attached to the existing card transaction without creating a duplicate expense.
+4. If payment was cash, a single confirmed cash expense is registered.
+5. See full specification in [`docs/RECEIPT_OCR_INGESTION_SPEC.md`](./RECEIPT_OCR_INGESTION_SPEC.md).
 
 ---
 
