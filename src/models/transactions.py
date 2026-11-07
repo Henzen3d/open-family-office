@@ -37,3 +37,4 @@ class TransferPair:
     destination_entity_code: str
     transfer_type: TransferType
     date: date
+

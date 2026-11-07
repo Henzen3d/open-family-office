@@ -30,3 +30,4 @@ class Account:
     account_type: AccountType = AccountType.CHECKING
     currency: str = "BRL"
     current_balance: Decimal = Decimal("0.00")
+

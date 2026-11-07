@@ -43,3 +43,4 @@ class ConfidenceLevel(str, Enum):
     CONFIRMED = "CONFIRMED"
     ESTIMATED = "ESTIMATED"
     PENDING = "PENDING"
+

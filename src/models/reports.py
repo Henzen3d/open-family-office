@@ -46,6 +46,35 @@ class MEIComplianceStatus:
 
 
 @dataclass
+class EconomicRate:
+    """Represents an official macroeconomic indicator (e.g. Selic, Dolar PTAX, IPCA)."""
+    indicator_code: str  # "SELIC", "DOLAR_PTAX", "IPCA_12M"
+    name: str
+    value: Decimal
+    reference_date: str
+    source: str = "Banco Central do Brasil"
+
+
+@dataclass
+class NewsHeadline:
+    """Represents a financial or economic news headline."""
+    title: str
+    source_name: str
+    published_at: str
+    link: str
+    relevant_keywords: List[str] = field(default_factory=list)
+
+
+@dataclass
+class MacroSnapshot:
+    """Daily aggregated macroeconomic context to ground AI models with real-world context."""
+    snapshot_date: str
+    rates: Dict[str, EconomicRate]
+    top_headlines: List[NewsHeadline]
+    cached: bool = False
+
+
+@dataclass
 class BriefingPayload:
     """Full deterministic payload exported for AI Advisory prompts."""
     generated_at: str
@@ -58,3 +87,5 @@ class BriefingPayload:
     total_reconciled_transfers: int
     total_neutralized_transfer_value: Decimal
     unclassified_transactions_count: int
+    macro_context: Optional[MacroSnapshot] = None
+

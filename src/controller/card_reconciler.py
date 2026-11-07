@@ -37,3 +37,4 @@ class CardReconciler:
                     tx.notes = (tx.notes + " [CARD_BILL_SETTLEMENT: Double-count neutralized]").strip()
                     reconciled_count += 1
         return transactions, reconciled_count
+

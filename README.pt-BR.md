@@ -73,6 +73,18 @@ Vá ao supermercado, padaria ou loja de materiais elétricos e simplesmente tire
 * **IA de Visão Multimodal Fallback**: Para recibos manuais ou sem QR-Code, modelos de visão locais ou em nuvem extraem valores, método de pagamento, data e itens.
 * **Pareamento Inteligente Anti-Duplicação**: Se a compra foi paga no cartão Nubank, o sistema identifica a transação correspondente no extrato bancário e anexa os itens do cupom a ela, enriquecendo o registro **sem duplicar a despesa**. Veja a especificação em [`docs/RECEIPT_OCR_INGESTION_SPEC.md`](docs/RECEIPT_OCR_INGESTION_SPEC.md).
 
+### 9. Roteador de IA com Free Tier & Proteção Proativa contra Limites (RPM/TPM/RPD)
+Permite operar o OpenFamilyOffice com **custo zero de infraestrutura e APIs (R\$ 0/mês)**:
+* **Monitoramento por Janela Deslizante**: Acompanha em tempo real requisições por minuto (RPM), tokens por minuto (TPM) e requisições diárias (RPD).
+* **Troca Proativa de Modelo (Failover)**: Ao atingir 80% da cota de um provedor, o sistema alterna automaticamente para o próximo da fila gratuita (Gemini 2.0 Flash $\rightarrow$ Groq Llama 3.3 70B $\rightarrow$ OpenRouter $\rightarrow$ Ollama Local) *antes* de bater no erro 429.
+* **Experiência Sem Atraso**: Zero delay para conversas interativas do usuário; fila suave assíncrona para tarefas de background (briefings longos e leitura de cupons). Veja [`docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md`](docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md).
+
+### 10. Inteligência Macroeconômica em Tempo Real & Notícias do Mercado
+Alimenta as IAs com o cenário econômico real do dia, garantindo análises fiéis e atualizadas para compra de ações, dólar e inflação:
+* **Integração Oficial com o Banco Central do Brasil (SGS/BCB)**: Coleta diária automática da Selic Meta, Dólar PTAX e IPCA acumulado 12 meses via API pública e gratuita, sem necessidade de tokens.
+* **Leitor de Notícias Econômicas RSS**: Varredura diária no Google News Economia e portais financeiros, filtrando notícias sobre juros, câmbio, bolsa e MEI.
+* **Cache Diário Local**: Salva um snapshot diário em `data/macro_cache/`, evitando chamadas repetidas de rede e economizando limites. Veja [`docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md`](docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md).
+
 ---
 
 ## O Conselho Consultivo de IA (Equipe 7+1)

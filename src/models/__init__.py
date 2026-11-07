@@ -15,6 +15,9 @@ from src.models.reports import (
     CashFlowWeek,
     MEIComplianceStatus,
     BriefingPayload,
+    EconomicRate,
+    NewsHeadline,
+    MacroSnapshot,
 )
 from src.models.receipts import Receipt, ReceiptItem
 
@@ -34,6 +37,9 @@ __all__ = [
     "CashFlowWeek",
     "MEIComplianceStatus",
     "BriefingPayload",
+    "EconomicRate",
+    "NewsHeadline",
+    "MacroSnapshot",
     "Receipt",
     "ReceiptItem",
 ]

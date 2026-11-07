@@ -150,3 +150,4 @@ CREATE TABLE receipt_items (
 
 * **Local Storage First**: Photos are stored locally in the user's data directory (e.g., `data/receipts/YYYY/MM/`), excluded from git via `.gitignore`.
 * **PII Redaction**: When using cloud multimodal APIs, customer personal CPF/Name printed on the receipt can be blurred or redacted prior to cloud transmission, or processed exclusively via local vision models (Ollama with `qwen2-vl` or `llava`).
+

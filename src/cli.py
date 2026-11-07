@@ -16,6 +16,7 @@ from src.controller.card_reconciler import CardReconciler
 from src.engine.runway import RunwayCalculator
 from src.engine.tax_monitor import MEITaxMonitor
 from src.engine.cash_flow import CashFlowForecastEngine
+from src.intelligence.macro_aggregator import MacroAggregator
 
 
 def run_full_audit(
@@ -23,6 +24,7 @@ def run_full_audit(
     categories_path: str,
     transactions_path: str,
     current_cash: dict = None,
+    include_macro: bool = False,
 ) -> dict:
     """Executes the complete deterministic audit pipeline and returns the verified structured data."""
     current_cash = current_cash or {
@@ -103,6 +105,23 @@ def run_full_audit(
 
     total_net_worth = sum(current_cash.values())
 
+    macro_data = None
+    if include_macro:
+        aggregator = MacroAggregator()
+        snapshot = aggregator.get_daily_snapshot()
+        macro_data = {
+            "snapshot_date": snapshot.snapshot_date,
+            "cached": snapshot.cached,
+            "rates": {
+                k: {"name": r.name, "value": float(r.value), "ref_date": r.reference_date}
+                for k, r in snapshot.rates.items()
+            },
+            "top_headlines": [
+                {"title": h.title, "source": h.source_name, "published": h.published_at}
+                for h in snapshot.top_headlines
+            ],
+        }
+
     return {
         "audit_timestamp": date.today().isoformat(),
         "total_transactions": len(transactions),
@@ -112,6 +131,7 @@ def run_full_audit(
         "runways": runways,
         "mei_compliance": mei_reports,
         "cash_flow_13_weeks": cash_flow_13w,
+        "macro_context": macro_data,
     }
 
 
@@ -119,6 +139,7 @@ def main():
     parser = argparse.ArgumentParser(description="OpenFamilyOffice Deterministic Engine CLI")
     parser.add_argument("--format", choices=["json", "markdown"], default="markdown", help="Output format")
     parser.add_argument("--templates-dir", default="templates", help="Path to templates folder containing CSVs")
+    parser.add_argument("--include-macro", action="store_true", help="Fetch official BCB economic rates and headlines")
 
     args = parser.parse_args()
 
@@ -131,10 +152,10 @@ def main():
             print(f"Error: Missing required file: {f}", file=sys.stderr)
             sys.exit(1)
 
-    result = run_full_audit(entities_f, categories_f, transactions_f)
+    result = run_full_audit(entities_f, categories_f, transactions_f, include_macro=args.include_macro)
 
     if args.format == "json":
-        print(json.dumps(result, indent=2))
+        print(json.dumps(result, indent=2, ensure_ascii=False))
     else:
         print("# OpenFamilyOffice — Deterministic Audit Summary")
         print(f"**Audit Date**: {result['audit_timestamp']}")
@@ -150,6 +171,16 @@ def main():
             for note in d["notes"]:
                 print(f"  * {note}")
 
+        if result.get("macro_context"):
+            mc = result["macro_context"]
+            print("\n## Live Macroeconomic Context (BCB & News)")
+            for k, r in mc["rates"].items():
+                print(f"- **{r['name']}**: {r['value']} ({r['ref_date']})")
+            print("\n**Top Market Headlines**:")
+            for idx, h in enumerate(mc["top_headlines"], 1):
+                print(f"{idx}. {h['title']} *({h['source']})*")
+
 
 if __name__ == "__main__":
     main()
+

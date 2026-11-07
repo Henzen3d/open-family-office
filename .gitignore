@@ -33,6 +33,7 @@ env.bak/
 venv.bak/
 
 # Personal Financial Data & Sensitive Statement Files
+/data/
 *.ofx
 *.qfx
 *.qif
@@ -41,6 +42,7 @@ venv.bak/
 /data/raw/
 /data/statements/
 /data/exports/
+/data/macro_cache/
 *.xlsx
 *.xls
 *.pdf

@@ -77,3 +77,4 @@ class TransferNeutralizer:
                 pairs.append(pair)
 
         return transactions, pairs
+

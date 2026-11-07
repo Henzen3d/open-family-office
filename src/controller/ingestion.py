@@ -94,3 +94,4 @@ def load_transactions_csv(filepath: str) -> List[Transaction]:
             )
             transactions.append(tx)
     return transactions
+

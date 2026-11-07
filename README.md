@@ -73,6 +73,18 @@ Snap a photo of any supermarket receipt, hardware store slip, or fuel invoice:
 * **Multimodal Vision AI Fallback**: Local or cloud vision models extract items, taxes, payment method, and merchant from non-QR paper slips.
 * **Anti-Duplication Card Matching**: Automatically detects if the receipt corresponds to a card transaction already logged on the statement, enriching the transaction with itemized details without duplicating the expense. See [`docs/RECEIPT_OCR_INGESTION_SPEC.md`](docs/RECEIPT_OCR_INGESTION_SPEC.md).
 
+### 9. Multi-Provider Free-Tier LLM Router & Proactive Rate Limiting
+Run OpenFamilyOffice at **\$0/month operating cost** using free-tier API quotas safely:
+* **Sliding Window Tracking**: Proactively monitors rolling RPM (Requests Per Minute), TPM (Tokens Per Minute), and RPD (Requests Per Day).
+* **Proactive Failover**: When reaching 80% capacity, the router automatically fails over to the next healthy provider (Gemini 2.0 Flash $\rightarrow$ Groq Llama 3.3 70B $\rightarrow$ OpenRouter $\rightarrow$ Local Ollama) *before* hitting a 429 error.
+* **Dual-Path Latency**: Zero wait time for interactive user chats; smooth background delay queue for batch tasks. See [`docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md`](docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md).
+
+### 10. Real-Time Macroeconomic Grounding & Daily Financial News
+Grounds AI advisory agents in verified, real-world economic reality rather than stale LLM training data:
+* **Official Central Bank Integration (BCB/SGS)**: Daily automated extraction of Selic Meta, Dólar Comercial PTAX, and IPCA 12-month inflation using free, official public APIs with zero API keys.
+* **Public Financial RSS Ingestion**: Scans Google News Business and economic feeds for breaking headlines regarding exchange rates, interest rates, stock market trends, and MEI tax laws.
+* **Local Daily Caching**: Automatically caches the daily snapshot in `data/macro_cache/` to avoid redundant network calls. See [`docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md`](docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md).
+
 ---
 
 ## System Architecture

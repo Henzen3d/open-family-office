@@ -54,3 +54,4 @@ class CashFlowForecastEngine:
             weeks.append(week_report)
 
         return weeks
+

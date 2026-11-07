@@ -39,3 +39,4 @@ class Receipt:
     source_channel: str = "WEB_UPLOAD"  # "WHATSAPP", "TELEGRAM", "WEB_UPLOAD", "CLI"
     parser_engine: str = "QR_CODE_NFCE"  # "QR_CODE_NFCE", "VISION_AI_LOCAL", "VISION_AI_CLOUD"
     items: List[ReceiptItem] = field(default_factory=list)
+

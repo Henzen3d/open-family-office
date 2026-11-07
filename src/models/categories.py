@@ -14,3 +14,4 @@ class Category:
     parent_category: Optional[str] = None
     is_essential: bool = False
     description: str = ""
+

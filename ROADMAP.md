@@ -58,6 +58,15 @@ flowchart LR
   - Deterministic SEFAZ QR-Code / NFC-e decoder (100% exact itemized data for Brazilian retail).
   - Multimodal Vision AI parser fallback for non-QR receipts (via local `qwen2-vl` or cloud APIs).
 - [ ] Implement **Receipt-to-Bank Matching**: automatically attaching itemized receipts to card transactions to eliminate duplicate expense entries.
+- [x] Multi-Provider Free-Tier LLM Rate Limiter & Fallback Router ([`docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md`](docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md), `src/llm/`):
+  - Sliding-window tracking for RPM, TPM, and RPD.
+  - Proactive switching at 80% capacity to avoid 429 errors.
+  - Cascade: Google Gemini Free -> Groq Free -> OpenRouter Free -> Local Ollama.
+  - Zero-latency switching for interactive user calls; smooth non-blocking delay queue for background batch tasks.
+- [x] Daily Real-Time Macroeconomic Grounding & News Ingestion ([`docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md`](docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md), `src/intelligence/`):
+  - Banco Central do Brasil (BCB/SGS) public API client for Selic Meta, Dólar PTAX, and IPCA 12M with zero API keys.
+  - Financial RSS news ingestion and keyword filtering (Dólar, Selic, IPCA, Ibovespa, MEI).
+  - Daily local snapshot caching (`data/macro_cache/`).
 - [ ] Build CLI command `open-family-office briefing` to:
   1. Ingest monthly CSV/OFX records;
   2. Run the deterministic engine;
