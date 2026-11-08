@@ -1793,6 +1793,8 @@ export default function StitchExecutiveDashboard() {
       <RunwayModal
         isOpen={isRunwayModalOpen}
         onClose={() => setIsRunwayModalOpen(false)}
+        totalReserve={508121.36}
+        monthlyBurn={11515}
       />
     </div>
   );

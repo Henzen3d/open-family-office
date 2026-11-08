@@ -195,11 +195,11 @@ export function DasModal({ isOpen, onClose }: DasModalProps) {
 interface RunwayModalProps {
   isOpen: boolean;
   onClose: () => void;
-  totalReserve: number;
-  monthlyBurn: number;
+  totalReserve?: number;
+  monthlyBurn?: number;
 }
 
-export function RunwayModal({ isOpen, onClose, totalReserve, monthlyBurn }: RunwayModalProps) {
+export function RunwayModal({ isOpen, onClose, totalReserve = 508121.36, monthlyBurn = 11515 }: RunwayModalProps) {
   if (!isOpen) return null;
 
   const runwayMonths = (totalReserve / Math.max(monthlyBurn, 1)).toFixed(1);
