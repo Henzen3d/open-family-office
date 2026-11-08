@@ -51,10 +51,10 @@ A realidade financeira não cabe em uma única visão. O sistema modela simultan
 * **Conciliador de Cartão de Crédito**: Registra compras na data da transação (competência) e trata o pagamento da fatura bancária como liquidação de passivo, impedindo a duplicação de despesas.
 * **Classificação de Confiança**: Rotula cada dado como `[CONFIRMED]` (conciliado em extrato), `[ESTIMATED]` (projetado com premissas documentadas) ou `[PENDING]` (pendente de revisão humana).
 
-### 4. Desenvolvido com o Elephant-Goldfish Model (EGM) da Google
-O projeto adota o modelo de desenvolvimento orientado a especificações (**[EGM](https://opensource.googleblog.com/2026/10/introducing-elephant-goldfish-model-plugin.html)**) lançado no *Google Open Source Blog*:
-* **The Elephant (O Elefante)**: Mantém a visão arquitetônica, histórico do projeto e contratos de design sem gerar código prematuro.
-* **The Goldfish (O Peixinho Dourado / Red Team)**: Agente revisor adversário, sem memória da conversa anterior, que ataca premissas frágeis, testa cenários de estresse e aponta pontos cegos antes de qualquer decisão.
+### 4. Engenharia Orientada a Especificações com o Elephant-Goldfish Model (EGM)
+O desenvolvimento do OpenFamilyOffice segue a metodologia open-source da Google (**[EGM](https://opensource.googleblog.com/2026/10/introducing-elephant-goldfish-model-plugin.html)**):
+* **The Elephant (Especificação em Primeiro Lugar)**: Contratos arquiteturais preservam o contexto e a memória de longo prazo antes de qualquer linha de código.
+* **The Goldfish (Revisão Adversária de Engenharia)**: Subagentes sem histórico anterior auditam as especificações de forma fria e implacável para caçar pontos cegos e premissas frágeis antes da implementação.
 
 ### 5. Profundidade Tributária Brasileira & Modularidade Global
 * **Foco Brasil**: Monitoramento automático dos tetos do MEI atualizados pela **Lei Complementar nº 238/2026** (R\$ 81.000 em 2026; R\$ 110.000 em 2027 com até 2 funcionários; R\$ 140.000 em 2028), calendário de DAS, auditoria da regra que proíbe titular de MEI de ser sócio em outra empresa e checklists de transição para o Simples Nacional.
@@ -108,7 +108,7 @@ graph TD
     
     subgraph Lideranca["Coordenação & Auditoria Adversária"]
         CFO["Family CFO AI<br/>(Coordenador Executivo)"]
-        Goldfish["Adversarial Auditor AI<br/>(O Peixinho Dourado / Red Team)"]
+        RedTeam["Risk & Adversarial Auditor AI<br/>(Red Team de Risco)"]
     end
     
     subgraph Especialistas["Agentes Especialistas"]
@@ -129,7 +129,7 @@ graph TD
     Tax --> CFO
     Steward --> CFO
     
-    CFO <--> Goldfish
+    CFO <--> RedTeam
     CFO ==>|Briefing Semanal de 1 Página| User
     User ==>|Decisão e Aprovação Humana| CFO
 ```
@@ -142,7 +142,7 @@ graph TD
 | **Growth & Pricing AI** | Precificação, margem de contribuição, capacidade e validação da Facilita Vistorias. | *"Quais clientes ou serviços devemos renegociar ou cortar para lucrar mais sem trabalhar mais?"* |
 | **Tax & Compliance AI** | Teto MEI (LC 238/2026), calendário de DAS, auditoria societária e Simples Nacional. | *"Quais prazos fiscais ou limites de receita colocam nossos negócios em risco de autuação?"* |
 | **Stewardship & Succession AI** | Proteção patrimonial, seguro de vida/invalidez, firewall jurídico PF/PJ e sucessão. | *"Que vulnerabilidade jurídica ou pessoal ameaçaria nossa família se algo ocorresse amanhã?"* |
-| **Adversarial Auditor AI (Goldfish)** | Crítico adversário, ataca premissas frágeis do CFO e combate otimismo cego. | *"Por que o plano proposto pelo Family CFO é frágil, falho ou arriscado demais?"* |
+| **Risk & Adversarial Auditor AI** | Crítico adversário, ataca premissas frágeis do CFO e combate otimismo cego. | *"Por que o plano proposto pelo Family CFO é frágil, falho ou arriscado demais?"* |
 | **[Módulo Futuro] Capital Allocation AI** | Alocação de ativos de longo prazo, diversificação e proteção contra inflação. | *"Como diversificar o excedente de capital após as reservas estarem consolidadas?"* |
 
 ---
@@ -168,7 +168,7 @@ open-family-office/
 │   ├── 04_growth_pricing.md
 │   ├── 05_tax_compliance_mei.md
 │   ├── 06_stewardship_succession.md
-│   └── 07_adversarial_auditor_goldfish.md
+│   └── 07_adversarial_auditor.md
 ├── templates/                     # Modelos de planilhas CSV e modelo de briefing executivo
 │   ├── README.md
 │   ├── transactions_template.csv  # Modelo para importação de extratos bancários
@@ -203,7 +203,7 @@ Copie os modelos da pasta `templates/`:
 ### 3. Execute a Linha de Comando (CLI) e os Briefings
 Execute comandos práticos diretamente no terminal:
 ```bash
-# Gerar briefing executivo semanal (Family CFO + Red Team Goldfish)
+# Gerar briefing executivo semanal (Family CFO + Red Team de Risco)
 python -m src.cli briefing [--dry-run]
 
 # Ingestão de cupom fiscal por foto ou QR-Code SEFAZ NFC-e
@@ -225,7 +225,7 @@ python -m src.cli config import --source caminho/para/.env
 ## Roteiro de Evolução (Roadmap)
 
 * **Fase 1 (Concluída)**: Núcleo Determinístico & Dados (Modelos Python, neutralizador de transferências, reconciliador de cartões e cálculo de runway).
-* **Fase 2 (Concluída)**: CLI do Conselho de IA, Ingestão de Cupons com Visão & Briefings Automáticos (Executores locais via Ollama/NexusLocal, nuvem, APIs públicas do BCB e Red Team Goldfish).
+* **Fase 2 (Concluída)**: CLI do Conselho de IA, Ingestão de Cupons com Visão & Briefings Automáticos (Executores locais via Ollama/NexusLocal, nuvem, APIs públicas do BCB e Red Team de Risco).
 * **Fase 3 (Próxima)**: Painel Web Interativo & Ingestão Móvel (FastAPI + Interface moderna, foto via Telegram/WhatsApp e tela de aprovação do casal).
 * **Fase 4**: Orquestração Multi-Agente & Plugins Tributários Internacionais (EUA, Reino Unido, Espanha, Alemanha).
 

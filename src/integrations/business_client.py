@@ -92,3 +92,4 @@ class BusinessClient:
         except Exception as e:
             print(f"Warning: Failed to lookup CNPJ {clean_cnpj}: {e}")
             return None
+

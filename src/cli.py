@@ -215,11 +215,12 @@ def handle_briefing_command(args):
     """Executes the executive briefing pipeline and displays output."""
     runner = BriefingRunner()
     print("⏳ Executing OpenFamilyOffice Executive Briefing Pipeline...")
+    skip_risk = getattr(args, "skip_risk_audit", False)
     res = runner.generate_briefing(
         data_dir=args.data_dir,
         output_file=args.output,
         dry_run=args.dry_run,
-        include_goldfish=not args.no_goldfish,
+        include_risk_audit=not skip_risk,
     )
     print(f"\n✅ Briefing generated successfully! [{res['status']}]")
     print(f"📄 Report File: {res['output_file']}")
@@ -334,12 +335,13 @@ def main():
     holidays_parser.add_argument("--year", type=int, default=date.today().year, help="Year to query")
     holidays_parser.add_argument("--country", default="BR", help="ISO country code (default: BR)")
 
-    # Executive Briefing command (Family CFO + Goldfish)
+    # Executive Briefing command (Family CFO + Risk Red Team)
     briefing_parser = subparsers.add_parser("briefing", help="Generate Executive Weekly Family Office Briefing")
     briefing_parser.add_argument("--data-dir", default="templates", help="Directory containing CSV files (default: templates)")
     briefing_parser.add_argument("--output", help="Custom markdown report output path")
     briefing_parser.add_argument("--dry-run", action="store_true", help="Run deterministic calculations without calling LLM APIs")
-    briefing_parser.add_argument("--no-goldfish", action="store_true", help="Skip EGM Goldfish Red Team audit")
+    briefing_parser.add_argument("--skip-risk-audit", action="store_true", help="Skip Adversarial Risk Audit (Red Team)")
+    briefing_parser.add_argument("--no-goldfish", dest="skip_risk_audit", action="store_true", help=argparse.SUPPRESS)
 
     # Receipt ingestion command (NFC-e QR / Vision AI)
     receipt_parser = subparsers.add_parser("receipt", help="Ingest receipt photo or NFC-e QR code and reconcile")

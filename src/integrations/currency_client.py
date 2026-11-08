@@ -73,3 +73,4 @@ class CurrencyClient:
             return (amount / inv_quotes[inv_pair].bid).quantize(Decimal("0.01"))
 
         return amount
+

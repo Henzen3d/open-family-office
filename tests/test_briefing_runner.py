@@ -54,7 +54,12 @@ class TestBriefingRunner(unittest.TestCase):
             self.assertEqual(res["status"], "COMPLETED_DRY_RUN")
             self.assertIn("Briefing Executivo Semanal", res["report_content"])
             self.assertIn("Painel de Caixa e Runway Verificado", res["report_content"])
-            self.assertIn("Fix Serviços", res["report_content"])
+            self.assertIn("Fix Servicos", res["report_content"])
+
+    def test_format_adversarial_prompt(self):
+        sys_prompt, user_content = self.runner.format_adversarial_prompt("Draft CFO briefing text")
+        self.assertIn("Risk & Adversarial Auditor AI", sys_prompt)
+        self.assertIn("Draft CFO briefing text", user_content)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 """Executive Briefing Runner Engine.
 Orchestrates deterministic financial calculations, macroeconomic grounding,
-the Family CFO AI Advisory Council, and the EGM Goldfish Red Team audit.
+the Family CFO AI Advisory Council, and the Risk & Adversarial Audit (Red Team).
 """
 from datetime import date, datetime
 from decimal import Decimal
@@ -234,15 +234,15 @@ Gere o relatório completo conforme a estrutura de 6 seções exigida.
 """
         return system_prompt, user_content
 
-    def format_goldfish_prompt(self, cfo_briefing: str) -> Tuple[str, str]:
-        """Loads prompt instructions and formats context for Adversarial Red Team (Goldfish)."""
-        goldfish_prompt_path = os.path.join("prompts", "07_adversarial_auditor_goldfish.md")
+    def format_adversarial_prompt(self, cfo_briefing: str) -> Tuple[str, str]:
+        """Loads prompt instructions and formats context for Financial Risk & Adversarial Auditor AI (Red Team)."""
+        prompt_path = os.path.join("prompts", "07_adversarial_auditor.md")
         system_prompt = (
-            "You are the Adversarial Auditor AI (The EGM Goldfish / Red Team) of OpenFamilyOffice. "
+            "You are the Financial Risk & Adversarial Auditor AI of OpenFamilyOffice. "
             "Ruthlessly critique and stress-test the Family CFO briefing. No praise, no flattery. Find the breaking points."
         )
-        if os.path.exists(goldfish_prompt_path):
-            with open(goldfish_prompt_path, "r", encoding="utf-8") as f:
+        if os.path.exists(prompt_path):
+            with open(prompt_path, "r", encoding="utf-8") as f:
                 system_prompt = f.read()
 
         user_content = f"""
@@ -252,10 +252,14 @@ Aqui está a proposta de Briefing Executivo Semanal elaborada pelo Family CFO AI
 {cfo_briefing}
 ---
 
-Faça a auditoria adversária sem complacência. Identifique premissas frágeis, armadilhas tributárias,
+Faça a auditoria adversária de risco sem complacência. Identifique premissas frágeis, armadilhas tributárias,
 risco de concentração de clientes e pontos cegos de liquidez. Entregue o relatório conforme o formato exigido.
 """
         return system_prompt, user_content
+
+    def format_goldfish_prompt(self, cfo_briefing: str) -> Tuple[str, str]:
+        """Alias for format_adversarial_prompt for backward compatibility."""
+        return self.format_adversarial_prompt(cfo_briefing)
 
     def run_deterministic_briefing(self, payload: BriefingPayload, entities: Dict[str, Entity]) -> str:
         """Produces a deterministic, offline markdown briefing when running in dry-run mode or without API keys."""
@@ -320,7 +324,7 @@ risco de concentração de clientes e pontos cegos de liquidez. Entregue o relat
 - [ ] Verificar aprovação conjunta (Osmar e Vera) para novos investimentos da Facilita Vistorias.
 
 ---
-*Gerado automaticamente pelo OpenFamilyOffice Engine — Cálculo determinístico em conformidade com o Elephant-Goldfish Model.*
+*Gerado pelo OpenFamilyOffice Engine — Cálculo determinístico verificado e governança soberana da família.*
 """
         return markdown
 
@@ -329,9 +333,13 @@ risco de concentração de clientes e pontos cegos de liquidez. Entregue o relat
         data_dir: str = "templates",
         output_file: Optional[str] = None,
         dry_run: bool = False,
-        include_goldfish: bool = True,
+        include_risk_audit: bool = True,
+        include_goldfish: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """Main execution method for the weekly briefing pipeline."""
+        if include_goldfish is not None:
+            include_risk_audit = include_goldfish
+
         payload, txs, entities = self.build_deterministic_payload(data_dir=data_dir)
 
         today_iso = date.today().strftime("%Y-%m-%d")
@@ -384,14 +392,14 @@ risco de concentração de clientes e pontos cegos de liquidez. Entregue o relat
         full_report = cfo_resp.content.strip()
         tokens_total = cfo_resp.tokens_used
 
-        # 2. Goldfish Red Team Run
-        if include_goldfish:
-            gf_sys, gf_user = self.format_goldfish_prompt(full_report)
-            gf_resp = self.client.generate(config=cfg, user_prompt=gf_user, system_prompt=gf_sys)
-            self.router.record_success(profile.name, gf_resp.tokens_used)
-            tokens_total += gf_resp.tokens_used
+        # 2. Risk & Adversarial Red Team Run
+        if include_risk_audit:
+            adv_sys, adv_user = self.format_adversarial_prompt(full_report)
+            adv_resp = self.client.generate(config=cfg, user_prompt=adv_user, system_prompt=adv_sys)
+            self.router.record_success(profile.name, adv_resp.tokens_used)
+            tokens_total += adv_resp.tokens_used
 
-            full_report += "\n\n---\n\n" + gf_resp.content.strip()
+            full_report += "\n\n---\n\n" + adv_resp.content.strip()
 
         with open(target_path, "w", encoding="utf-8") as f:
             f.write(full_report)

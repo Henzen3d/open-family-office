@@ -47,3 +47,4 @@ class PublicApiHub:
     def get_upcoming_holidays(self, year: int, country_code: str = "BR") -> List[PublicHoliday]:
         """Returns official holidays for settlement calculations."""
         return self.calendar.fetch_holidays(year, country_code)
+

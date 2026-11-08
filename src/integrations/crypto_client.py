@@ -65,3 +65,4 @@ class CryptoClient:
             prices["ETH"] = CryptoPrice("ETH", "BRL", Decimal("16000.00"), "Fallback", "Offline")
 
         return prices
+

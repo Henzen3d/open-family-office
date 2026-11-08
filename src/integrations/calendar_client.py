@@ -93,3 +93,4 @@ class CalendarClient:
         while not self.is_business_day(current, country_code):
             current += timedelta(days=1)
         return current
+

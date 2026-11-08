@@ -35,7 +35,7 @@ graph TD
     
     subgraph Leadership["Coordination & Adversarial Review"]
         CFO["Family CFO AI<br/>(Chief Synthesizer)"]
-        Goldfish["Adversarial Auditor AI<br/>(The Goldfish / Red Team)"]
+        RedTeam["Risk & Adversarial Auditor AI<br/>(Advisory Red Team)"]
     end
     
     subgraph Specialists["Domain Specialists"]
@@ -56,7 +56,7 @@ graph TD
     Tax --> CFO
     Steward --> CFO
     
-    CFO <--> Goldfish
+    CFO <--> RedTeam
     CFO ==>|Weekly Briefing & Action Proposals| User
     User ==>|Human Decision & Approval| CFO
 ```
@@ -119,12 +119,12 @@ graph TD
   * Prepares questions for legal counsel on future holding structures or succession plans.
 * **Anchor Question**: *"What legal, fiscal, or personal vulnerability could threaten our family's security if an unexpected crisis occurs tomorrow?"*
 
-#### 7. Adversarial Auditor AI (The EGM Goldfish / Red Team)
-* **Role**: Stateless critic that stress-tests every recommendation made by the Family CFO AI.
+#### 7. Risk & Adversarial Auditor AI (Advisory Council Red Team)
+* **Role**: Financial devil's advocate that ruthlessly stress-tests every recommendation made by the Family CFO AI.
 * **Core Responsibilities**:
-  * Operates without previous conversational bias (following Google EGM principles).
+  * Evaluates downside shocks without emotional attachment or confirmation bias.
   * Actively attacks assumptions: *"What if the client does not accept the price increase?", "What if inflation accelerates?", "Is this calculation based on unverified numbers?"*
-  * Protects against confirmation bias and over-optimism.
+  * Protects against confirmation bias, premature capital deployment, and over-optimism.
 * **Anchor Question**: *"Why is the Family CFO's proposed plan fragile, flawed, or overly optimistic?"*
 
 #### 8. [Future Module] Capital Allocation AI

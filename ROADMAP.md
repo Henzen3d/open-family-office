@@ -51,7 +51,7 @@ flowchart LR
   - `04_growth_pricing.md`
   - `05_tax_compliance_mei.md`
   - `06_stewardship_succession.md`
-  - `07_adversarial_auditor_goldfish.md`
+  - `07_adversarial_auditor.md`
   - `08_receipt_ocr_parser.md` (Photo & NFC-e Vision Parser)
 - [x] Author Receipt Photo & NFC-e OCR Ingestion Specification ([`docs/RECEIPT_OCR_INGESTION_SPEC.md`](docs/RECEIPT_OCR_INGESTION_SPEC.md)).
 - [x] Build the **Receipt Ingestion Engine** (`src/controller/receipt_processor.py`):
@@ -81,7 +81,7 @@ flowchart LR
   1. Ingest monthly CSV/OFX records;
   2. Run the deterministic engine;
   3. Feed the validated JSON payload to the Family CFO prompt;
-  4. Automatically run the Red Team (Goldfish) audit pass;
+  4. Automatically run the Risk & Adversarial Audit (Red Team) pass;
   5. Render the final 1-page Markdown Weekly Executive Briefing (`reports/briefing_YYYY-MM-DD.md`).
 - [x] Add dual-LLM backend support:
   - **Local Privacy Mode**: Ollama / NexusLocal (qwen2.5, llama3.3) for zero cloud transmission of sensitive financial data.

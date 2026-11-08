@@ -2,7 +2,7 @@
 
 **Reporting Window**: YYYY-MM-DD to YYYY-MM-DD  
 **Coordinating Agent**: Family CFO AI  
-**Review Status**: Red Team (Goldfish) Audited  
+**Review Status**: Adversarial Red Team Audited  
 
 ---
 
@@ -41,7 +41,7 @@
 
 ---
 
-## 4. Adversarial Red Team (Goldfish) Critique
+## 4. Adversarial Red Team Critique (Downside Risk Analysis)
 * **Challenged Premise**: [What assumption in this week's plan is fragile?]
 * **Worst-Case Simulation**: [What occurs if client defaults or project delays?]
 * **Recommended Guardrail**: [Action required prior to capital deployment]

@@ -51,10 +51,10 @@ Financial reality cannot be captured by a single view. OpenFamilyOffice simultan
 * **Credit Card Reconciler**: Records purchases on transaction dates while treating statement payments as liability settlements, eliminating double-counted expenses.
 * **Confidence Rating**: Tags every figure as `[CONFIRMED]`, `[ESTIMATED]`, or `[PENDING]`.
 
-### 4. Built with Google's Elephant-Goldfish Model (EGM)
-OpenFamilyOffice is developed under Google's open-source **[Elephant-Goldfish Model (EGM)](https://opensource.googleblog.com/2026/10/introducing-elephant-goldfish-model-plugin.html)** for Spec-Driven Development:
-* **The Elephant**: Context-rich architectural contracts maintain project memory and design intent without premature code slop.
-* **The Goldfish (Adversarial Auditor)**: Stateless AI agents ruthlessly stress-test weekly proposals, challenge assumptions, and audit worst-case scenarios.
+### 4. Spec-Driven Engineering via Google's Elephant-Goldfish Model (EGM)
+OpenFamilyOffice is engineered using Google's open-source **[Elephant-Goldfish Model (EGM)](https://opensource.googleblog.com/2026/10/introducing-elephant-goldfish-model-plugin.html)** methodology:
+* **The Elephant (Specification First)**: Context-rich architectural specifications (`docs/designs/`) maintain project memory and design intent before code is written.
+* **The Goldfish (Adversarial Engineering Review)**: Stateless subagents audit specifications and pull requests without conversational bias, testing edge cases and legal constraints.
 
 ### 5. Brazilian Regulatory Depth & Global Modularity
 * **Brazil Core**: Out-of-the-box support for Microempreendedor Individual (MEI) gross revenue ceilings under **Lei Complementar nº 238/2026** (R\$ 81k in 2026, R\$ 110k in 2027, R\$ 140k in 2028), DAS payment calendars, anti-partner registration audits, and Simples Nacional transition pathways.
@@ -119,7 +119,7 @@ flowchart TD
 
     subgraph Council["3. AI Advisory Council (Read-Only)"]
         CFO["Family CFO AI (Coordinator)"]
-        RED["Adversarial Auditor AI (Goldfish)"]
+        RED["Risk & Adversarial Auditor AI (Red Team)"]
         SPEC["Specialists: Ledger | Risk | Growth | Tax | Stewardship"]
     end
 
@@ -150,7 +150,7 @@ flowchart TD
 | **Growth & Pricing AI** | Unit economics, pricing strategy, contribution margins, client concentration. | *"Which services or clients should we renegotiate or drop to increase profit without extra hours?"* |
 | **Tax & Compliance AI** | MEI / LC 238 ceilings, DAS deadlines, legal corporate separation. | *"What upcoming fiscal deadlines or revenue limits could expose us to penalties or regime changes?"* |
 | **Stewardship & Succession AI** | Asset shielding, legal firewalls, insurance matrices, estate continuity. | *"What legal, fiscal, or personal vulnerability could threaten our family if a crisis occurs?"* |
-| **Adversarial Auditor AI (Goldfish)** | Stateless critic, attacks assumptions, fights confirmation bias. | *"Why is the Family CFO's proposed weekly plan fragile, flawed, or overly optimistic?"* |
+| **Risk & Adversarial Auditor AI** | Financial devil's advocate, attacks assumptions, fights confirmation bias. | *"Why is the Family CFO's proposed weekly plan fragile, flawed, or overly optimistic?"* |
 | **[Future] Capital Allocation AI** | Long-term portfolio rebalancing, macro inflation hedging. | *"How should surplus capital be allocated across asset classes to preserve multi-generational wealth?"* |
 
 ---
@@ -176,7 +176,7 @@ open-family-office/
 │   ├── 04_growth_pricing.md
 │   ├── 05_tax_compliance_mei.md
 │   ├── 06_stewardship_succession.md
-│   └── 07_adversarial_auditor_goldfish.md
+│   └── 07_adversarial_auditor.md
 ├── templates/                     # CSV input schemas and executive reporting templates
 │   ├── README.md
 │   ├── transactions_template.csv  # Standard ledger import format
@@ -211,7 +211,7 @@ Copy and adapt the templates in `templates/`:
 ### 3. Run CLI & AI Advisory Briefings
 Execute the CLI commands for deterministic audits and AI advisory briefings:
 ```bash
-# Run weekly executive briefing (Family CFO + Goldfish Red Team audit)
+# Run weekly executive briefing (Family CFO + Risk Red Team audit)
 python -m src.cli briefing [--dry-run]
 
 # Ingest receipt photo or Brazilian SEFAZ NFC-e QR Code
@@ -233,7 +233,7 @@ python -m src.cli config import --source path/to/.env
 ## Roadmap
 
 * **Phase 1 (Complete)**: Deterministic Core & Data Engine (Python data models, transfer neutralizer, card reconciler, runway math, MEI monitor).
-* **Phase 2 (Complete)**: AI Advisory Suite CLI, Receipt Vision Ingestion & Automated Briefings (Local Ollama / Cloud API runners, BCB macro & Public APIs, Family CFO + Goldfish Red Team).
+* **Phase 2 (Complete)**: AI Advisory Suite CLI, Receipt Vision Ingestion & Automated Briefings (Local Ollama / Cloud API runners, BCB macro & Public APIs, Family CFO + Risk Red Team).
 * **Phase 3 (Next)**: Interactive Web Dashboard & Mobile Ingestion (FastAPI + Modern UI, mobile camera upload, spousal approval UI).
 * **Phase 4**: Multi-Agent Autonomous Orchestration & Global Tax Plugins (US, UK, Spain, Germany).
 

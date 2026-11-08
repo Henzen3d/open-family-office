@@ -79,3 +79,4 @@ flowchart TD
 * **Zero Lock-In**: None of these APIs require subscription contracts or credit cards.
 * **Network Fault Tolerance**: Every client implements a 5-second timeout and returns documented safe fallback rates if disconnected, ensuring offline operation is never blocked.
 * **Local Caching**: Holiday lists and currency quotes are cached locally in `data/cache/` to eliminate redundant queries.
+
