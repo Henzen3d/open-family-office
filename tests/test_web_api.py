@@ -34,3 +34,4 @@ def test_chat_non_stream(client):
     assert response.status_code == 200
     data = response.json()
     assert "reply" in data
+

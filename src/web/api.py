@@ -203,3 +203,4 @@ async def get_latest_report():
         "last_modified": datetime.fromtimestamp(latest.stat().st_mtime, timezone.utc).isoformat(),
         "content": latest.read_text(encoding="utf-8"),
     }
+
