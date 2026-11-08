@@ -54,3 +54,4 @@ Before Osmar and Vera approve the CFO's proposed weekly plan, the following cond
 - [ ] Condition 1: [e.g., Secure signed commitment from Client B before raising prices on Client A]
 - [ ] Condition 2: [e.g., Verify that current month's DAS is paid and recorded before allocating marketing budget]
 ```
+

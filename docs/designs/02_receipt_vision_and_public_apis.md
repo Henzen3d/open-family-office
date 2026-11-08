@@ -30,3 +30,4 @@ Users need to record on-the-go expenses (grocery trips, tool purchases for Fix S
 - Verified extraction of Brazilian SEFAZ 44-digit keys.
 - Mathematical validation of receipt item totals.
 - Zero duplication when matching receipts to bank transactions.
+
