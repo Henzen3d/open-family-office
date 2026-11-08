@@ -24,6 +24,13 @@ from src.llm.client import UniversalLLMClient
 from src.llm.config_manager import CustomProviderConfig, ProviderConfigManager
 from src.llm.importer import EnvImporter
 from src.llm.rate_limiter import ProviderLimits
+from src.controller.ofx_parser import BankStatementParser, ParsedStatement, ParsedBankTransaction
+from src.controller.ledger_manager import LedgerManager
+from src.intelligence.market_feed import MarketFeedService
+from src.controller.receipt_store import ReceiptStore
+from src.models.receipts import Receipt, ReceiptItem
+from src.models.transactions import Transaction
+from decimal import Decimal
 
 # Application Initialization
 app = FastAPI(
@@ -580,5 +587,388 @@ async def update_general_settings(payload: GeneralSettingsPayload):
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(current, f, indent=2, ensure_ascii=False)
     return {"status": "success", "settings": current}
+
+
+# ==============================================================================
+# PHASE 4: BANK STATEMENTS INGESTION & LEDGER ENDPOINTS
+# ==============================================================================
+
+statement_parser = BankStatementParser()
+
+
+def get_ledger_manager() -> LedgerManager:
+    """Returns LedgerManager pointed to active data directory."""
+    ledger_csv = DATA_DIR / "ledger" / "transactions.csv"
+    templates_csv = Path("templates/transactions_template.csv")
+    return LedgerManager(
+        ledger_file=str(ledger_csv),
+        templates_fallback=str(templates_csv) if templates_csv.exists() else None,
+    )
+
+
+class StatementTxCommitItem(BaseModel):
+    id: str
+    entity_code: str
+    account_name: str
+    date: str
+    amount: float
+    currency: str = "BRL"
+    raw_description: str
+    clean_description: str
+    fitid: str
+    memo: Optional[str] = ""
+    is_transfer: bool = False
+    transfer_pair_id: Optional[str] = None
+    hash_id: str = ""
+
+
+class StatementCommitPayload(BaseModel):
+    bank_id: str = "077"
+    bank_name: str = "Banco Inter"
+    account_id: str = "1001"
+    account_type: str = "CHECKING"
+    currency: str = "BRL"
+    transactions: list[StatementTxCommitItem]
+
+
+@app.post("/api/statements/upload")
+@app.post("/statements/upload")
+async def upload_bank_statement(
+    file: UploadFile = File(...),
+    entity_override: Optional[str] = Form(None),
+    account_override: Optional[str] = Form(None),
+):
+    """Parses bank statement (OFX or CSV) and returns preview before committing to ledger."""
+    content_bytes = await file.read()
+    filename = (file.filename or "").lower()
+
+    try:
+        content_str = content_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        content_str = content_bytes.decode("latin-1", errors="replace")
+
+    is_ofx = filename.endswith(".ofx") or "<OFX>" in content_str.upper() or "<BANKID>" in content_str.upper()
+    is_csv = filename.endswith(".csv") or "," in content_str.split("\n")[0] or ";" in content_str.split("\n")[0]
+
+    if is_ofx:
+        statement = statement_parser.parse_ofx(content_str, entity_override=entity_override)
+    elif is_csv:
+        statement = statement_parser.parse_csv(
+            content_str,
+            entity_override=entity_override,
+            account_name=account_override or "Extrato Importado (CSV)",
+        )
+    else:
+        # Fallback try OFX then CSV
+        try:
+            statement = statement_parser.parse_ofx(content_str, entity_override=entity_override)
+        except Exception:
+            statement = statement_parser.parse_csv(content_str, entity_override=entity_override)
+
+    # Check duplicates against current ledger
+    ledger_mgr = get_ledger_manager()
+    existing_txs = ledger_mgr.load_transactions()
+    existing_fingerprints = {
+        (t.entity_code, t.date.isoformat(), str(t.amount), t.clean_description.strip().lower())
+        for t in existing_txs
+    }
+    existing_ids = {t.id for t in existing_txs}
+
+    preview_items = []
+    duplicate_count = 0
+    for tx in statement.transactions:
+        fp = (tx.entity_code, tx.date.isoformat(), str(tx.amount), tx.clean_description.strip().lower())
+        is_dup = (tx.id in existing_ids) or (fp in existing_fingerprints)
+        if is_dup:
+            duplicate_count += 1
+        preview_items.append({
+            "id": tx.id,
+            "entity_code": tx.entity_code,
+            "account_name": tx.account_name,
+            "date": tx.date.isoformat(),
+            "amount": float(tx.amount),
+            "currency": tx.currency,
+            "raw_description": tx.raw_description,
+            "clean_description": tx.clean_description,
+            "fitid": tx.fitid,
+            "memo": tx.memo,
+            "is_transfer": tx.is_transfer,
+            "transfer_pair_id": tx.transfer_pair_id,
+            "hash_id": tx.hash_id,
+            "is_duplicate": is_dup,
+        })
+
+    return {
+        "status": "success",
+        "bank_id": statement.bank_id,
+        "bank_name": statement.bank_name,
+        "account_id": statement.account_id,
+        "account_type": statement.account_type,
+        "currency": statement.currency,
+        "start_date": statement.start_date.isoformat() if statement.start_date else None,
+        "end_date": statement.end_date.isoformat() if statement.end_date else None,
+        "total_credits": float(statement.total_credits),
+        "total_debits": float(statement.total_debits),
+        "balance": float(statement.balance) if statement.balance is not None else None,
+        "total_count": len(statement.transactions),
+        "duplicates_detected": duplicate_count,
+        "new_count": len(statement.transactions) - duplicate_count,
+        "transactions": preview_items,
+    }
+
+
+@app.post("/api/statements/upload-and-commit")
+@app.post("/statements/upload-and-commit")
+async def upload_and_commit_statement(
+    file: UploadFile = File(...),
+    entity_override: Optional[str] = Form(None),
+    account_override: Optional[str] = Form(None),
+):
+    """Direct 1-step upload, parse, deduplicate, and merge into primary ledger."""
+    content_bytes = await file.read()
+    filename = (file.filename or "").lower()
+
+    try:
+        content_str = content_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        content_str = content_bytes.decode("latin-1", errors="replace")
+
+    is_ofx = filename.endswith(".ofx") or "<OFX>" in content_str.upper() or "<BANKID>" in content_str.upper()
+
+    if is_ofx:
+        statement = statement_parser.parse_ofx(content_str, entity_override=entity_override)
+    else:
+        statement = statement_parser.parse_csv(
+            content_str,
+            entity_override=entity_override,
+            account_name=account_override or "Extrato Importado",
+        )
+
+    ledger_mgr = get_ledger_manager()
+    combined, new_added, dups_skipped, transfers_paired = ledger_mgr.merge_statement(statement)
+
+    return {
+        "status": "success",
+        "bank_name": statement.bank_name,
+        "account_id": statement.account_id,
+        "new_added_count": new_added,
+        "duplicates_skipped": dups_skipped,
+        "transfers_neutralized": transfers_paired,
+        "total_ledger_records": len(combined),
+        "message": f"Extrato processado com sucesso. {new_added} novos lançamentos inseridos, {dups_skipped} duplicatas bloqueadas.",
+    }
+
+
+@app.get("/api/statements/transactions")
+@app.get("/statements/transactions")
+async def list_transactions(
+    entity_code: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+):
+    """Returns ledger transactions filtered by entity code with transfer pair info."""
+    ledger_mgr = get_ledger_manager()
+    all_txs = ledger_mgr.load_transactions()
+
+    if entity_code:
+        clean_code = entity_code.upper().strip()
+        filtered = [t for t in all_txs if t.entity_code.upper() == clean_code]
+    else:
+        filtered = all_txs
+
+    # Sort descending by date
+    sorted_txs = sorted(filtered, key=lambda t: (t.date, t.id), reverse=True)
+    paged = sorted_txs[offset : offset + limit]
+
+    result = []
+    total_inflow = Decimal("0.00")
+    total_outflow = Decimal("0.00")
+
+    for t in paged:
+        if t.amount > Decimal("0.00"):
+            total_inflow += t.amount
+        else:
+            total_outflow += abs(t.amount)
+
+        result.append({
+            "id": t.id,
+            "entity_code": t.entity_code,
+            "account_name": t.account_name,
+            "date": t.date.isoformat(),
+            "amount": float(t.amount),
+            "currency": t.currency,
+            "raw_description": t.raw_description,
+            "clean_description": t.clean_description,
+            "category_code": t.category_code,
+            "counterparty": t.counterparty,
+            "is_transfer": t.is_transfer,
+            "transfer_pair_id": t.transfer_pair_id,
+            "reconciliation_status": t.reconciliation_status.value if hasattr(t.reconciliation_status, "value") else str(t.reconciliation_status),
+            "notes": t.notes,
+        })
+
+    return {
+        "status": "success",
+        "total_count": len(filtered),
+        "limit": limit,
+        "offset": offset,
+        "total_inflow": float(total_inflow),
+        "total_outflow": float(total_outflow),
+        "transactions": result,
+    }
+
+
+# ==============================================================================
+# PHASE 5: PUBLIC FINANCIAL APIS & MACRO FEED ENDPOINTS
+# ==============================================================================
+
+def get_market_service() -> MarketFeedService:
+    """Returns MarketFeedService pointed to persistent cache."""
+    cache_file = DATA_DIR / "macro_cache" / "market_overview.json"
+    return MarketFeedService(cache_file=str(cache_file))
+
+
+@app.get("/api/market/overview")
+@app.get("/market/overview")
+async def get_market_overview():
+    """Returns macroeconomic indicators, FX quotes, and crypto prices with 15-minute disk cache."""
+    service = get_market_service()
+    overview = service.get_market_overview(force_refresh=False)
+    return overview
+
+
+@app.post("/api/market/refresh")
+@app.post("/market/refresh")
+async def refresh_market_overview():
+    """Forces cache invalidation and fetches fresh indicators from BCB, AwesomeAPI, and CoinGecko."""
+    service = get_market_service()
+    overview = service.get_market_overview(force_refresh=True)
+    return overview
+
+
+# ==============================================================================
+# PHASE 6: MULTIMODAL RECEIPT & CUPOM FISCAL OCR VISION ENDPOINTS
+# ==============================================================================
+
+def get_receipt_store() -> ReceiptStore:
+    """Returns ReceiptStore pointed to persistent storage."""
+    db_file = DATA_DIR / "receipts" / "receipts_db.json"
+    return ReceiptStore(db_path=str(db_file))
+
+
+@app.post("/api/receipts/extract")
+@app.post("/receipts/extract")
+async def extract_receipt(
+    file: Optional[UploadFile] = File(None),
+    image_path: Optional[str] = Form(None),
+    sefaz_key: Optional[str] = Form(None),
+    entity_code: Optional[str] = Form("HOUSEHOLD_OSMAR"),
+):
+    """Extracts fiscal data from receipt photo, purging EXIF metadata and matching against ledger."""
+    receipts_dir = DATA_DIR / "receipts"
+    receipts_dir.mkdir(parents=True, exist_ok=True)
+    store = get_receipt_store()
+    ledger_mgr = get_ledger_manager()
+
+    target_image_path = None
+    if file:
+        timestamp = int(time.time())
+        safe_name = f"{timestamp}_{file.filename}"
+        target_image_path = str(receipts_dir / safe_name)
+        raw_bytes = await file.read()
+        # Purge EXIF metadata immediately
+        clean_bytes = store.strip_exif_metadata(raw_bytes)
+        with open(target_image_path, "wb") as f:
+            f.write(clean_bytes)
+    elif image_path and os.path.exists(image_path):
+        target_image_path = image_path
+    else:
+        # If neither provided, check if sefaz_key given
+        if not sefaz_key:
+            raise HTTPException(status_code=400, detail="Envie um arquivo de imagem ou uma chave SEFAZ de 44 dígitos.")
+        # Dummy path for key-only extraction
+        target_image_path = str(receipts_dir / f"key_{sefaz_key}.txt")
+        if not os.path.exists(target_image_path):
+            with open(target_image_path, "w", encoding="utf-8") as f:
+                f.write(sefaz_key)
+
+    # Resolve active LLM provider if configured
+    cfg_mgr = get_config_manager()
+    active_providers = [p for p in cfg_mgr.list_providers() if p.enabled]
+    vision_provider = active_providers[0] if active_providers else None
+
+    receipt, matched_tx_id = store.extract_from_image(
+        image_path=target_image_path,
+        provider_config=vision_provider,
+        entity_hint=entity_code,
+        sefaz_key_hint=sefaz_key,
+        ledger_mgr=ledger_mgr,
+    )
+
+    return {
+        "status": "success",
+        "receipt": {
+            "id": receipt.id,
+            "entity_code": receipt.entity_code,
+            "merchant_name": receipt.merchant_name,
+            "merchant_tax_id": receipt.merchant_tax_id,
+            "issue_date": receipt.issue_date.isoformat(),
+            "total_amount": float(receipt.total_amount),
+            "tax_amount": float(receipt.tax_amount),
+            "discount_amount": float(receipt.discount_amount),
+            "payment_method": receipt.payment_method,
+            "card_last_digits": receipt.card_last_digits,
+            "fiscal_access_key": receipt.fiscal_access_key,
+            "confidence_score": float(receipt.confidence_score),
+            "matched_transaction_id": matched_tx_id,
+            "source_channel": receipt.source_channel,
+            "parser_engine": receipt.parser_engine,
+            "exif_metadata_purged": True,
+            "items": [
+                {
+                    "item_index": it.item_index,
+                    "description": it.description,
+                    "quantity": float(it.quantity),
+                    "unit_measure": it.unit_measure,
+                    "unit_price": float(it.unit_price),
+                    "total_price": float(it.total_price),
+                    "category_code": it.category_code,
+                }
+                for it in receipt.items
+            ],
+        },
+        "matched_transaction_id": matched_tx_id,
+        "message": "Comprovante fiscal analisado. Metadados EXIF purgados localmente.",
+    }
+
+
+@app.get("/api/receipts/recent")
+@app.get("/receipts/recent")
+async def get_recent_receipts():
+    """Lists recent scanned receipts and their ledger reconciliation state."""
+    store = get_receipt_store()
+    receipts = store.load_receipts()
+    # Sort descending by issue_date
+    sorted_receipts = sorted(receipts, key=lambda r: (r.issue_date, r.id), reverse=True)
+
+    result = []
+    for r in sorted_receipts[:50]:
+        result.append({
+            "id": r.id,
+            "entity_code": r.entity_code,
+            "merchant_name": r.merchant_name,
+            "merchant_tax_id": r.merchant_tax_id,
+            "issue_date": r.issue_date.isoformat(),
+            "total_amount": float(r.total_amount),
+            "payment_method": r.payment_method,
+            "fiscal_access_key": r.fiscal_access_key,
+            "matched_transaction_id": r.matched_transaction_id,
+            "items_count": len(r.items),
+            "confidence_score": float(r.confidence_score),
+            "parser_engine": r.parser_engine,
+        })
+
+    return {"status": "success", "count": len(result), "receipts": result}
+
 
 

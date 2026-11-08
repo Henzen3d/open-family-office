@@ -32,6 +32,9 @@ import {
   Moon,
 } from 'lucide-react';
 import SettingsModal from './components/SettingsModal';
+import MarketTicker from './components/MarketTicker';
+import StatementModal from './components/StatementModal';
+import ReceiptScannerModal from './components/ReceiptScannerModal';
 
 interface ChatMessage {
   id: string;
@@ -46,6 +49,9 @@ export default function StitchExecutiveDashboard() {
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'inter' | 'caixa' | 'nubank'>('all');
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isStatementOpen, setIsStatementOpen] = useState(false);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [ledgerTransactions, setLedgerTransactions] = useState<any[]>([]);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
@@ -93,6 +99,20 @@ export default function StitchExecutiveDashboard() {
   // Quick transfer state
   const [transferAmount, setTransferAmount] = useState('200,00');
 
+  const loadTransactions = async () => {
+    try {
+      const res = await fetch('/api/py/statements/transactions?limit=20');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.transactions && Array.isArray(data.transactions)) {
+          setLedgerTransactions(data.transactions);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load ledger transactions:', e);
+    }
+  };
+
   useEffect(() => {
     fetch('/api/py/health')
       .then((res) => {
@@ -100,6 +120,8 @@ export default function StitchExecutiveDashboard() {
         else setApiOnline(false);
       })
       .catch(() => setApiOnline(false));
+
+    loadTransactions();
   }, []);
 
   useEffect(() => {
@@ -382,6 +404,9 @@ export default function StitchExecutiveDashboard() {
           </div>
         </header>
 
+        {/* Real-time Macroeconomic & Financial API Feed Ticker */}
+        <MarketTicker />
+
         {/* Welcome Greeting & Action Pills */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div>
@@ -401,10 +426,24 @@ export default function StitchExecutiveDashboard() {
           {/* Quick Action Pill Group */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full text-xs">
             <button
-              onClick={() => setIsAssistantOpen(true)}
+              onClick={() => setIsStatementOpen(true)}
               className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-2xl font-bold shadow-pill hover:bg-indigo-500 transition whitespace-nowrap"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Upload className="w-3.5 h-3.5" />
+              <span>Extrato OFX / CSV</span>
+            </button>
+            <button
+              onClick={() => setIsReceiptOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
+            >
+              <Camera className="w-3.5 h-3.5 text-slate-400" />
+              <span>Escanear Cupom</span>
+            </button>
+            <button
+              onClick={() => setIsAssistantOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
+            >
+              <Send className="w-3.5 h-3.5 text-slate-400" />
               <span>Enviar PIX</span>
             </button>
             <button
@@ -415,25 +454,11 @@ export default function StitchExecutiveDashboard() {
               <span>Cobrança</span>
             </button>
             <button
-              onClick={() => handleSendMessage('Transferir recursos')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-              <span>Transferir</span>
-            </button>
-            <button
               onClick={() => handleSendMessage('Pagar DAS MEI ou Fatura')}
               className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
             >
               <FileText className="w-3.5 h-3.5 text-slate-400" />
               <span>Pagar DAS / Fatura</span>
-            </button>
-            <button
-              onClick={() => handleSendMessage('Emitir NFS-e')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
-            >
-              <Plus className="w-3.5 h-3.5 text-slate-400" />
-              <span>Emitir NFS-e</span>
             </button>
           </div>
         </div>
@@ -803,46 +828,64 @@ export default function StitchExecutiveDashboard() {
                   <p className="text-xs text-slate-500 dark:text-slate-400">Conciliação bancária automática com chaves XML e recibos fiscais</p>
                 </div>
 
-                <div className="flex items-center gap-1 bg-slate-50 dark:bg-[#121722] p-1 rounded-xl border border-slate-200/60 dark:border-white/5 text-xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1 bg-slate-50 dark:bg-[#121722] p-1 rounded-xl border border-slate-200/60 dark:border-white/5 text-xs">
+                    <button
+                      onClick={() => setLedgerFilter('all')}
+                      className={`px-3 py-1 rounded-lg font-bold transition ${
+                        ledgerFilter === 'all'
+                          ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm border border-slate-200/80 dark:border-white/10'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Todas
+                    </button>
+                    <button
+                      onClick={() => setLedgerFilter('inter')}
+                      className={`px-3 py-1 rounded-lg font-medium transition ${
+                        ledgerFilter === 'inter'
+                          ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm border border-slate-200/80 dark:border-white/10'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Inter PJ (Fix)
+                    </button>
+                    <button
+                      onClick={() => setLedgerFilter('caixa')}
+                      className={`px-3 py-1 rounded-lg font-medium transition ${
+                        ledgerFilter === 'caixa'
+                          ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm border border-slate-200/80 dark:border-white/10'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Caixa PJ (Vistorias)
+                    </button>
+                    <button
+                      onClick={() => setLedgerFilter('nubank')}
+                      className={`px-3 py-1 rounded-lg font-medium transition ${
+                        ledgerFilter === 'nubank'
+                          ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm border border-slate-200/80 dark:border-white/10'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                    >
+                      Nubank PF
+                    </button>
+                  </div>
+
                   <button
-                    onClick={() => setLedgerFilter('all')}
-                    className={`px-3 py-1 rounded-lg font-bold transition ${
-                      ledgerFilter === 'all'
-                        ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm border border-slate-200/80 dark:border-white/10'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
+                    onClick={() => setIsStatementOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-sm transition"
                   >
-                    Todas
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Importar OFX/CSV</span>
                   </button>
+
                   <button
-                    onClick={() => setLedgerFilter('inter')}
-                    className={`px-3 py-1 rounded-lg font-medium transition ${
-                      ledgerFilter === 'inter'
-                        ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm border border-slate-200/80 dark:border-white/10'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
+                    onClick={() => setIsReceiptOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-[#1f2738] hover:bg-slate-200 dark:hover:bg-[#28334a] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-bold shadow-sm transition"
                   >
-                    Inter PJ (Fix)
-                  </button>
-                  <button
-                    onClick={() => setLedgerFilter('caixa')}
-                    className={`px-3 py-1 rounded-lg font-medium transition ${
-                      ledgerFilter === 'caixa'
-                        ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm border border-slate-200/80 dark:border-white/10'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    Caixa PJ (Vistorias)
-                  </button>
-                  <button
-                    onClick={() => setLedgerFilter('nubank')}
-                    className={`px-3 py-1 rounded-lg font-medium transition ${
-                      ledgerFilter === 'nubank'
-                        ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm border border-slate-200/80 dark:border-white/10'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    Nubank PF
+                    <Camera className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>Escanear Cupom</span>
                   </button>
                 </div>
               </div>
@@ -860,96 +903,125 @@ export default function StitchExecutiveDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5 font-medium">
-                    <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
-                      <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">Hoje, 14:22</td>
-                      <td className="py-3">
-                        <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-semibold text-[10px] border border-amber-200 dark:border-amber-500/30">
-                          Inter PJ
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <div className="text-slate-900 dark:text-white font-semibold">PIX Cliente Condomínio Jardins</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Receita Bruta MEI • Prestação de Reparos</div>
-                      </td>
-                      <td className="py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">+R$ 1.850,00</td>
-                      <td className="py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400">NFS-e #0084.xml</td>
-                      <td className="py-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
-                        </span>
-                      </td>
-                    </tr>
+                    {ledgerTransactions.length > 0 ? (
+                      ledgerTransactions
+                        .filter((tx) => {
+                          if (ledgerFilter === 'inter') return tx.entity_code === 'FIX_SERVICOS' || tx.account_name?.toLowerCase().includes('inter');
+                          if (ledgerFilter === 'caixa') return tx.entity_code === 'FACILITA_VISTORIAS' || tx.account_name?.toLowerCase().includes('caixa');
+                          if (ledgerFilter === 'nubank') return tx.entity_code === 'HOUSEHOLD_OSMAR' || tx.account_name?.toLowerCase().includes('nubank');
+                          return true;
+                        })
+                        .map((tx) => (
+                          <tr key={tx.id} className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
+                            <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">{tx.date}</td>
+                            <td className="py-3">
+                              <span
+                                className={`px-2 py-0.5 rounded-md font-semibold text-[10px] border ${
+                                  tx.entity_code === 'FIX_SERVICOS'
+                                    ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30'
+                                    : tx.entity_code === 'FACILITA_VISTORIAS'
+                                    ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/30'
+                                    : 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30'
+                                }`}
+                              >
+                                {tx.entity_code === 'FIX_SERVICOS'
+                                  ? 'Inter PJ'
+                                  : tx.entity_code === 'FACILITA_VISTORIAS'
+                                  ? 'Caixa PJ'
+                                  : 'Nubank PF'}
+                              </span>
+                            </td>
+                            <td className="py-3">
+                              <div className="text-slate-900 dark:text-white font-semibold">{tx.clean_description}</div>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-sm">
+                                {tx.counterparty || tx.raw_description}
+                              </div>
+                            </td>
+                            <td className="py-3 text-right font-mono font-bold">
+                              <span className={tx.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-200'}>
+                                {tx.amount >= 0 ? '+' : ''}
+                                R$ {tx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </td>
+                            <td className="py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                              {tx.is_transfer ? (
+                                <span className="text-indigo-600 dark:text-indigo-400 font-semibold">
+                                  PJ ↔ PF Neutralizada
+                                </span>
+                              ) : (
+                                tx.notes ? tx.notes.split(' ')[0] : 'Conciliado'
+                              )}
+                            </td>
+                            <td className="py-3 text-center">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                    ) : (
+                      <>
+                        <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
+                          <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">Hoje, 14:22</td>
+                          <td className="py-3">
+                            <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-semibold text-[10px] border border-amber-200 dark:border-amber-500/30">
+                              Inter PJ
+                            </span>
+                          </td>
+                          <td className="py-3">
+                            <div className="text-slate-900 dark:text-white font-semibold">PIX Cliente Condomínio Jardins</div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400">Receita Bruta MEI • Prestação de Reparos</div>
+                          </td>
+                          <td className="py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">+R$ 1.850,00</td>
+                          <td className="py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400">NFS-e #0084.xml</td>
+                          <td className="py-3 text-center">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
+                            </span>
+                          </td>
+                        </tr>
 
-                    <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
-                      <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">Hoje, 10:15</td>
-                      <td className="py-3">
-                        <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-semibold text-[10px] border border-purple-200 dark:border-purple-500/30">
-                          Caixa PJ
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <div className="text-slate-900 dark:text-white font-semibold">Locação Medidor Laser 3D</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Despesa Operacional • Georreferenciamento</div>
-                      </td>
-                      <td className="py-3 text-right font-mono font-semibold text-slate-700 dark:text-slate-300">-R$ 420,00</td>
-                      <td className="py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400">Recibo_Loc_09.pdf</td>
-                      <td className="py-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
-                        </span>
-                      </td>
-                    </tr>
+                        <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
+                          <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">Hoje, 10:15</td>
+                          <td className="py-3">
+                            <span className="px-2 py-0.5 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 font-semibold text-[10px] border border-purple-200 dark:border-purple-500/30">
+                              Caixa PJ
+                            </span>
+                          </td>
+                          <td className="py-3">
+                            <div className="text-slate-900 dark:text-white font-semibold">Locação Medidor Laser 3D</div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400">Despesa Operacional • Georreferenciamento</div>
+                          </td>
+                          <td className="py-3 text-right font-mono font-semibold text-slate-700 dark:text-slate-300">-R$ 420,00</td>
+                          <td className="py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400">Recibo_Loc_09.pdf</td>
+                          <td className="py-3 text-center">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
+                            </span>
+                          </td>
+                        </tr>
 
-                    <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
-                      <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">Ontem, 19:40</td>
-                      <td className="py-3">
-                        <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold text-[10px] border border-blue-200 dark:border-blue-500/30">
-                          Nubank PF
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <div className="text-slate-900 dark:text-white font-semibold">Supermercado Pão de Açúcar</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Despesa Familiar • Cesta Alimentação</div>
-                      </td>
-                      <td className="py-3 text-right font-mono font-semibold text-slate-700 dark:text-slate-300">-R$ 684,30</td>
-                      <td className="py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400">NFC-e 3526..8901</td>
-                      <td className="py-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
-                        </span>
-                      </td>
-                    </tr>
-
-                    {/* Pending Row */}
-                    <tr className="hover:bg-amber-100/50 dark:hover:bg-amber-950/30 bg-amber-50/50 dark:bg-amber-950/15 transition">
-                      <td className="py-3 pl-1 font-mono text-amber-700 dark:text-amber-300 font-semibold">04/Nov 11:05</td>
-                      <td className="py-3">
-                        <span className="px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 font-semibold text-[10px] border border-amber-300 dark:border-amber-500/40">
-                          Inter PJ
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <div className="text-slate-900 dark:text-white font-semibold">Manutenção Veicular Utilitário</div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400">Custo Operacional • Troca Pastilhas de Freio</div>
-                      </td>
-                      <td className="py-3 text-right font-mono font-bold text-amber-700 dark:text-amber-300">-R$ 1.250,00</td>
-                      <td className="py-3">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-400">
-                          <AlertCircle className="w-3.5 h-3.5" /> NF-e Pendente
-                        </span>
-                      </td>
-                      <td className="py-3 text-center">
-                        <button
-                          onClick={() => {
-                            setIsAssistantOpen(true);
-                            setSelectedEntityChat('inter_cnpj');
-                          }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold text-[10px] shadow-sm hover:bg-indigo-500 transition"
-                        >
-                          <Camera className="w-3 h-3" /> Anexar
-                        </button>
-                      </td>
-                    </tr>
+                        <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
+                          <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">Ontem, 19:40</td>
+                          <td className="py-3">
+                            <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold text-[10px] border border-blue-200 dark:border-blue-500/30">
+                              Nubank PF
+                            </span>
+                          </td>
+                          <td className="py-3">
+                            <div className="text-slate-900 dark:text-white font-semibold">Supermercado Pão de Açúcar</div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400">Despesa Familiar • Cesta Alimentação</div>
+                          </td>
+                          <td className="py-3 text-right font-mono font-semibold text-slate-700 dark:text-slate-300">-R$ 684,30</td>
+                          <td className="py-3 font-mono text-[11px] text-slate-500 dark:text-slate-400">NFC-e 3526..8901</td>
+                          <td className="py-3 text-center">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
+                            </span>
+                          </td>
+                        </tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1209,9 +1281,9 @@ export default function StitchExecutiveDashboard() {
         </button>
 
         <button
-          onClick={() => setLedgerFilter('all')}
+          onClick={() => setIsStatementOpen(true)}
           className="flex flex-col items-center justify-center min-w-[48px] min-h-[48px] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400"
-          title="Extratos & Livro-Razão"
+          title="Extratos & Conciliação (OFX/CSV)"
         >
           <FileText className="w-5 h-5" />
           <span className="text-[10px] mt-0.5">Extrato</span>
@@ -1251,6 +1323,20 @@ export default function StitchExecutiveDashboard() {
         onClose={() => setIsSettingsOpen(false)}
         theme={theme}
         onThemeChange={handleThemeChange}
+      />
+
+      {/* 6. BANK STATEMENTS IMPORT & DEDUPLICATION MODAL */}
+      <StatementModal
+        isOpen={isStatementOpen}
+        onClose={() => setIsStatementOpen(false)}
+        onSuccess={() => loadTransactions()}
+      />
+
+      {/* 7. RECEIPT & CUPOM FISCAL OCR VISION MODAL */}
+      <ReceiptScannerModal
+        isOpen={isReceiptOpen}
+        onClose={() => setIsReceiptOpen(false)}
+        onSuccess={() => loadTransactions()}
       />
     </div>
   );

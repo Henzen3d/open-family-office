@@ -86,3 +86,4 @@
   - Cruzamento de data ($\pm 2$ dias) e valor exato com extrato do Inter PJ ou Caixa PJ.
 - [ ] **OCR-04: Interface de Validação e Ajuste de Lançamento**
   - Modal com visualização da foto do cupom e campos editáveis pelo usuário.
+
