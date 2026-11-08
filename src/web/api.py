@@ -73,9 +73,30 @@ async def system_status():
         "ledger_configured": ledger_file.exists(),
         "available_reports_count": len(reports),
         "supported_entities": [
-            {"id": "fix_servicos", "label": "Fix Serviços MEI", "default_account": "Inter CNPJ"},
-            {"id": "facilita_vistorias", "label": "Facilita Vistorias MEI", "default_account": "Caixa PJ"},
-            {"id": "household_osmar", "label": "Família / PF", "default_account": "Nubank PF"},
+            {
+                "id": "fix_servicos",
+                "label": "Fix Serviços MEI",
+                "titular": "Osmar",
+                "tax_regime": "MEI",
+                "default_account": "Inter CNPJ",
+                "legal_note": "Titular individual exclusivo (LC 123/2006, Art. 18-A).",
+            },
+            {
+                "id": "facilita_vistorias",
+                "label": "Facilita Vistorias MEI",
+                "titular": "Vera",
+                "tax_regime": "MEI",
+                "default_account": "Caixa PJ",
+                "legal_note": "Titular individual exclusiva (LC 123/2006, Art. 18-A).",
+            },
+            {
+                "id": "household_osmar",
+                "label": "Família / PF",
+                "titular": "Casal (Comunhão)",
+                "tax_regime": "PF",
+                "default_account": "Nubank PF",
+                "legal_note": "Patrimônio pessoal e frutos consolidados do casal.",
+            },
         ],
     }
 

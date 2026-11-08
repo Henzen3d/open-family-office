@@ -197,7 +197,7 @@ export default function ExecutiveDashboard() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Fix Serviços MEI
+            Fix Serviços MEI (Osmar)
           </button>
           <button
             onClick={() => setActiveEntity('facilita')}
@@ -207,7 +207,7 @@ export default function ExecutiveDashboard() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Facilita Vistorias MEI
+            Facilita Vistorias MEI (Vera)
           </button>
           <button
             onClick={() => setActiveEntity('pf')}
@@ -217,7 +217,7 @@ export default function ExecutiveDashboard() {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            Família PF
+            Família PF (Casal)
           </button>
         </div>
 
@@ -330,6 +330,7 @@ export default function ExecutiveDashboard() {
                 <div className="flex justify-between text-xs">
                   <span className="font-medium text-slate-200 flex items-center gap-1.5">
                     <Building2 className="w-3.5 h-3.5 text-emerald-400" /> Fix Serviços MEI
+                    <span className="text-[10px] text-slate-400 font-mono">(Titular: Osmar)</span>
                   </span>
                   <span className="font-mono text-emerald-400 font-semibold">
                     R$ 34.200,00 (42,2%)
@@ -352,6 +353,7 @@ export default function ExecutiveDashboard() {
                 <div className="flex justify-between text-xs">
                   <span className="font-medium text-slate-200 flex items-center gap-1.5">
                     <Building2 className="w-3.5 h-3.5 text-teal-400" /> Facilita Vistorias MEI
+                    <span className="text-[10px] text-slate-400 font-mono">(Titular: Vera)</span>
                   </span>
                   <span className="font-mono text-teal-400 font-semibold">
                     R$ 25.110,00 (31,0%)
@@ -381,14 +383,14 @@ export default function ExecutiveDashboard() {
                 <div className="flex items-center gap-2 mb-3">
                   <Users className="w-4 h-4 text-emerald-400" />
                   <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
-                    Governança Conjugal (Osmar & Vera)
+                    Governança Conjugal & Segregação Fiscal
                   </span>
                 </div>
                 <h4 className="text-sm font-semibold text-white mb-1">
                   1 Transferência Pendente de Conferência
                 </h4>
                 <p className="text-xs text-slate-400 mb-4">
-                  Movimentações entre PJ e PF exigem confirmação mútua para manter a clareza contábil.
+                  Titularidade individual estrita por CNPJ (Osmar na Fix e Vera na Facilita, conforme LC 123/2006). A governança audita a distribuição regular de lucros para a PF e blinda o casal contra confusão patrimonial.
                 </p>
 
                 <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs space-y-1">

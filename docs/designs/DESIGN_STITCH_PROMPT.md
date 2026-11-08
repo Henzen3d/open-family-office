@@ -86,3 +86,4 @@ ESTRUTURA DA TELA (GRID BENTO ASSIMÉTRICO):
    - No canto inferior direito, um botão flutuante discreto "+ Assistente Financeiro".
    - Ao clicar, abre uma gaveta lateral/inferior com o chat operacional (frases curtas, padrão ASD-STE100) e botão de anexar foto do comprovante. A tela inicial é 100% dashboard com métricas e gráficos.
 ```
+
