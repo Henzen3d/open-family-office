@@ -389,3 +389,4 @@ export default function StatementModal({ isOpen, onClose, onSuccess }: Statement
     </div>
   );
 }
+

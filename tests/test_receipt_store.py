@@ -67,3 +67,4 @@ class TestReceiptStore(unittest.TestCase):
         self.assertEqual(loaded[0].merchant_name, "Eletro Materiais Ltda")
         self.assertEqual(loaded[0].total_amount, Decimal("120.50"))
         self.assertEqual(len(loaded[0].items), 1)
+

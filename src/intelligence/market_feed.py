@@ -145,3 +145,4 @@ class MarketFeedService:
 
         self._save_cache(snapshot)
         return snapshot
+

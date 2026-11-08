@@ -379,3 +379,4 @@ export default function ReceiptScannerModal({ isOpen, onClose, onSuccess }: Rece
     </div>
   );
 }
+

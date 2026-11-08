@@ -320,3 +320,4 @@ class BankStatementParser:
         if lower_name.endswith(".ofx") or lower_name.endswith(".qfx") or "<OFX>" in content or "OFXHEADER" in content:
             return self.parse_ofx(content, entity_override=entity_override)
         return self.parse_csv(content, entity_override=entity_override)
+

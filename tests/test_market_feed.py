@@ -36,3 +36,4 @@ class TestMarketFeedService(unittest.TestCase):
         cached_data = self.service.get_market_overview(force_refresh=False)
         self.assertTrue(cached_data["cached"])
         self.assertEqual(cached_data["rates"]["SELIC"]["value"], data["rates"]["SELIC"]["value"])
+

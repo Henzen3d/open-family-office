@@ -101,3 +101,4 @@ Track international assets (USD, EUR, Stocks, ETFs) and automate Brazilian tax c
 | **Phase 7** | Automated Executive Briefings & Multi-channel Alerts | Phases 4, 5, 6 | 4 Days |
 | **Phase 8** | Conjugal Governance & Cryptographic Dual-Signature | Phase 7 | 5 Days |
 | **Phase 9** | Offshore Investments & Cross-Border Tax (Lei 14.754) | Phase 8 | 6 Days |
+

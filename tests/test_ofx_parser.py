@@ -159,3 +159,4 @@ class TestBankStatementParser(unittest.TestCase):
         self.assertTrue(inter_debit.is_transfer)
         self.assertTrue(nu_credit.is_transfer)
         self.assertEqual(inter_debit.transfer_pair_id, nu_credit.transfer_pair_id)
+

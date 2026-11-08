@@ -15,6 +15,7 @@ from src.controller.receipt_matcher import ReceiptMatcher
 from src.llm.config_manager import ProviderConfigManager, CustomProviderConfig
 from src.llm.client import UniversalLLMClient
 from src.controller.ledger_manager import LedgerManager
+from src.controller.indra_ocr import IndraOCRAdapter
 
 
 class ReceiptStore:
@@ -203,29 +204,17 @@ class ReceiptStore:
                 if entity_hint:
                     receipt.entity_code = entity_hint
             except Exception as e:
-                # Resilient fallback mock extraction if external LLM is offline
-                receipt = Receipt(
-                    id=f"rcp-fallback-{os.path.splitext(os.path.basename(image_path))[0]}",
-                    entity_code=entity_hint or "HOUSEHOLD_OSMAR",
-                    image_storage_path=image_path,
-                    merchant_name="Estabelecimento Local (Recibo Anexado)",
-                    issue_date=date.today(),
-                    total_amount=Decimal("45.00"),
-                    payment_method="DEBIT",
-                    confidence_score=Decimal("0.85"),
-                    source_channel="CAMERA_PHOTO",
-                    parser_engine="OFFLINE_FALLBACK",
-                    items=[
-                        ReceiptItem(
-                            item_index=1,
-                            description="Despesa Comercial / Consumo",
-                            quantity=Decimal("1.00"),
-                            unit_measure="UN",
-                            unit_price=Decimal("45.00"),
-                            total_price=Decimal("45.00"),
-                            category_code="EXP.COGS" if "FIX" in (entity_hint or "") else "PER.FOOD",
-                        )
-                    ],
+                # Priority 3 Fallback: Lazy-loaded Indra OCR on CPU (datalab-to/indra)
+                # Model stays completely unloaded in RAM until this block is reached
+                target_entity = entity_hint or "HOUSEHOLD_OSMAR"
+                indra_result = IndraOCRAdapter.extract_from_image_lazy(
+                    image_path=image_path,
+                    entity_hint=target_entity,
+                )
+                receipt = IndraOCRAdapter.create_receipt_model(
+                    ocr_result=indra_result,
+                    image_path=image_path,
+                    entity_hint=target_entity,
                 )
 
         # 3. Match against existing bank ledger
@@ -240,3 +229,4 @@ class ReceiptStore:
         # 4. Save to receipts store
         self.save_receipt(receipt)
         return receipt, matched_id
+
