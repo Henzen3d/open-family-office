@@ -780,6 +780,24 @@ async def list_transactions(
     }
 
 
+@app.get("/api/statements/summary")
+@app.get("/statements/summary")
+async def get_statements_summary():
+    """Returns multi-year consolidated financial metrics from history_consolidation.json."""
+    consolidation_file = DATA_DIR / "ledger" / "history_consolidation.json"
+    if consolidation_file.exists():
+        try:
+            with open(consolidation_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Failed to read consolidation file: {e}")
+            raise HTTPException(status_code=500, detail="Failed to load historical consolidation summary.")
+    return {
+        "status": "empty",
+        "message": "Nenhum histórico consolidado encontrado. Execute o script de ingestão.",
+    }
+
+
 # ==============================================================================
 # PHASE 5: PUBLIC FINANCIAL APIS & MACRO FEED ENDPOINTS
 # ==============================================================================

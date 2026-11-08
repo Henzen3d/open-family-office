@@ -45,3 +45,15 @@ def test_market_chart_endpoint(client):
     assert "stats" in data
     assert len(data["points"]) > 0
 
+
+def test_statements_summary_and_transactions(client):
+    res_summary = client.get("/api/statements/summary")
+    assert res_summary.status_code == 200
+
+    res_txs = client.get("/api/statements/transactions?limit=10")
+    assert res_txs.status_code == 200
+    data_txs = res_txs.json()
+    assert "transactions" in data_txs
+    assert len(data_txs["transactions"]) > 0
+
+

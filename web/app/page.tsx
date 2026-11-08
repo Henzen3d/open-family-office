@@ -106,7 +106,7 @@ export default function StitchExecutiveDashboard() {
 
   const loadTransactions = async () => {
     try {
-      const res = await fetch('/api/py/statements/transactions?limit=20');
+      const res = await fetch('/api/py/statements/transactions?limit=50');
       if (res.ok) {
         const data = await res.json();
         if (data.transactions && Array.isArray(data.transactions)) {
@@ -1070,7 +1070,11 @@ export default function StitchExecutiveDashboard() {
             </div>
 
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-3 border-t border-slate-200/80 dark:border-white/10 mt-2">
-              <span>5 conciliações efetuadas nas últimas 48h</span>
+              <span>
+                {ledgerTransactions.length > 0
+                  ? `${ledgerTransactions.length} lançamentos reais consolidados (Histórico 2020 - 2026)`
+                  : '5 conciliações efetuadas nas últimas 48h'}
+              </span>
               <button onClick={() => setIsAssistantOpen(true)} className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
                 Ver extrato completo no Assistente
               </button>
