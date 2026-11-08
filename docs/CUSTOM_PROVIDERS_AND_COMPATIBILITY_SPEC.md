@@ -141,3 +141,4 @@ python -m src.cli config test --provider "cerebras"
 * All sensitive API keys in `config/providers.json` and `.env` are strictly excluded from version control via `.gitignore`.
 * A sanitized template is provided at `config/providers.example.json`.
 * Keys can be declared directly or referenced as environment variable tokens (e.g. `"${GROQ_API_KEY}"`).
+

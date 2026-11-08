@@ -20,6 +20,7 @@ from src.intelligence.macro_aggregator import MacroAggregator
 from src.llm.config_manager import ProviderConfigManager, CustomProviderConfig
 from src.llm.importer import EnvImporter
 from src.llm.rate_limiter import ProviderLimits
+from src.integrations.hub import PublicApiHub
 
 
 def run_full_audit(
@@ -246,8 +247,21 @@ def main():
     imp_parser = config_sub.add_parser("import", help="Import providers from .env file (NexusLocal / Multi+)")
     imp_parser.add_argument("--source", help="Path to .env file to import from")
 
+    # Market overview command (public-apis)
+    market_parser = subparsers.add_parser("market", help="Show live FX and Crypto market rates (AwesomeAPI & Coinbase)")
+    market_parser.add_argument("--format", choices=["json", "markdown"], default="markdown", help="Output format")
+
+    # CNPJ verification command (BrasilAPI)
+    cnpj_parser = subparsers.add_parser("cnpj", help="Inspect company legal standing by CNPJ (BrasilAPI)")
+    cnpj_parser.add_argument("cnpj", help="14-digit CNPJ to inspect")
+
+    # Holidays command (BrasilAPI / Nager.Date)
+    holidays_parser = subparsers.add_parser("holidays", help="Show banking and public holidays")
+    holidays_parser.add_argument("--year", type=int, default=date.today().year, help="Year to query")
+    holidays_parser.add_argument("--country", default="BR", help="ISO country code (default: BR)")
+
     # If no subcommand passed, default to running audit
-    if len(sys.argv) == 1 or sys.argv[1] not in ["audit", "config"]:
+    if len(sys.argv) == 1 or sys.argv[1] not in ["audit", "config", "market", "cnpj", "holidays"]:
         # Parse audit directly from root args for backward compatibility
         parser.add_argument("--format", choices=["json", "markdown"], default="markdown", help="Output format")
         parser.add_argument("--templates-dir", default="templates", help="Path to templates folder containing CSVs")
@@ -256,6 +270,59 @@ def main():
         args.command = "audit"
     else:
         args = parser.parse_args()
+
+    if args.command == "market":
+        hub = PublicApiHub()
+        overview = hub.get_market_overview()
+        if args.format == "json":
+            serializable = {
+                "usd_brl": {"bid": float(overview.usd_brl.bid), "ask": float(overview.usd_brl.ask), "pct_change": float(overview.usd_brl.pct_change)} if overview.usd_brl else None,
+                "eur_brl": {"bid": float(overview.eur_brl.bid), "ask": float(overview.eur_brl.ask), "pct_change": float(overview.eur_brl.pct_change)} if overview.eur_brl else None,
+                "btc_brl": {"spot": float(overview.btc_brl.spot_price)} if overview.btc_brl else None,
+                "btc_usd": {"spot": float(overview.btc_usd.spot_price)} if overview.btc_usd else None,
+            }
+            print(json.dumps(serializable, indent=2))
+        else:
+            print("# Live Market Rates (AwesomeAPI & Coinbase)")
+            if overview.usd_brl:
+                print(f"- **Dólar (USD/BRL)**: Compra R$ {overview.usd_brl.bid} | Venda R$ {overview.usd_brl.ask} (Var 24h: {overview.usd_brl.pct_change}%)")
+            if overview.eur_brl:
+                print(f"- **Euro (EUR/BRL)**: Compra R$ {overview.eur_brl.bid} | Venda R$ {overview.eur_brl.ask} (Var 24h: {overview.eur_brl.pct_change}%)")
+            if overview.btc_brl:
+                print(f"- **Bitcoin (BTC/BRL)**: R$ {overview.btc_brl.spot_price:,.2f}")
+            if overview.btc_usd:
+                print(f"- **Bitcoin (BTC/USD)**: $ {overview.btc_usd.spot_price:,.2f}")
+        return
+
+    if args.command == "cnpj":
+        hub = PublicApiHub()
+        company = hub.verify_company(args.cnpj)
+        if not company:
+            print(f"Error: Could not retrieve data for CNPJ {args.cnpj}")
+            sys.exit(1)
+        print(f"# Company Verification: {company.razao_social}")
+        print(f"- **Nome Fantasia**: {company.nome_fantasia}")
+        print(f"- **CNPJ**: {company.cnpj}")
+        print(f"- **Situação Cadastral**: {company.situacao_cadastral} ({'Regular' if company.is_active else 'IRREGULAR'})")
+        print(f"- **Atividade (CNAE)**: {company.cnae_descricao}")
+        print(f"- **Capital Social**: R$ {company.capital_social:,.2f}")
+        print(f"- **Localização**: {company.municipio}/{company.uf}")
+        if company.qsa:
+            print("- **Sócios e Administradores (QSA)**:")
+            for p in company.qsa:
+                print(f"  * {p.nome_socio} ({p.qualificacao_socio})")
+        return
+
+    if args.command == "holidays":
+        hub = PublicApiHub()
+        holidays = hub.get_upcoming_holidays(args.year, args.country)
+        print(f"# Official Bank Holidays ({args.country} - {args.year})\n")
+        print("| Date | Day of Week | Holiday Name |")
+        print("|---|---|---|")
+        for h in holidays:
+            weekday_str = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"][h.holiday_date.weekday()]
+            print(f"| {h.holiday_date.strftime('%Y-%m-%d')} | {weekday_str} | {h.name} |")
+        return
 
     if args.command == "config":
         if not args.config_action:

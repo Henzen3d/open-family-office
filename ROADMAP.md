@@ -72,6 +72,11 @@ flowchart LR
   - Banco Central do Brasil (BCB/SGS) public API client for Selic Meta, Dólar PTAX, and IPCA 12M with zero API keys.
   - Financial RSS news ingestion and keyword filtering (Dólar, Selic, IPCA, Ibovespa, MEI).
   - Daily local snapshot caching (`data/macro_cache/`).
+- [x] Curated Free Public APIs Integrations Suite ([`docs/PUBLIC_APIS_INTEGRATION_SPEC.md`](docs/PUBLIC_APIS_INTEGRATION_SPEC.md), `src/integrations/`):
+  - FX rates & conversion via AwesomeAPI & Frankfurter API (`python -m src.cli market`).
+  - Cryptocurrency pricing via Coinbase Public Spot & AwesomeAPI Crypto.
+  - Corporate CNPJ client/vendor legal validation via BrasilAPI (`python -m src.cli cnpj <cnpj>`).
+  - Banking calendar & settlement day rollover via BrasilAPI Feriados and Nager.Date (`python -m src.cli holidays`).
 - [ ] Build CLI command `open-family-office briefing` to:
   1. Ingest monthly CSV/OFX records;
   2. Run the deterministic engine;

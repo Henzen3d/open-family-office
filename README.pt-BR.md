@@ -91,6 +91,13 @@ Arquitetura flexível e à prova de futuro para cadastrar qualquer novo provedor
 * **Importador Automático do NexusLocal / Multi+**: Importa todas as chaves existentes do `.env` com um único comando: `python -m src.cli config import`.
 * **Zero Engessamento**: Cadastre novos provedores informando apenas a `base_url`, `api_key`, `protocol` e `model` via CLI (`python -m src.cli config add`) ou pelo arquivo `config/providers.json`. Veja [`docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md`](docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md).
 
+### 12. Suíte de APIs Públicas e Gratuitas (Câmbio, Crypto, CNPJ, Feriados Bancários)
+Integração nativa com APIs abertas e gratuitas catalogadas no ecossistema [public-apis](https://github.com/public-apis/public-apis) para enriquecer as decisões das IAs com dados reais:
+* **Câmbio e Moedas (AwesomeAPI & Frankfurter)**: Cotações em tempo real do Dólar, Euro e Libra com spread e variação diária (`python -m src.cli market`).
+* **Criptomoedas (Coinbase Spot & AwesomeAPI Crypto)**: Preço à vista do Bitcoin (BTC) e Ethereum (ETH) em reais e dólares sem necessidade de chaves de corretora.
+* **Inteligência de Fornecedores e Clientes (BrasilAPI CNPJ)**: Validação automática da situação cadastral (Ativa/Inapta), atividade CNAE e quadro de sócios (QSA) de clientes e fornecedores (`python -m src.cli cnpj <dígitos>`).
+* **Calendário Bancário & Prorrogação de Vencimentos (BrasilAPI Feriados & Nager.Date)**: Calcula dias úteis bancários e prorroga automaticamente boletos e tributos (DAS) que caem em finais de semana ou feriados nacionais (`python -m src.cli holidays`). Veja [`docs/PUBLIC_APIS_INTEGRATION_SPEC.md`](docs/PUBLIC_APIS_INTEGRATION_SPEC.md).
+
 ---
 
 ## O Conselho Consultivo de IA (Equipe 7+1)

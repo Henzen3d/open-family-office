@@ -91,6 +91,13 @@ Future-proof architecture allowing dynamic registration of any current or future
 * **NexusLocal / Multi+ Importer**: Instantly imports configured API keys from existing `.env` files via `python -m src.cli config import`.
 * **Zero Lock-In**: Simply specify a `base_url`, `api_key`, `protocol`, and `model` to connect any enterprise proxy, custom cloud gateway, or local instance. See [`docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md`](docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md).
 
+### 12. Curated Free Public APIs Suite (Finance, Crypto, CNPJ, Calendar)
+Integrated with high-reliability, zero-auth public APIs from the [public-apis](https://github.com/public-apis/public-apis) ecosystem:
+* **Currency & FX (AwesomeAPI & Frankfurter)**: Real-time USD, EUR, and GBP rates with bid/ask spreads and daily variations (`python -m src.cli market`).
+* **Cryptocurrency (Coinbase Spot & AwesomeAPI)**: Real-time Bitcoin (BTC) and Ethereum (ETH) prices in BRL and USD without API keys.
+* **Business & Vendor Intelligence (BrasilAPI CNPJ)**: Inspect any company/supplier legal standing (Ativa/Inapta), CNAE, and corporate partners QSA (`python -m src.cli cnpj <digits>`).
+* **Banking Calendar & Settlement Dates (BrasilAPI Feriados & Nager.Date)**: Automatically calculates banking business days and rolls due dates for tax slips (DAS) and invoices falling on weekends or public holidays (`python -m src.cli holidays`). See [`docs/PUBLIC_APIS_INTEGRATION_SPEC.md`](docs/PUBLIC_APIS_INTEGRATION_SPEC.md).
+
 ---
 
 ## System Architecture
