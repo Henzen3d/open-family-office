@@ -14,7 +14,11 @@ interface MarketData {
   upcoming_holidays?: Array<{ date: string; name: string; type: string }>;
 }
 
-export default function MarketTicker() {
+interface MarketTickerProps {
+  onSelectAsset?: (symbol: string) => void;
+}
+
+export default function MarketTicker({ onSelectAsset }: MarketTickerProps) {
   const [data, setData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<string>('');
@@ -52,47 +56,75 @@ export default function MarketTicker() {
   const nasdaq = data?.indices?.['NASDAQ'];
 
   return (
-    <div className="w-full bg-white dark:bg-[#161c28] border border-slate-200/80 dark:border-white/10 rounded-2xl p-3 mb-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 text-xs overflow-x-auto">
+    <div className="w-full bg-white dark:bg-[#161c28] border border-slate-200/80 dark:border-white/10 rounded-2xl p-2.5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-2.5 text-xs overflow-x-auto">
       {/* Indicator Chips */}
       <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+        <button
+          onClick={() => onSelectAsset?.('SELIC')}
+          title="Ver gráfico e histórico da Taxa Selic"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] hover:bg-slate-200/80 dark:hover:bg-[#28344c] border border-slate-200 dark:border-white/5 hover:border-indigo-500/40 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
           <Activity className="w-3.5 h-3.5 text-indigo-500" />
           <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Selic Meta:</span>
           <span className="font-mono font-bold text-slate-900 dark:text-white">{selicRate.toFixed(2)}%</span>
-        </div>
+        </button>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+        <button
+          onClick={() => onSelectAsset?.('IPCA')}
+          title="Ver gráfico e histórico do IPCA"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] hover:bg-slate-200/80 dark:hover:bg-[#28344c] border border-slate-200 dark:border-white/5 hover:border-indigo-500/40 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
           <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
           <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">IPCA 12m:</span>
           <span className="font-mono font-bold text-slate-900 dark:text-white">{ipcaRate.toFixed(2)}%</span>
-        </div>
+        </button>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+        <button
+          onClick={() => onSelectAsset?.('DOLAR_PTAX')}
+          title="Ver gráfico e histórico do Dólar PTAX"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] hover:bg-slate-200/80 dark:hover:bg-[#28344c] border border-slate-200 dark:border-white/5 hover:border-indigo-500/40 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
           <DollarSign className="w-3.5 h-3.5 text-amber-500" />
           <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">PTAX:</span>
           <span className="font-mono font-bold text-slate-900 dark:text-white">R$ {ptaxRate.toFixed(2)}</span>
-        </div>
+        </button>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+        <button
+          onClick={() => onSelectAsset?.('USD')}
+          title="Ver gráfico e histórico do Dólar USD"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] hover:bg-slate-200/80 dark:hover:bg-[#28344c] border border-slate-200 dark:border-white/5 hover:border-indigo-500/40 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
           <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">USD:</span>
           <span className="font-mono font-bold text-slate-900 dark:text-white">R$ {usdBrl.toFixed(2)}</span>
-        </div>
+        </button>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+        <button
+          onClick={() => onSelectAsset?.('EUR')}
+          title="Ver gráfico e histórico do Euro EUR"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] hover:bg-slate-200/80 dark:hover:bg-[#28344c] border border-slate-200 dark:border-white/5 hover:border-indigo-500/40 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
           <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">EUR:</span>
           <span className="font-mono font-bold text-slate-900 dark:text-white">R$ {eurBrl.toFixed(2)}</span>
-        </div>
+        </button>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+        <button
+          onClick={() => onSelectAsset?.('BTC')}
+          title="Ver gráfico e histórico do Bitcoin"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] hover:bg-slate-200/80 dark:hover:bg-[#28344c] border border-slate-200 dark:border-white/5 hover:border-indigo-500/40 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
           <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">BTC:</span>
           <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
             R$ {(btcBrl / 1000).toFixed(0)}k
           </span>
-        </div>
+        </button>
 
         {/* Equity Indices (B3, S&P 500, Nasdaq) */}
         {ibov && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+          <button
+            onClick={() => onSelectAsset?.('IBOV')}
+            title="Ver gráfico e histórico do Ibovespa B3 (1d, 5d, 1m, 6m, 1a, 5a)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] hover:bg-slate-200/80 dark:hover:bg-[#28344c] border border-slate-200 dark:border-white/5 hover:border-indigo-500/40 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
             <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">B3:</span>
             <span className="font-mono font-bold text-slate-900 dark:text-white">
               {ibov.value >= 1000 ? `${(ibov.value / 1000).toFixed(1)}k` : ibov.value.toLocaleString('pt-BR')}
@@ -100,11 +132,15 @@ export default function MarketTicker() {
             <span className={`text-[10px] font-mono ${ibov.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
               {ibov.pct_change >= 0 ? `+${ibov.pct_change}%` : `${ibov.pct_change}%`}
             </span>
-          </div>
+          </button>
         )}
 
         {sp500 && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+          <button
+            onClick={() => onSelectAsset?.('SP500')}
+            title="Ver gráfico e histórico do S&P 500 (1d, 5d, 1m, 6m, 1a, 5a)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] hover:bg-slate-200/80 dark:hover:bg-[#28344c] border border-slate-200 dark:border-white/5 hover:border-indigo-500/40 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
             <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">S&P 500:</span>
             <span className="font-mono font-bold text-slate-900 dark:text-white">
               {sp500.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}
@@ -112,11 +148,15 @@ export default function MarketTicker() {
             <span className={`text-[10px] font-mono ${sp500.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
               {sp500.pct_change >= 0 ? `+${sp500.pct_change}%` : `${sp500.pct_change}%`}
             </span>
-          </div>
+          </button>
         )}
 
         {nasdaq && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+          <button
+            onClick={() => onSelectAsset?.('NASDAQ')}
+            title="Ver gráfico e histórico do Nasdaq (1d, 5d, 1m, 6m, 1a, 5a)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] hover:bg-slate-200/80 dark:hover:bg-[#28344c] border border-slate-200 dark:border-white/5 hover:border-indigo-500/40 font-semibold text-slate-700 dark:text-slate-200 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
             <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Nasdaq:</span>
             <span className="font-mono font-bold text-slate-900 dark:text-white">
               {nasdaq.value >= 1000 ? `${(nasdaq.value / 1000).toFixed(1)}k` : nasdaq.value.toLocaleString('en-US')}
@@ -124,12 +164,15 @@ export default function MarketTicker() {
             <span className={`text-[10px] font-mono ${nasdaq.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
               {nasdaq.pct_change >= 0 ? `+${nasdaq.pct_change}%` : `${nasdaq.pct_change}%`}
             </span>
-          </div>
+          </button>
         )}
       </div>
 
       {/* Meta & Refresh Action */}
       <div className="flex items-center gap-3 shrink-0 ml-auto md:ml-0">
+        <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hidden xl:inline">
+          ✦ Clique no índice para abrir gráfico interativo
+        </span>
         <span className="text-[11px] text-slate-400 hidden sm:inline">
           {data?.cached ? `Cache 15m (${data.cache_age_seconds ?? 0}s)` : 'Feed em tempo real'}
         </span>

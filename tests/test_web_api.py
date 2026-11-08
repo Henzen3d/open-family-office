@@ -35,3 +35,13 @@ def test_chat_non_stream(client):
     data = response.json()
     assert "reply" in data
 
+
+def test_market_chart_endpoint(client):
+    response = client.get("/api/market/chart?symbol=IBOV&timeframe=1d")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["symbol"] == "IBOV"
+    assert "points" in data
+    assert "stats" in data
+    assert len(data["points"]) > 0
+

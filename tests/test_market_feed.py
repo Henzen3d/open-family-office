@@ -44,3 +44,18 @@ class TestMarketFeedService(unittest.TestCase):
         self.assertTrue(cached_data["cached"])
         self.assertEqual(cached_data["rates"]["SELIC"]["value"], data["rates"]["SELIC"]["value"])
 
+    def test_fetch_market_chart(self):
+        # Test IBOV chart across timeframes
+        chart_1d = self.service.fetch_market_chart("IBOV", "1d")
+        self.assertEqual(chart_1d["symbol"], "IBOV")
+        self.assertIn("points", chart_1d)
+        self.assertTrue(len(chart_1d["points"]) > 0)
+        self.assertIn("stats", chart_1d)
+        self.assertGreater(chart_1d["current_price"], 0)
+
+        # Test Selic rate series
+        selic_chart = self.service.fetch_market_chart("SELIC", "1a")
+        self.assertEqual(selic_chart["symbol"], "SELIC")
+        self.assertTrue(len(selic_chart["points"]) > 0)
+        self.assertEqual(selic_chart["currency"], "%")
+

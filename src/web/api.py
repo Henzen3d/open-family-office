@@ -808,6 +808,14 @@ async def refresh_market_overview():
     return overview
 
 
+@app.get("/api/market/chart")
+@app.get("/market/chart")
+async def get_market_chart(symbol: str = "IBOV", timeframe: str = "1d"):
+    """Returns historical price series and InfoMoney-style statistics for an asset across 1d, 5d, 1m, 6m, 1a, 5a."""
+    service = get_market_service()
+    return service.fetch_market_chart(symbol=symbol, timeframe=timeframe)
+
+
 # ==============================================================================
 # PHASE 6: MULTIMODAL RECEIPT & CUPOM FISCAL OCR VISION ENDPOINTS
 # ==============================================================================
