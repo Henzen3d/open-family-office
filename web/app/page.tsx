@@ -30,6 +30,9 @@ import {
   Sparkles,
   Sun,
   Moon,
+  Wallet,
+  Sliders,
+  Building2,
 } from 'lucide-react';
 import SettingsModal from './components/SettingsModal';
 import MarketTicker from './components/MarketTicker';
@@ -64,6 +67,48 @@ interface ChatMessage {
   provider?: string;
   latencyMs?: number;
   confirmationCard?: ConfirmationCardData;
+}
+
+const MONTHLY_LIQUIDITY_DATA = [
+  { month: 'Jan', fullName: 'Janeiro', in2026: 14762.00, in2025: 12959.10, out2026: 1342.00, out2025: 1178.10, fixMei: 13562.00, rent: 1200.00, projected: false },
+  { month: 'Fev', fullName: 'Fevereiro', in2026: 11910.01, in2025: 13885.30, out2026: 1082.72, out2025: 1262.30, fixMei: 10710.01, rent: 1200.00, projected: false },
+  { month: 'Mar', fullName: 'Março', in2026: 13497.00, in2025: 11800.80, out2026: 1227.00, out2025: 1072.80, fixMei: 12297.00, rent: 1200.00, projected: false },
+  { month: 'Abr', fullName: 'Abril', in2026: 9097.00, in2025: 16558.30, out2026: 827.00, out2025: 1505.30, fixMei: 7897.00, rent: 1200.00, projected: false },
+  { month: 'Mai', fullName: 'Maio', in2026: 13338.04, in2025: 19594.30, out2026: 1212.54, out2025: 1781.30, fixMei: 12138.04, rent: 1200.00, projected: false },
+  { month: 'Jun', fullName: 'Junho', in2026: 12190.20, in2025: 15417.60, out2026: 1108.20, out2025: 1401.60, fixMei: 10990.20, rent: 1200.00, projected: false },
+  { month: 'Jul', fullName: 'Julho', in2026: 12208.90, in2025: 15512.20, out2026: 1109.90, out2025: 1410.20, fixMei: 11008.90, rent: 1200.00, projected: false },
+  { month: 'Ago', fullName: 'Agosto (Pico 2026)', in2026: 16006.71, in2025: 12956.63, out2026: 1455.16, out2025: 1177.88, fixMei: 14806.71, rent: 1200.00, projected: false },
+  { month: 'Set', fullName: 'Setembro (Mês Atual)', in2026: 10985.70, in2025: 11741.40, out2026: 998.70, out2025: 1067.40, fixMei: 9785.70, rent: 1200.00, projected: false },
+  { month: 'Out', fullName: 'Outubro (Projeção)', in2026: 12500.00, in2025: 15152.50, out2026: 1136.00, out2025: 1377.50, fixMei: 11300.00, rent: 1200.00, projected: true },
+  { month: 'Nov', fullName: 'Novembro (Projeção)', in2026: 13200.00, in2025: 13027.30, out2026: 1200.00, out2025: 1184.30, fixMei: 12000.00, rent: 1200.00, projected: true },
+  { month: 'Dez', fullName: 'Dezembro (Projeção)', in2026: 14100.00, in2025: 13214.30, out2026: 1280.00, out2025: 1201.30, fixMei: 12900.00, rent: 1200.00, projected: true },
+];
+
+const HISTORICAL_7_YEARS = [
+  { year: '2020', gross: 90280.31, fixMei: 78880.31, rent: 11400.00, label: 'R$ 90,3k', pct: '57%' },
+  { year: '2021', gross: 126706.00, fixMei: 99116.00, rent: 10500.00, label: 'R$ 126,7k', pct: '81%' },
+  { year: '2022', gross: 150177.00, fixMei: 128717.00, rent: 7560.00, label: 'R$ 150,2k', pct: '96%' },
+  { year: '2023', gross: 138005.00, fixMei: 126205.00, rent: 6000.00, label: 'R$ 138,0k', pct: '88%' },
+  { year: '2024', gross: 150510.10, fixMei: 144455.10, rent: 5550.00, label: 'R$ 150,5k', pct: '96%' },
+  { year: '2025', gross: 156199.75, fixMei: 150199.75, rent: 6000.00, label: 'R$ 156,2k', pct: '100%', peak: true },
+  { year: '2026', gross: 103632.34, fixMei: 100332.34, rent: 3300.00, label: 'R$ 103,6k', pct: '66%', current: true },
+];
+
+function buildSmoothSpline(pts: [number, number][]): string {
+  if (!pts || pts.length === 0) return '';
+  let d = `M ${pts[0][0]},${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const cp1x = Number((p1[0] + (p2[0] - p0[0]) / 6).toFixed(1));
+    const cp1y = Number((p1[1] + (p2[1] - p0[1]) / 6).toFixed(1));
+    const cp2x = Number((p2[0] - (p3[0] - p1[0]) / 6).toFixed(1));
+    const cp2y = Number((p2[1] - (p3[1] - p1[1]) / 6).toFixed(1));
+    d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`;
+  }
+  return d;
 }
 
 export default function StitchExecutiveDashboard() {
@@ -103,6 +148,8 @@ export default function StitchExecutiveDashboard() {
 
   // Interactive Card & Navigation State
   const [liquidityView, setLiquidityView] = useState<'compare' | 'history' | 'cumulative'>('compare');
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(8); // default to Setembro (index 8)
+  const [selectedYearIdx, setSelectedYearIdx] = useState<number>(6); // default to 2026 (index 6)
   const [conjugalApproved, setConjugalApproved] = useState(false);
   const [selectedContact, setSelectedContact] = useState('Vera');
   const [transferFeedback, setTransferFeedback] = useState<string | null>(null);
@@ -142,7 +189,7 @@ export default function StitchExecutiveDashboard() {
     {
       id: 'welcome',
       sender: 'assistant',
-      text: 'Assistente OpenFamilyOffice ativo. Padrão ASD-STE100 (~80%). Frases diretas e números operacionais primeiro. Fotografe o cupom fiscal ou digite sua consulta.',
+      text: 'Assistente financeiro ativo. Consulte saldos consolidados, tetos fiscais MEI, fluxo de caixa ou anexe um comprovante para conciliação imediata.',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
@@ -814,139 +861,247 @@ export default function StitchExecutiveDashboard() {
               </div>
             </div>
 
-            {/* View 1: 2026 vs 2025 Double Wave */}
-            {liquidityView === 'compare' && (
-              <div key="view-compare" className="animate-view-fade">
-                <div className="relative w-full h-56 pt-2">
-                  <div className="absolute top-2 left-[48%] -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-3 text-xs pointer-events-none text-slate-900 dark:text-white">
-                    <div>
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400" /> 2026 YTD
+            {/* View 1: 2026 vs 2025 Month-by-Month Real Consolidated Cashflow */}
+            {liquidityView === 'compare' && (() => {
+              const pts2026: [number, number][] = MONTHLY_LIQUIDITY_DATA.map((d, i) => [
+                Number((35 + i * (630 / 11)).toFixed(1)),
+                Number((150 - (d.in2026 / 22000) * 125).toFixed(1)),
+              ]);
+              const pts2025: [number, number][] = MONTHLY_LIQUIDITY_DATA.map((d, i) => [
+                Number((35 + i * (630 / 11)).toFixed(1)),
+                Number((150 - (d.in2025 / 22000) * 125).toFixed(1)),
+              ]);
+
+              const spline2026 = buildSmoothSpline(pts2026);
+              const spline2025 = buildSmoothSpline(pts2025);
+              const fill2026 = `${spline2026} L 665,155 L 35,155 Z`;
+              const fill2025 = `${spline2025} L 665,155 L 35,155 Z`;
+
+              const currentMonth = MONTHLY_LIQUIDITY_DATA[selectedMonthIdx] ?? MONTHLY_LIQUIDITY_DATA[8];
+              const curX = pts2026[selectedMonthIdx]?.[0] ?? 493.2;
+              const curY26 = pts2026[selectedMonthIdx]?.[1] ?? 87.6;
+              const curY25 = pts2025[selectedMonthIdx]?.[1] ?? 88.3;
+              const diff = currentMonth.in2026 - currentMonth.in2025;
+              const diffPct = (diff / currentMonth.in2025) * 100;
+
+              return (
+                <div key="view-compare" className="animate-view-fade">
+                  <div className="relative w-full h-56 pt-2 select-none">
+                    {/* Dynamic Inspection Badge */}
+                    <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl px-4 py-2 z-20 flex flex-wrap items-center gap-4 text-xs">
+                      <div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                          <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                          <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[10px]">
+                            {currentMonth.fullName}
+                          </span>
+                        </div>
+                        <div className="flex items-baseline gap-2 mt-0.5">
+                          <span className="font-mono font-extrabold text-sm sm:text-base text-slate-900 dark:text-white">
+                            R$ {currentMonth.in2026.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                              diff >= 0
+                                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30'
+                                : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30'
+                            }`}
+                          >
+                            {diff >= 0 ? `+${diffPct.toFixed(1)}%` : `${diffPct.toFixed(1)}%`} vs 2025
+                          </span>
+                        </div>
                       </div>
-                      <div className="font-mono font-bold text-slate-900 dark:text-white">R$ 103.632</div>
-                    </div>
-                    <div className="border-l border-slate-200 dark:border-white/10 pl-3">
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#FB923C]" /> 2025 Total
+
+                      <div className="border-l border-slate-200 dark:border-white/10 pl-3">
+                        <span className="text-[10px] text-slate-400 block font-medium">2025 Mesmo Mês</span>
+                        <span className="font-mono font-semibold text-xs text-[#FB923C]">
+                          R$ {currentMonth.in2025.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
                       </div>
-                      <div className="font-mono font-semibold text-slate-700 dark:text-slate-300">R$ 156.200</div>
+
+                      <div className="border-l border-slate-200 dark:border-white/10 pl-3 hidden sm:block">
+                        <span className="text-[10px] text-slate-400 block font-medium">Origem 2026</span>
+                        <span className="text-[11px] text-slate-600 dark:text-slate-300 font-mono">
+                          MEI: <strong>R$ {currentMonth.fixMei.toLocaleString('pt-BR')}</strong> • Aluguel: <strong>R$ {currentMonth.rent.toLocaleString('pt-BR')}</strong>
+                        </span>
+                      </div>
                     </div>
+
+                    <svg className="w-full h-full overflow-visible" fill="none" preserveAspectRatio="none" viewBox="0 0 700 170">
+                      <defs>
+                        <linearGradient id="blueGlowDark" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stopColor="#6366f1" stopOpacity="0.30" />
+                          <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
+                        </linearGradient>
+                        <linearGradient id="orangeGlowDark" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stopColor="#FB923C" stopOpacity="0.18" />
+                          <stop offset="100%" stopColor="#FB923C" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Horizontal Gridlines & Values */}
+                      <line stroke="#334155" strokeDasharray="3 3" strokeWidth="0.8" opacity={0.3} x1="30" x2="670" y1="35" y2="35" />
+                      <line stroke="#334155" strokeDasharray="3 3" strokeWidth="0.8" opacity={0.3} x1="30" x2="670" y1="75" y2="75" />
+                      <line stroke="#334155" strokeDasharray="3 3" strokeWidth="0.8" opacity={0.3} x1="30" x2="670" y1="115" y2="115" />
+                      <line stroke="#334155" strokeWidth="1" opacity={0.4} x1="30" x2="670" y1="155" y2="155" />
+
+                      {/* Area Fills */}
+                      <path d={fill2025} fill="url(#orangeGlowDark)" />
+                      <path d={fill2026} fill="url(#blueGlowDark)" />
+
+                      {/* 2025 Historical Curve */}
+                      <path
+                        d={spline2025}
+                        stroke="#FB923C"
+                        strokeDasharray="4 4"
+                        strokeLinecap="round"
+                        strokeWidth="2.5"
+                      />
+
+                      {/* 2026 Active Curve */}
+                      <path
+                        d={spline2026}
+                        stroke="#6366f1"
+                        strokeLinecap="round"
+                        strokeWidth="3.2"
+                      />
+
+                      {/* Vertical Hairline Guide on Active Month */}
+                      <line
+                        x1={curX}
+                        x2={curX}
+                        y1="25"
+                        y2="155"
+                        stroke="#6366f1"
+                        strokeDasharray="3 3"
+                        strokeWidth="1.5"
+                        opacity={0.8}
+                      />
+
+                      {/* Active Month Data Dots */}
+                      <circle cx={curX} cy={curY25} fill="#FB923C" r="5" stroke="#161c28" strokeWidth="2" />
+                      <circle cx={curX} cy={curY26} fill="#6366f1" r="6.5" stroke="#ffffff" strokeWidth="2.5" />
+
+                      {/* Column Hit Areas for Mouse Hover */}
+                      {MONTHLY_LIQUIDITY_DATA.map((_, i) => {
+                        const x = 35 + i * (630 / 11);
+                        return (
+                          <rect
+                            key={`hit-${i}`}
+                            x={x - 25}
+                            y="15"
+                            width="50"
+                            height="145"
+                            fill="transparent"
+                            className="cursor-pointer"
+                            onMouseEnter={() => setSelectedMonthIdx(i)}
+                            onClick={() => setSelectedMonthIdx(i)}
+                          />
+                        );
+                      })}
+                    </svg>
                   </div>
 
-                  <svg className="w-full h-full overflow-visible" fill="none" preserveAspectRatio="none" viewBox="0 0 700 170">
-                    <defs>
-                      <linearGradient id="blueGlowDark" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.32" />
-                        <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
-                      </linearGradient>
-                      <linearGradient id="orangeGlowDark" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#FB923C" stopOpacity="0.22" />
-                        <stop offset="100%" stopColor="#FB923C" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="30" y2="30" />
-                    <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="70" y2="70" />
-                    <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="110" y2="110" />
-                    <line stroke="#212a3d" strokeWidth="1" x1="0" x2="700" y1="150" y2="150" />
-
-                    <path
-                      d="M 0,95 C 60,65 120,115 180,95 C 240,75 300,45 350,55 C 410,70 470,120 530,90 C 590,60 650,110 700,95 L 700,160 L 0,160 Z"
-                      fill="url(#orangeGlowDark)"
-                    />
-                    <path
-                      d="M 0,95 C 60,65 120,115 180,95 C 240,75 300,45 350,55 C 410,70 470,120 530,90 C 590,60 650,110 700,95"
-                      stroke="#FB923C"
-                      strokeLinecap="round"
-                      strokeWidth="2.5"
-                    />
-
-                    <path
-                      d="M 0,115 C 60,110 120,60 180,75 C 240,90 300,105 350,85 C 400,30 450,25 500,65 C 550,105 620,35 700,60 L 700,160 L 0,160 Z"
-                      fill="url(#blueGlowDark)"
-                    />
-                    <path
-                      d="M 0,115 C 60,110 120,60 180,75 C 240,90 300,105 350,85 C 400,30 450,25 500,65 C 550,105 620,35 700,60"
-                      stroke="#7c8cf8"
-                      strokeLinecap="round"
-                      strokeWidth="3"
-                    />
-
-                    <circle cx="350" cy="55" fill="#FB923C" r="5" stroke="#161c28" strokeWidth="2" />
-                    <circle cx="350" cy="85" fill="#7c8cf8" r="6" stroke="#161c28" strokeWidth="2.5" />
-                    <line stroke="#475569" strokeDasharray="3 3" strokeWidth="1.5" x1="350" x2="350" y1="20" y2="150" />
-                  </svg>
+                  {/* 12 Months Interactive Label Bar */}
+                  <div className="flex justify-between items-center text-[11px] mt-2 px-1">
+                    {MONTHLY_LIQUIDITY_DATA.map((item, idx) => (
+                      <button
+                        key={item.month}
+                        onMouseEnter={() => setSelectedMonthIdx(idx)}
+                        onClick={() => setSelectedMonthIdx(idx)}
+                        className={`px-2 py-1 rounded-xl transition-all font-semibold ${
+                          selectedMonthIdx === idx
+                            ? 'bg-indigo-600 text-white shadow-sm scale-105'
+                            : item.month === 'Set'
+                            ? 'text-indigo-600 dark:text-indigo-400 font-bold underline underline-offset-4'
+                            : item.projected
+                            ? 'text-slate-400 italic'
+                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                        title={`${item.fullName}: R$ ${item.in2026.toLocaleString('pt-BR')}`}
+                      >
+                        {item.month}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-
-                <div className="flex justify-between items-center text-[11px] font-medium text-slate-400 mt-2 px-1">
-                  <span>Jan</span>
-                  <span>Fev</span>
-                  <span>Mar</span>
-                  <span>Abr</span>
-                  <span>Mai</span>
-                  <span>Jun</span>
-                  <span>Jul</span>
-                  <span>Ago</span>
-                  <span className="text-indigo-600 dark:text-indigo-400 font-extrabold underline underline-offset-4">Set (Atual)</span>
-                  <span>Out</span>
-                  <span>Nov</span>
-                  <span>Dez</span>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* View 2: 7 Anos Historical Evolution (2020-2026) */}
-            {liquidityView === 'history' && (
-              <div key="view-history" className="animate-view-fade">
-                <div className="relative w-full h-56 pt-2 flex items-end justify-between gap-3 px-2">
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-4 text-xs pointer-events-none text-slate-900 dark:text-white">
-                    <div>
-                      <span className="text-[10px] text-slate-400 block">Total 7 Anos (2020-2026)</span>
-                      <strong className="font-mono text-emerald-600 dark:text-emerald-400 text-sm">R$ 907.352,00</strong>
+            {liquidityView === 'history' && (() => {
+              const activeYear = HISTORICAL_7_YEARS[selectedYearIdx] ?? HISTORICAL_7_YEARS[6];
+              return (
+                <div key="view-history" className="animate-view-fade">
+                  <div className="relative w-full h-56 pt-2 flex items-end justify-between gap-3 px-2">
+                    <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl px-4 py-2 z-20 flex flex-wrap items-center gap-4 text-xs pointer-events-auto">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">
+                          Exercício {activeYear.year} {activeYear.peak ? '(Pico Histórico)' : activeYear.current ? '(YTD Setembro)' : ''}
+                        </span>
+                        <strong className="font-mono text-emerald-600 dark:text-emerald-400 text-sm sm:text-base">
+                          R$ {activeYear.gross.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </strong>
+                      </div>
+                      <div className="border-l border-slate-200 dark:border-white/10 pl-3">
+                        <span className="text-[10px] text-slate-400 block font-medium">Média Mensal</span>
+                        <strong className="font-mono text-indigo-600 dark:text-indigo-400 text-xs">
+                          R$ {(activeYear.gross / (activeYear.current ? 9 : 12)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês
+                        </strong>
+                      </div>
+                      <div className="border-l border-slate-200 dark:border-white/10 pl-3 hidden sm:block">
+                        <span className="text-[10px] text-slate-400 block font-medium">Divisão de Faturamento</span>
+                        <span className="text-[11px] text-slate-600 dark:text-slate-300 font-mono">
+                          Fix MEI: <strong>R$ {activeYear.fixMei.toLocaleString('pt-BR')}</strong> • Aluguel: <strong>R$ {activeYear.rent.toLocaleString('pt-BR')}</strong>
+                        </span>
+                      </div>
                     </div>
-                    <div className="border-l border-slate-200 dark:border-white/10 pl-3">
-                      <span className="text-[10px] text-slate-400 block">Média Anual</span>
-                      <strong className="font-mono text-indigo-600 dark:text-indigo-400 text-sm">R$ 129.621/ano</strong>
-                    </div>
+
+                    {HISTORICAL_7_YEARS.map((bar, idx) => (
+                      <div
+                        key={bar.year}
+                        onMouseEnter={() => setSelectedYearIdx(idx)}
+                        onClick={() => setSelectedYearIdx(idx)}
+                        className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer"
+                      >
+                        <span className={`text-[10px] font-mono mb-1 font-semibold transition ${selectedYearIdx === idx ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {bar.label}
+                        </span>
+                        <div
+                          style={{ height: bar.pct }}
+                          className={`w-full rounded-t-2xl transition-all ${
+                            selectedYearIdx === idx
+                              ? 'bg-gradient-to-t from-indigo-600 via-indigo-500 to-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.55)] scale-105'
+                              : bar.peak
+                              ? 'bg-gradient-to-t from-amber-600 via-amber-500 to-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)]'
+                              : 'bg-slate-200 dark:bg-[#1e2638] group-hover:bg-slate-300 dark:group-hover:bg-[#28334a]'
+                          }`}
+                        />
+                      </div>
+                    ))}
                   </div>
 
-                  {[
-                    { year: '2020', val: 90300, height: '48%', label: 'R$ 90,3k' },
-                    { year: '2021', val: 137820, height: '74%', label: 'R$ 137,8k' },
-                    { year: '2022', val: 126900, height: '68%', label: 'R$ 126,9k' },
-                    { year: '2023', val: 143700, height: '77%', label: 'R$ 143,7k' },
-                    { year: '2024', val: 148800, height: '80%', label: 'R$ 148,8k' },
-                    { year: '2025', val: 156200, height: '84%', label: 'R$ 156,2k', peak: true },
-                    { year: '2026*', val: 103632, height: '56%', label: 'R$ 103,6k', active: true },
-                  ].map((bar) => (
-                    <div key={bar.year} className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer">
-                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 font-semibold transition">
-                        {bar.label}
-                      </span>
-                      <div
-                        style={{ height: bar.height }}
-                        className={`w-full rounded-t-2xl transition-all ${
-                          bar.active
-                            ? 'bg-gradient-to-t from-indigo-600 via-indigo-500 to-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.55)]'
+                  <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-2 px-2">
+                    {HISTORICAL_7_YEARS.map((bar, idx) => (
+                      <button
+                        key={bar.year}
+                        onClick={() => setSelectedYearIdx(idx)}
+                        onMouseEnter={() => setSelectedYearIdx(idx)}
+                        className={`transition-all ${
+                          selectedYearIdx === idx
+                            ? 'text-indigo-600 dark:text-indigo-400 font-extrabold underline underline-offset-4 scale-105'
                             : bar.peak
-                            ? 'bg-gradient-to-t from-amber-600 via-amber-500 to-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)]'
-                            : 'bg-slate-200 dark:bg-[#1e2638] group-hover:bg-slate-300 dark:group-hover:bg-[#28334a]'
+                            ? 'text-amber-600 dark:text-amber-400 font-bold'
+                            : 'hover:text-slate-900 dark:hover:text-white'
                         }`}
-                      />
-                    </div>
-                  ))}
+                      >
+                        {bar.year}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-
-                <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-2 px-2">
-                  <span>2020</span>
-                  <span>2021</span>
-                  <span>2022</span>
-                  <span>2023</span>
-                  <span>2024</span>
-                  <span className="text-amber-600 dark:text-amber-400 font-bold">2025 (Pico)</span>
-                  <span className="text-indigo-600 dark:text-indigo-400 font-extrabold underline underline-offset-4">2026 (YTD Set)</span>
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* View 3: Patrimônio Acumulado & Reservas */}
             {liquidityView === 'cumulative' && (
@@ -1607,19 +1762,24 @@ export default function StitchExecutiveDashboard() {
         </button>
       </div>
 
-      {/* 7. SLIDE-OVER ASSISTANT & OCR CAPTURE DRAWER */}
+      {/* 7. SLIDE-OVER ASSISTANT & OCR CAPTURE DRAWER (Impeccable Decoupled Architecture) */}
       <div
-        className={`fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-all duration-300 ${
-          isAssistantOpen
-            ? 'opacity-100 pointer-events-auto visible'
-            : 'opacity-0 pointer-events-none invisible'
+        className={`fixed inset-0 z-50 overflow-hidden transition-all duration-300 ${
+          isAssistantOpen ? 'pointer-events-auto visible' : 'pointer-events-none invisible'
         }`}
-        style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
-        onClick={() => setIsAssistantOpen(false)}
         aria-hidden={!isAssistantOpen}
       >
+        {/* Backdrop (Transitions opacity only; zero blur-lag) */}
         <div
-          className={`w-full sm:w-[560px] md:w-[620px] max-w-full h-full bg-white dark:bg-[#161c28] border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col text-slate-900 dark:text-white transition-transform duration-300 will-change-transform ${
+          className={`fixed inset-0 bg-slate-950/50 backdrop-blur-[2px] transition-opacity duration-300 ease-out ${
+            isAssistantOpen ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={() => setIsAssistantOpen(false)}
+        />
+
+        {/* Drawer Panel (100% solid opacity at all times; glides on GPU with cubic-bezier(0.16,1,0.3,1)) */}
+        <div
+          className={`fixed inset-y-0 right-0 w-full sm:w-[560px] md:w-[620px] max-w-full h-full bg-white dark:bg-[#161c28] border-l border-slate-200 dark:border-white/10 shadow-[-12px_0_36px_rgba(0,0,0,0.18)] dark:shadow-[-12px_0_36px_rgba(0,0,0,0.55)] flex flex-col text-slate-900 dark:text-white transition-transform duration-320 will-change-transform z-10 ${
             isAssistantOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
           style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
@@ -1627,13 +1787,13 @@ export default function StitchExecutiveDashboard() {
         >
             {/* Drawer Header */}
             <div className="p-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-[#121722]">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs">
-                  IA
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/20 flex items-center justify-center">
+                  <Sliders className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Assistente & Conciliação</h3>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Padrão ASD-STE100 (~80%)</p>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Assistente Financeiro</h3>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Conciliação fiscal e controle patrimonial</p>
                 </div>
               </div>
               <button
@@ -1644,37 +1804,42 @@ export default function StitchExecutiveDashboard() {
               </button>
             </div>
 
-            {/* Quick Context Chips inside Drawer */}
-            <div className="px-4 py-2 border-b border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-[#161c28] flex gap-1.5 overflow-x-auto text-[11px]">
+            {/* Quick Context Chips inside Drawer (Crisp institutional icons, zero emoji slop) */}
+            <div className="px-4 py-2 border-b border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-[#161c28] flex gap-1.5 overflow-x-auto text-[11px] no-scrollbar">
               <button
                 onClick={() => handleSendMessage('Quanto temos disponível somando nossas três contas?')}
-                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium"
               >
-                💰 Saldos das Contas
+                <Wallet className="w-3 h-3 text-slate-400" />
+                <span>Saldos das Contas</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Teto MEI')}
-                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium"
               >
-                📊 Teto MEI
+                <ShieldCheck className="w-3 h-3 text-slate-400" />
+                <span>Teto MEI</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Quais contas vencem nos próximos sete dias?')}
-                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium"
               >
-                📅 Contas 7 Dias
+                <Calendar className="w-3 h-3 text-slate-400" />
+                <span>Contas 7 Dias</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Runway Familiar')}
-                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium"
               >
-                🛡️ Runway Familiar
+                <TrendingUp className="w-3 h-3 text-slate-400" />
+                <span>Runway Familiar</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Quanto já retiramos das empresas para a família este ano?')}
-                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium"
               >
-                ⚖️ Retiradas Isentas
+                <ArrowUpRight className="w-3 h-3 text-slate-400" />
+                <span>Retiradas Isentas</span>
               </button>
             </div>
 
@@ -1772,8 +1937,8 @@ export default function StitchExecutiveDashboard() {
                     )}
                     {msg.sender === 'assistant' && (msg.model || msg.provider) && (
                       <div className="mt-2 pt-1.5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-2 text-[10px] text-slate-600 dark:text-slate-400 font-mono">
-                        <span className="inline-flex items-center gap-1">
-                          <Sparkles className="w-2.5 h-2.5 text-indigo-500" />
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           <span className="font-semibold text-slate-800 dark:text-slate-200">{msg.model || msg.provider}</span>
                           {msg.provider && msg.model && <span className="text-[9px] opacity-75">({msg.provider})</span>}
                         </span>
@@ -1790,7 +1955,7 @@ export default function StitchExecutiveDashboard() {
               {loadingChat && (
                 <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-[#121722] p-2.5 rounded-xl border border-slate-200 dark:border-white/10 w-fit">
                   <RefreshCw className="w-3 h-3 animate-spin text-indigo-500 dark:text-indigo-400" />
-                  <span>Processando resposta com brevidade ASD-STE100...</span>
+                  <span>Consultando base contábil e processando...</span>
                 </div>
               )}
               <div ref={chatEndRef} />
