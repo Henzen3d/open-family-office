@@ -321,24 +321,112 @@ class MarketFeedService:
     def _build_rate_series(
         self, sym: str, name: str, timeframe: str, base_val: float
     ) -> Dict[str, Any]:
-        """Builds realistic macroeconomic rate historical series for Selic and IPCA."""
+        """Builds realistic macroeconomic rate historical series for Selic and IPCA adapted to each timeframe."""
         now_ts = int(time.time())
         points = []
+        tf = timeframe.lower().strip()
+
         if "SELIC" in sym:
-            # Historical Selic cuts/hikes
-            steps = [13.75, 13.25, 12.75, 12.25, 11.75, 10.50, 10.50, 10.75, 11.25, 13.75]
-        else:
-            # Historical IPCA 12m
-            steps = [4.58, 4.50, 4.24, 3.93, 3.90, 4.10, 4.23, 4.42, 4.50, 4.58]
-
-        count = len(steps)
-        interval_secs = 86400 * 30  # ~monthly
-        start_ts = now_ts - (count * interval_secs)
-
-        for i, val in enumerate(steps):
-            pt_ts = start_ts + (i * interval_secs)
-            dt_str = datetime.fromtimestamp(pt_ts, tz=timezone.utc).strftime("%d/%m/%Y")
-            points.append({"timestamp": pt_ts, "datetime": dt_str, "price": val})
+            # Current Selic is 13.75
+            if tf == "1d":
+                # Intraday 1d: constant flat line during business day (9h to 18h)
+                hours = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"]
+                for i, h in enumerate(hours):
+                    ts = now_ts - ((len(hours) - 1 - i) * 3600)
+                    points.append({"timestamp": ts, "datetime": f"Hoje {h}", "price": base_val})
+                day_low, day_high = base_val, base_val
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.0, 0.50, 0.0
+            elif tf == "5d":
+                for i in range(5):
+                    ts = now_ts - ((4 - i) * 86400)
+                    dt_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%d/%m")
+                    points.append({"timestamp": ts, "datetime": dt_str, "price": base_val})
+                day_low, day_high = base_val, base_val
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.0, 0.50, 0.0
+            elif tf == "1m":
+                for i in range(5):
+                    ts = now_ts - ((4 - i) * 7 * 86400)
+                    dt_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%d/%m")
+                    points.append({"timestamp": ts, "datetime": dt_str, "price": base_val})
+                day_low, day_high = base_val, base_val
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.0, 0.50, 0.0
+            elif tf == "6m":
+                steps = [10.50, 10.50, 10.75, 11.25, 12.25, base_val]
+                for i, val in enumerate(steps):
+                    ts = now_ts - ((len(steps) - 1 - i) * 30 * 86400)
+                    dt_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%m/%y")
+                    points.append({"timestamp": ts, "datetime": dt_str, "price": val})
+                day_low, day_high = min(steps), max(steps)
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.0, 0.50, round(base_val - steps[0], 2)
+            elif tf == "1a":
+                steps = [11.75, 11.25, 10.75, 10.50, 10.50, 10.50, 10.75, 11.25, 12.25, 13.00, 13.50, base_val]
+                for i, val in enumerate(steps):
+                    ts = now_ts - ((len(steps) - 1 - i) * 30 * 86400)
+                    dt_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%m/%y")
+                    points.append({"timestamp": ts, "datetime": dt_str, "price": val})
+                day_low, day_high = min(steps), max(steps)
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.0, 0.50, round(base_val - steps[0], 2)
+            else:  # 5a (5 years)
+                steps_5a = [
+                    (2021, 1, 2.00), (2021, 6, 4.25), (2021, 12, 9.25),
+                    (2022, 5, 12.75), (2022, 8, 13.75), (2022, 12, 13.75),
+                    (2023, 6, 13.75), (2023, 9, 12.75), (2023, 12, 11.75),
+                    (2024, 4, 10.75), (2024, 8, 10.50), (2024, 12, 11.25),
+                    (2025, 6, 12.25), (2025, 12, 13.25), (2026, 9, base_val)
+                ]
+                for yr, mo, val in steps_5a:
+                    dt = datetime(yr, mo, 1, tzinfo=timezone.utc)
+                    ts = int(dt.timestamp())
+                    points.append({"timestamp": ts, "datetime": f"{mo:02d}/{yr}", "price": val})
+                day_low = min(p["price"] for p in points)
+                day_high = max(p["price"] for p in points)
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.0, 0.50, round(base_val - 2.00, 2)
+        else:  # IPCA 12M
+            if tf in ("1d", "5d"):
+                hours = ["09:00", "12:00", "15:00", "18:00"] if tf == "1d" else ["Seg", "Ter", "Qua", "Qui", "Sex"]
+                for i, h in enumerate(hours):
+                    ts = now_ts - ((len(hours) - 1 - i) * (3600 if tf == "1d" else 86400))
+                    points.append({"timestamp": ts, "datetime": h, "price": base_val})
+                day_low, day_high = base_val, base_val
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.0, 0.25, 0.15
+            elif tf == "1m":
+                for i in range(4):
+                    ts = now_ts - ((3 - i) * 7 * 86400)
+                    dt_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%d/%m")
+                    points.append({"timestamp": ts, "datetime": dt_str, "price": base_val})
+                day_low, day_high = base_val, base_val
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.0, 0.25, 0.15
+            elif tf == "6m":
+                steps = [3.93, 3.99, 4.10, 4.23, 4.42, base_val]
+                for i, val in enumerate(steps):
+                    ts = now_ts - ((len(steps) - 1 - i) * 30 * 86400)
+                    dt_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%m/%y")
+                    points.append({"timestamp": ts, "datetime": dt_str, "price": val})
+                day_low, day_high = min(steps), max(steps)
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.12, 0.25, round(base_val - steps[0], 2)
+            elif tf == "1a":
+                steps = [3.69, 3.82, 3.93, 3.90, 4.02, 4.15, 4.23, 4.35, 4.42, 4.50, 4.52, base_val]
+                for i, val in enumerate(steps):
+                    ts = now_ts - ((len(steps) - 1 - i) * 30 * 86400)
+                    dt_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%m/%y")
+                    points.append({"timestamp": ts, "datetime": dt_str, "price": val})
+                day_low, day_high = min(steps), max(steps)
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.12, 0.25, round(base_val - steps[0], 2)
+            else:  # 5a (5 years)
+                steps_5a = [
+                    (2021, 1, 4.56), (2021, 6, 8.35), (2021, 12, 10.06),
+                    (2022, 4, 12.13), (2022, 8, 8.73), (2022, 12, 5.79),
+                    (2023, 6, 3.16), (2023, 9, 5.19), (2023, 12, 4.62),
+                    (2024, 4, 3.69), (2024, 8, 4.24), (2024, 12, 4.42),
+                    (2025, 6, 4.30), (2025, 12, 4.50), (2026, 9, base_val)
+                ]
+                for yr, mo, val in steps_5a:
+                    dt = datetime(yr, mo, 1, tzinfo=timezone.utc)
+                    ts = int(dt.timestamp())
+                    points.append({"timestamp": ts, "datetime": f"{mo:02d}/{yr}", "price": val})
+                day_low = min(p["price"] for p in points)
+                day_high = max(p["price"] for p in points)
+                var_1d, var_1m, var_ytd, var_1y = 0.0, 0.12, 0.25, round(base_val - 4.56, 2)
 
         curr_p = points[-1]["price"]
         prev_p = points[0]["price"]
@@ -349,7 +437,7 @@ class MarketFeedService:
             "symbol": sym,
             "name": name,
             "currency": "%",
-            "timeframe": timeframe,
+            "timeframe": tf,
             "current_price": curr_p,
             "previous_close": prev_p,
             "change": abs_change,
@@ -358,12 +446,12 @@ class MarketFeedService:
             "stats": {
                 "open": points[0]["price"],
                 "prev_close": prev_p,
-                "day_low": min(steps),
-                "day_high": max(steps),
-                "var_1d": 0.0,
-                "var_1m": -0.15 if "IPCA" in sym else 0.0,
-                "var_ytd": 0.50,
-                "var_1y": abs_change,
+                "day_low": day_low,
+                "day_high": day_high,
+                "var_1d": var_1d,
+                "var_1m": var_1m,
+                "var_ytd": var_ytd,
+                "var_1y": var_1y,
             },
         }
 

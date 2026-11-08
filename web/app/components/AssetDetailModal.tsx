@@ -112,15 +112,19 @@ export default function AssetDetailModal({
     const prices = points.map((p) => p.price);
     const minPrice = Math.min(...prices);
     const maxPrice = Math.max(...prices);
-    const range = maxPrice - minPrice || 1;
+    const isFlat = maxPrice === minPrice;
+    const range = isFlat ? 1 : maxPrice - minPrice;
 
     const width = 800;
     const height = 260;
     const padding = 20;
 
     const coords = points.map((p, idx) => {
-      const x = padding + (idx / (points.length - 1)) * (width - padding * 2);
-      const y = height - padding - ((p.price - minPrice) / range) * (height - padding * 2);
+      const divisor = Math.max(points.length - 1, 1);
+      const x = padding + (idx / divisor) * (width - padding * 2);
+      const y = isFlat
+        ? height / 2
+        : height - padding - ((p.price - minPrice) / range) * (height - padding * 2);
       return { x, y, point: p };
     });
 

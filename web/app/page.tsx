@@ -36,6 +36,7 @@ import MarketTicker from './components/MarketTicker';
 import StatementModal from './components/StatementModal';
 import ReceiptScannerModal from './components/ReceiptScannerModal';
 import AssetDetailModal from './components/AssetDetailModal';
+import { CobrancaModal, DasModal, RunwayModal } from './components/ExecutiveModals';
 
 interface ChatMessage {
   id: string;
@@ -83,6 +84,17 @@ export default function StitchExecutiveDashboard() {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
   const [selectedAssetModal, setSelectedAssetModal] = useState<string | null>(null);
 
+  // Interactive Card & Navigation State
+  const [liquidityView, setLiquidityView] = useState<'compare' | 'history' | 'cumulative'>('compare');
+  const [conjugalApproved, setConjugalApproved] = useState(false);
+  const [selectedContact, setSelectedContact] = useState('Vera');
+  const [transferFeedback, setTransferFeedback] = useState<string | null>(null);
+  const [isCobrançaOpen, setIsCobrançaOpen] = useState(false);
+  const [isDasModalOpen, setIsDasModalOpen] = useState(false);
+  const [isRunwayModalOpen, setIsRunwayModalOpen] = useState(false);
+  const [meiDetailEntity, setMeiDetailEntity] = useState<'fix' | 'facilita' | null>(null);
+  const [activeMonthFilter, setActiveMonthFilter] = useState<string | null>(null);
+
   // Initialize theme from localStorage or system preference
   useEffect(() => {
     const savedTheme = localStorage.getItem('ofo_theme') as 'dark' | 'light' | null;
@@ -125,7 +137,48 @@ export default function StitchExecutiveDashboard() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Quick transfer state
-  const [transferAmount, setTransferAmount] = useState('200,00');
+  const [transferAmount, setTransferAmount] = useState('3.500,00');
+
+  const handleQuickTransfer = () => {
+    const rawVal = parseFloat(transferAmount.replace(/\./g, '').replace(',', '.')) || 0;
+    if (rawVal <= 0) return;
+
+    const newTx = {
+      id: `TX-PIX-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      entity_code: selectedContact === 'Vera' ? 'HOUSEHOLD_OSMAR' : 'FIX_SERVICOS',
+      account_name: selectedContact === 'Vera' ? 'Nubank PF' : 'Banco Inter PJ',
+      clean_description: selectedContact === 'Vera'
+        ? 'Distribuição de Lucros Isenta MEI (Vera)'
+        : `Pagamento PIX: ${selectedContact}`,
+      counterparty: selectedContact,
+      amount: selectedContact === 'Vera' ? rawVal : -rawVal,
+      is_transfer: selectedContact === 'Vera',
+      notes: `Transferência rápida autorizada via OpenFamilyOffice (${selectedContact})`,
+      status: 'CONFIRMED',
+    };
+
+    setLedgerTransactions((prev) => [newTx, ...prev]);
+    setTransferFeedback(`PIX de R$ ${transferAmount} para ${selectedContact} registrado no Livro Razão!`);
+    setTimeout(() => setTransferFeedback(null), 5000);
+  };
+
+  const handleApproveConjugal = () => {
+    setConjugalApproved(true);
+    const newTx = {
+      id: `TX-CONJUGAL-${Date.now()}`,
+      date: new Date().toISOString().split('T')[0],
+      entity_code: 'HOUSEHOLD_OSMAR',
+      account_name: 'Nubank PF',
+      clean_description: 'Distribuição de Lucros Isenta MEI (Dupla Assinatura Concluída)',
+      counterparty: 'Fix Serviços MEI → Nubank PF',
+      amount: 3500.0,
+      is_transfer: true,
+      notes: 'Acordo Conjugal assinado por Osmar e Vera (Blindagem LC 123/2006)',
+      status: 'CONFIRMED',
+    };
+    setLedgerTransactions((prev) => [newTx, ...prev]);
+  };
 
   const loadTransactions = async () => {
     try {
@@ -262,64 +315,89 @@ export default function StitchExecutiveDashboard() {
 
   return (
     <div className="min-h-screen flex bg-[#F4F6FB] dark:bg-[#0c1017] text-slate-900 dark:text-[#f8fafc] font-sans antialiased transition-colors duration-200">
-      {/* 1. LEFT COMPACT FLOATING ICON SIDEBAR (Desktop only, hidden on mobile) */}
-      <aside className="hidden md:flex w-18 md:w-20 bg-transparent flex flex-col items-center py-6 px-3 z-30 shrink-0 select-none border-r border-slate-200/80 dark:border-white/5">
-        {/* Brand Emblem */}
-        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] border border-slate-200/80 dark:border-white/10 shadow-lg flex items-center justify-center mb-8 hover:border-indigo-500/50 hover:bg-slate-50 dark:hover:bg-[#1a2232] transition group cursor-pointer">
-          <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-indigo-500 to-indigo-400 flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-indigo-900/50">
-            O
+      {/* 1. LEFT COMPACT FLOATING ICON SIDEBAR (Fixed and always visible on desktop) */}
+      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-20 bg-white/95 dark:bg-[#0c1017]/95 backdrop-blur-md flex flex-col items-center py-6 px-3 z-40 shrink-0 select-none border-r border-slate-200/80 dark:border-white/5 h-screen justify-between">
+        <div className="flex flex-col items-center w-full">
+          {/* Brand Emblem */}
+          <div
+            onClick={() => setActiveTab('all')}
+            className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] border border-slate-200/80 dark:border-white/10 shadow-lg flex items-center justify-center mb-8 hover:border-indigo-500/50 hover:bg-slate-50 dark:hover:bg-[#1a2232] transition group cursor-pointer"
+          >
+            <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-indigo-500 to-indigo-400 flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-indigo-900/50">
+              O
+            </div>
           </div>
+
+          {/* Nav Items with real active states */}
+          <nav className="flex flex-col items-center gap-4 w-full">
+            <button
+              title="Visão Geral / Dashboard"
+              onClick={() => setActiveTab('all')}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                activeTab === 'all'
+                  ? 'bg-indigo-600 text-white shadow-pill scale-105'
+                  : 'bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm'
+              }`}
+            >
+              <Home className="w-5 h-5" />
+            </button>
+
+            <button
+              title="Livro Razão & Conciliação"
+              onClick={() => {
+                setActiveTab('all');
+                document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
+            >
+              <FileText className="w-5 h-5" />
+            </button>
+
+            <button
+              title="Cartões & Contas Multientidade"
+              onClick={() => {
+                setActiveTab('all');
+                setLedgerFilter('inter');
+                document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
+            >
+              <CreditCard className="w-5 h-5" />
+            </button>
+
+            <button
+              title="Curva Patrimonial & Analytics"
+              onClick={() => {
+                setLiquidityView('history');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                liquidityView === 'history'
+                  ? 'bg-indigo-600 text-white shadow-pill scale-105'
+                  : 'bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm'
+              }`}
+            >
+              <TrendingUp className="w-5 h-5" />
+            </button>
+
+            <button
+              title="Governança Conjugal (Dual-Signature)"
+              onClick={() => {
+                document.getElementById('governance-card')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
+            >
+              <ShieldCheck className="w-5 h-5" />
+            </button>
+          </nav>
         </div>
 
-        {/* Nav Items with pill active state */}
-        <nav className="flex flex-col items-center gap-4 w-full">
-          <button
-            title="Visão Geral"
-            onClick={() => setActiveTab('all')}
-            className="w-12 h-12 rounded-2xl bg-indigo-600 text-white shadow-pill flex items-center justify-center transition-transform hover:scale-105"
-          >
-            <Home className="w-5 h-5" />
-          </button>
-
-          <button
-            title="Monitor de Liquidez & Faturas"
-            onClick={() => setLedgerFilter('all')}
-            className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
-          >
-            <FileText className="w-5 h-5" />
-          </button>
-
-          <button
-            title="Cartões & Contas Multientidade"
-            onClick={() => setLedgerFilter('inter')}
-            className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
-          >
-            <CreditCard className="w-5 h-5" />
-          </button>
-
-          <button
-            title="Curva Patrimonial & Analytics"
-            onClick={() => setActiveTab('all')}
-            className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
-          >
-            <TrendingUp className="w-5 h-5" />
-          </button>
-
-          <button
-            title="Governança Conjugal (Dual-Signature)"
-            onClick={() => setIsSettingsOpen(true)}
-            className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
-          >
-            <ShieldCheck className="w-5 h-5" />
-          </button>
-        </nav>
-
-        {/* Bottom Settings & Status Pin */}
-        <div className="mt-auto flex flex-col items-center gap-3">
+        {/* Bottom Settings & Status Pin - ALWAYS visible and fixed at bottom */}
+        <div className="flex flex-col items-center gap-3 pb-2 w-full">
           <button
             title="Configurações & Provedores de IA"
             onClick={() => setIsSettingsOpen(true)}
-            className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
+            className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition hover:scale-105"
           >
             <Settings className="w-5 h-5" />
           </button>
@@ -330,13 +408,13 @@ export default function StitchExecutiveDashboard() {
                 ? 'bg-emerald-400 ring-emerald-500/20'
                 : 'bg-amber-400 ring-amber-500/20'
             }`}
-            title="Local Air-Gapped Engine"
+            title={apiOnline ? 'Conexão Local Segura Ativa' : 'Verificando Conexão'}
           />
         </div>
       </aside>
 
-      {/* 2. MAIN VIEWPORT */}
-      <div className="flex-1 flex flex-col min-w-0 pr-4 sm:pr-8 pl-4 sm:pl-6 py-5 pb-24 md:pb-8 overflow-x-hidden">
+      {/* 2. MAIN VIEWPORT (Offset by md:ml-20 so it never overlaps fixed sidebar) */}
+      <div className="flex-1 flex flex-col min-w-0 md:ml-20 pr-4 sm:pr-8 pl-4 sm:pl-6 py-5 pb-24 md:pb-8">
         {/* Top Header Bar */}
         <header className="w-full flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
           {/* Search Input with ⌘K */}
@@ -485,21 +563,23 @@ export default function StitchExecutiveDashboard() {
               <span>Escanear Cupom</span>
             </button>
             <button
-              onClick={() => setIsAssistantOpen(true)}
+              onClick={() => {
+                document.getElementById('quick-transfer-card')?.scrollIntoView({ behavior: 'smooth' });
+              }}
               className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
             >
               <Send className="w-3.5 h-3.5 text-slate-400" />
               <span>Enviar PIX</span>
             </button>
             <button
-              onClick={() => handleSendMessage('Cobrança de clientes')}
+              onClick={() => setIsCobrançaOpen(true)}
               className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
             >
               <ArrowDownLeft className="w-3.5 h-3.5 text-slate-400" />
               <span>Cobrança</span>
             </button>
             <button
-              onClick={() => handleSendMessage('Pagar DAS MEI ou Fatura')}
+              onClick={() => setIsDasModalOpen(true)}
               className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
             >
               <FileText className="w-3.5 h-3.5 text-slate-400" />
@@ -516,19 +596,40 @@ export default function StitchExecutiveDashboard() {
               {/* Stacked Cards Envelope */}
               <div className="relative w-full pt-1 pb-2">
                 {/* Card 1: Vibrant Indigo / Violet Nubank UV (Top card) */}
-                <div className="relative z-10 w-full h-14 rounded-2xl bg-gradient-to-r from-[#6366f1] via-[#818cf8] to-[#93c5fd] text-white px-5 py-3 flex items-center justify-between shadow-md border border-white/20">
+                <div
+                  onClick={() => {
+                    setLedgerFilter('nubank');
+                    document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  title="Filtrar lançamentos da Conta Familiar Nubank PF"
+                  className="relative z-10 w-full h-14 rounded-2xl bg-gradient-to-r from-[#6366f1] via-[#818cf8] to-[#93c5fd] text-white px-5 py-3 flex items-center justify-between shadow-md border border-white/20 cursor-pointer hover:scale-[1.02] active:scale-[0.99] transition-all"
+                >
                   <span className="text-xs font-semibold uppercase tracking-wider text-blue-50">Nubank UV (PF)</span>
                   <span className="font-mono text-xs font-bold text-white">R$ 357.458,00</span>
                 </div>
                 {/* Card 2: Warm Amber Banco Inter MEI (Middle card) */}
-                <div className="relative z-20 w-full h-14 -mt-6 rounded-2xl bg-gradient-to-r from-[#f59e0b] via-[#fb923c] to-[#ea580c] text-white px-5 py-3 flex items-center justify-between shadow-lg border border-white/20">
+                <div
+                  onClick={() => {
+                    setLedgerFilter('inter');
+                    document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  title="Filtrar lançamentos da Fix Serviços (Inter PJ)"
+                  className="relative z-20 w-full h-14 -mt-6 rounded-2xl bg-gradient-to-r from-[#f59e0b] via-[#fb923c] to-[#ea580c] text-white px-5 py-3 flex items-center justify-between shadow-lg border border-white/20 cursor-pointer hover:scale-[1.02] active:scale-[0.99] transition-all"
+                >
                   <span className="text-xs font-semibold uppercase tracking-wider text-amber-50">
                     Inter PJ • Fix Serviços (Osmar)
                   </span>
                   <span className="font-mono text-xs font-bold text-white">R$ 100.332,34</span>
                 </div>
                 {/* Card 3: Rose / Magenta Caixa PJ (Front card) */}
-                <div className="relative z-30 w-full h-16 -mt-6 rounded-2xl bg-gradient-to-r from-[#c026d3] via-[#a855f7] to-[#ec4899] text-white px-5 py-3 flex items-start justify-between shadow-xl border border-white/25">
+                <div
+                  onClick={() => {
+                    setLedgerFilter('caixa');
+                    document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  title="Filtrar lançamentos da Facilita Vistorias (Caixa PJ)"
+                  className="relative z-30 w-full h-16 -mt-6 rounded-2xl bg-gradient-to-r from-[#c026d3] via-[#a855f7] to-[#ec4899] text-white px-5 py-3 flex items-start justify-between shadow-xl border border-white/25 cursor-pointer hover:scale-[1.02] active:scale-[0.99] transition-all"
+                >
                   <span className="text-xs font-semibold uppercase tracking-wider text-pink-50">
                     Caixa PJ • Facilita Vist. (Vera)
                   </span>
@@ -565,12 +666,18 @@ export default function StitchExecutiveDashboard() {
               <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-mono">
                 {formatBRL(totalCumulativeProfit)}
               </div>
-              <div className="flex items-center justify-between mt-3 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-[#121722] p-2.5 rounded-xl border border-slate-200/60 dark:border-white/5">
+              <div
+                onClick={() => setIsRunwayModalOpen(true)}
+                title="Clique para abrir o Simulador de Autonomia & Runway Familiar"
+                className="flex items-center justify-between mt-3 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-[#121722] hover:bg-indigo-50/50 dark:hover:bg-[#1a2232] cursor-pointer p-2.5 rounded-xl border border-slate-200/60 dark:border-white/5 transition"
+              >
                 <span className="flex items-center gap-1.5 font-medium">
                   <Clock className="w-3.5 h-3.5 text-indigo-500" />
-                  Runway Familiar: <strong className="text-slate-900 dark:text-white font-semibold">18,4 meses</strong>
+                  Runway Familiar: <strong className="text-slate-900 dark:text-white font-semibold">44,1 meses</strong>
                 </span>
-                <span className="font-mono text-[11px] text-slate-400 dark:text-slate-500">Média R$ 11.515/mês</span>
+                <span className="font-mono text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+                  Simular →
+                </span>
               </div>
             </div>
           </div>
@@ -580,104 +687,234 @@ export default function StitchExecutiveDashboard() {
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">Visão Geral de Liquidez & Reservas</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Evolução do Fluxo de Caixa Consolidado vs. Histórico de 2025</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {liquidityView === 'compare' && 'Evolução do Fluxo de Caixa Consolidado: 2026 vs. Histórico de 2025'}
+                  {liquidityView === 'history' && 'Série Histórica Consolidada (2020 - 2026): R$ 907.352,00 Faturamento Real'}
+                  {liquidityView === 'cumulative' && 'Evolução do Patrimônio Líquido Total e Reservas de Autonomia Familiar'}
+                </p>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-3 bg-slate-50 dark:bg-[#121722] px-3 py-1.5 rounded-xl border border-slate-200/60 dark:border-white/5 text-xs">
-                  <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
-                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
-                    <span>Ano Atual (2026) <strong className="font-mono text-slate-900 dark:text-white ml-0.5">R$ {(rev2026 / 1000).toFixed(1).replace('.', ',')}k</strong></span>
-                  </div>
-                  <span className="text-slate-300 dark:text-slate-700">|</span>
-                  <div className="flex items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#FB923C] shadow-[0_0_8px_rgba(251,146,60,0.5)]" />
-                    <span>Ano Anterior (2025) <strong className="font-mono text-slate-700 dark:text-slate-300 ml-0.5">R$ {(rev2025 / 1000).toFixed(1).replace('.', ',')}k</strong></span>
-                  </div>
-                </div>
-
-                <button className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 bg-slate-100 dark:bg-[#1a2232] border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-200 dark:hover:bg-[#212a3d] text-slate-700 dark:text-slate-300 shadow-sm transition">
-                  <span>Últimos 12 meses</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </button>
-              </div>
-            </div>
-
-            {/* SVG Double Wave Chart with Glowing Tooltip Box */}
-            <div className="relative w-full h-56 pt-2">
-              <div className="absolute top-2 left-[48%] -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-3 text-xs pointer-events-none text-slate-900 dark:text-white">
-                <div>
-                  <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400" /> 2026 YTD
-                  </div>
-                  <div className="font-mono font-bold text-slate-900 dark:text-white">R$ 103.632</div>
-                </div>
-                <div className="border-l border-slate-200 dark:border-white/10 pl-3">
-                  <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#FB923C]" /> 2025 Total
-                  </div>
-                  <div className="font-mono font-semibold text-slate-700 dark:text-slate-300">R$ 156.200</div>
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#121722] p-1 rounded-xl border border-slate-200/60 dark:border-white/5 text-xs">
+                  <button
+                    onClick={() => setLiquidityView('compare')}
+                    className={`px-3 py-1 rounded-lg font-semibold transition ${
+                      liquidityView === 'compare'
+                        ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    2026 vs 2025
+                  </button>
+                  <button
+                    onClick={() => setLiquidityView('history')}
+                    className={`px-3 py-1 rounded-lg font-semibold transition ${
+                      liquidityView === 'history'
+                        ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    7 Anos (2020-2026)
+                  </button>
+                  <button
+                    onClick={() => setLiquidityView('cumulative')}
+                    className={`px-3 py-1 rounded-lg font-semibold transition ${
+                      liquidityView === 'cumulative'
+                        ? 'bg-white dark:bg-[#212a3d] text-indigo-600 dark:text-white shadow-sm'
+                        : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Patrimônio
+                  </button>
                 </div>
               </div>
-
-              <svg className="w-full h-full overflow-visible" fill="none" preserveAspectRatio="none" viewBox="0 0 700 170">
-                <defs>
-                  <linearGradient id="blueGlowDark" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.32" />
-                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
-                  </linearGradient>
-                  <linearGradient id="orangeGlowDark" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#FB923C" stopOpacity="0.22" />
-                    <stop offset="100%" stopColor="#FB923C" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-                <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="30" y2="30" />
-                <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="70" y2="70" />
-                <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="110" y2="110" />
-                <line stroke="#212a3d" strokeWidth="1" x1="0" x2="700" y1="150" y2="150" />
-
-                <path
-                  d="M 0,95 C 60,65 120,115 180,95 C 240,75 300,45 350,55 C 410,70 470,120 530,90 C 590,60 650,110 700,95 L 700,160 L 0,160 Z"
-                  fill="url(#orangeGlowDark)"
-                />
-                <path
-                  d="M 0,95 C 60,65 120,115 180,95 C 240,75 300,45 350,55 C 410,70 470,120 530,90 C 590,60 650,110 700,95"
-                  stroke="#FB923C"
-                  strokeLinecap="round"
-                  strokeWidth="2.5"
-                />
-
-                <path
-                  d="M 0,115 C 60,110 120,60 180,75 C 240,90 300,105 350,85 C 400,30 450,25 500,65 C 550,105 620,35 700,60 L 700,160 L 0,160 Z"
-                  fill="url(#blueGlowDark)"
-                />
-                <path
-                  d="M 0,115 C 60,110 120,60 180,75 C 240,90 300,105 350,85 C 400,30 450,25 500,65 C 550,105 620,35 700,60"
-                  stroke="#7c8cf8"
-                  strokeLinecap="round"
-                  strokeWidth="3"
-                />
-
-                <circle cx="350" cy="55" fill="#FB923C" r="5" stroke="#161c28" strokeWidth="2" />
-                <circle cx="350" cy="85" fill="#7c8cf8" r="6" stroke="#161c28" strokeWidth="2.5" />
-                <line stroke="#475569" strokeDasharray="3 3" strokeWidth="1.5" x1="350" x2="350" y1="20" y2="150" />
-              </svg>
             </div>
 
-            <div className="flex justify-between items-center text-[11px] font-medium text-slate-400 mt-2 px-1">
-              <span>Jan</span>
-              <span>Fev</span>
-              <span>Mar</span>
-              <span>Abr</span>
-              <span>Mai</span>
-              <span>Jun</span>
-              <span>Jul</span>
-              <span>Ago</span>
-              <span className="text-indigo-600 dark:text-indigo-400 font-extrabold underline underline-offset-4">Set (Atual)</span>
-              <span>Out</span>
-              <span>Nov</span>
-              <span>Dez</span>
-            </div>
+            {/* View 1: 2026 vs 2025 Double Wave */}
+            {liquidityView === 'compare' && (
+              <>
+                <div className="relative w-full h-56 pt-2">
+                  <div className="absolute top-2 left-[48%] -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-3 text-xs pointer-events-none text-slate-900 dark:text-white">
+                    <div>
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400" /> 2026 YTD
+                      </div>
+                      <div className="font-mono font-bold text-slate-900 dark:text-white">R$ 103.632</div>
+                    </div>
+                    <div className="border-l border-slate-200 dark:border-white/10 pl-3">
+                      <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#FB923C]" /> 2025 Total
+                      </div>
+                      <div className="font-mono font-semibold text-slate-700 dark:text-slate-300">R$ 156.200</div>
+                    </div>
+                  </div>
+
+                  <svg className="w-full h-full overflow-visible" fill="none" preserveAspectRatio="none" viewBox="0 0 700 170">
+                    <defs>
+                      <linearGradient id="blueGlowDark" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.32" />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
+                      </linearGradient>
+                      <linearGradient id="orangeGlowDark" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="#FB923C" stopOpacity="0.22" />
+                        <stop offset="100%" stopColor="#FB923C" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="30" y2="30" />
+                    <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="70" y2="70" />
+                    <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="110" y2="110" />
+                    <line stroke="#212a3d" strokeWidth="1" x1="0" x2="700" y1="150" y2="150" />
+
+                    <path
+                      d="M 0,95 C 60,65 120,115 180,95 C 240,75 300,45 350,55 C 410,70 470,120 530,90 C 590,60 650,110 700,95 L 700,160 L 0,160 Z"
+                      fill="url(#orangeGlowDark)"
+                    />
+                    <path
+                      d="M 0,95 C 60,65 120,115 180,95 C 240,75 300,45 350,55 C 410,70 470,120 530,90 C 590,60 650,110 700,95"
+                      stroke="#FB923C"
+                      strokeLinecap="round"
+                      strokeWidth="2.5"
+                    />
+
+                    <path
+                      d="M 0,115 C 60,110 120,60 180,75 C 240,90 300,105 350,85 C 400,30 450,25 500,65 C 550,105 620,35 700,60 L 700,160 L 0,160 Z"
+                      fill="url(#blueGlowDark)"
+                    />
+                    <path
+                      d="M 0,115 C 60,110 120,60 180,75 C 240,90 300,105 350,85 C 400,30 450,25 500,65 C 550,105 620,35 700,60"
+                      stroke="#7c8cf8"
+                      strokeLinecap="round"
+                      strokeWidth="3"
+                    />
+
+                    <circle cx="350" cy="55" fill="#FB923C" r="5" stroke="#161c28" strokeWidth="2" />
+                    <circle cx="350" cy="85" fill="#7c8cf8" r="6" stroke="#161c28" strokeWidth="2.5" />
+                    <line stroke="#475569" strokeDasharray="3 3" strokeWidth="1.5" x1="350" x2="350" y1="20" y2="150" />
+                  </svg>
+                </div>
+
+                <div className="flex justify-between items-center text-[11px] font-medium text-slate-400 mt-2 px-1">
+                  <span>Jan</span>
+                  <span>Fev</span>
+                  <span>Mar</span>
+                  <span>Abr</span>
+                  <span>Mai</span>
+                  <span>Jun</span>
+                  <span>Jul</span>
+                  <span>Ago</span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-extrabold underline underline-offset-4">Set (Atual)</span>
+                  <span>Out</span>
+                  <span>Nov</span>
+                  <span>Dez</span>
+                </div>
+              </>
+            )}
+
+            {/* View 2: 7 Anos Historical Evolution (2020-2026) */}
+            {liquidityView === 'history' && (
+              <>
+                <div className="relative w-full h-56 pt-2 flex items-end justify-between gap-3 px-2">
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-4 text-xs pointer-events-none text-slate-900 dark:text-white">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Total 7 Anos (2020-2026)</span>
+                      <strong className="font-mono text-emerald-600 dark:text-emerald-400 text-sm">R$ 907.352,00</strong>
+                    </div>
+                    <div className="border-l border-slate-200 dark:border-white/10 pl-3">
+                      <span className="text-[10px] text-slate-400 block">Média Anual</span>
+                      <strong className="font-mono text-indigo-600 dark:text-indigo-400 text-sm">R$ 129.621/ano</strong>
+                    </div>
+                  </div>
+
+                  {[
+                    { year: '2020', val: 90300, height: '48%', label: 'R$ 90,3k' },
+                    { year: '2021', val: 137820, height: '74%', label: 'R$ 137,8k' },
+                    { year: '2022', val: 126900, height: '68%', label: 'R$ 126,9k' },
+                    { year: '2023', val: 143700, height: '77%', label: 'R$ 143,7k' },
+                    { year: '2024', val: 148800, height: '80%', label: 'R$ 148,8k' },
+                    { year: '2025', val: 156200, height: '84%', label: 'R$ 156,2k', peak: true },
+                    { year: '2026*', val: 103632, height: '56%', label: 'R$ 103,6k', active: true },
+                  ].map((bar) => (
+                    <div key={bar.year} className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer">
+                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 font-semibold transition">
+                        {bar.label}
+                      </span>
+                      <div
+                        style={{ height: bar.height }}
+                        className={`w-full rounded-t-2xl transition-all ${
+                          bar.active
+                            ? 'bg-gradient-to-t from-indigo-600 via-indigo-500 to-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.55)]'
+                            : bar.peak
+                            ? 'bg-gradient-to-t from-amber-600 via-amber-500 to-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.4)]'
+                            : 'bg-slate-200 dark:bg-[#1e2638] group-hover:bg-slate-300 dark:group-hover:bg-[#28334a]'
+                        }`}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-2 px-2">
+                  <span>2020</span>
+                  <span>2021</span>
+                  <span>2022</span>
+                  <span>2023</span>
+                  <span>2024</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-bold">2025 (Pico)</span>
+                  <span className="text-indigo-600 dark:text-indigo-400 font-extrabold underline underline-offset-4">2026 (YTD Set)</span>
+                </div>
+              </>
+            )}
+
+            {/* View 3: Patrimônio Acumulado & Reservas */}
+            {liquidityView === 'cumulative' && (
+              <>
+                <div className="relative w-full h-56 pt-2">
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-4 text-xs pointer-events-none text-slate-900 dark:text-white">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Patrimônio Líquido Acumulado</span>
+                      <strong className="font-mono text-emerald-600 dark:text-emerald-400 text-sm">R$ 508.121,36</strong>
+                    </div>
+                    <div className="border-l border-slate-200 dark:border-white/10 pl-3">
+                      <span className="text-[10px] text-slate-400 block">Autonomia Familiar</span>
+                      <strong className="font-mono text-indigo-600 dark:text-indigo-400 text-sm">44,1 Meses</strong>
+                    </div>
+                  </div>
+
+                  <svg className="w-full h-full overflow-visible" fill="none" preserveAspectRatio="none" viewBox="0 0 700 170">
+                    <defs>
+                      <linearGradient id="patrimonioGlow" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="30" y2="30" />
+                    <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="70" y2="70" />
+                    <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="110" y2="110" />
+                    <line stroke="#212a3d" strokeWidth="1" x1="0" x2="700" y1="150" y2="150" />
+
+                    <path
+                      d="M 0,140 C 100,130 200,105 300,90 C 400,75 500,45 600,30 L 700,20 L 700,160 L 0,160 Z"
+                      fill="url(#patrimonioGlow)"
+                    />
+                    <path
+                      d="M 0,140 C 100,130 200,105 300,90 C 400,75 500,45 600,30 L 700,20"
+                      stroke="#10b981"
+                      strokeLinecap="round"
+                      strokeWidth="3.5"
+                    />
+                    <circle cx="700" cy="20" fill="#10b981" r="6" stroke="#161c28" strokeWidth="2.5" />
+                  </svg>
+                </div>
+
+                <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-2 px-2">
+                  <span>2020: R$ 42,1k</span>
+                  <span>2022: R$ 168,5k</span>
+                  <span>2024: R$ 342,0k</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-extrabold underline underline-offset-4">
+                    Hoje: R$ 508.121,36 (Protegido)
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -750,16 +987,22 @@ export default function StitchExecutiveDashboard() {
           </div>
 
           {/* CARD 2: Dual-Signature Desk (Governança Conjugal Osmar & Vera) */}
-          <div className="lg:col-span-4 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card dark:shadow-card flex flex-col justify-between">
+          <div id="governance-card" className="lg:col-span-4 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card dark:shadow-card flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Fingerprint className="w-5 h-5 text-amber-500 dark:text-amber-400" />
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">Governança Familiar</h3>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold text-[11px] border border-amber-200 dark:border-amber-500/30">
-                  1 Pendência
-                </span>
+                {conjugalApproved ? (
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] border border-emerald-200 dark:border-emerald-500/30">
+                    ✓ 0 Pendências
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold text-[11px] border border-amber-200 dark:border-amber-500/30">
+                    1 Pendência
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                 Distribuições acima de R$ 3.000 exigem validação mútua para blindar os CNPJs contra confusão patrimonial.
@@ -770,7 +1013,7 @@ export default function StitchExecutiveDashboard() {
                 <div className="flex items-start justify-between">
                   <div>
                     <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
-                      Distribuição de Lucros Isenta
+                      {conjugalApproved ? 'Distribuição Homologada' : 'Distribuição de Lucros Isenta'}
                     </span>
                     <span className="text-xs font-semibold text-slate-900 dark:text-white">Fix Serviços MEI → Conta Familiar PF</span>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Banco Inter PJ → Nubank PF</div>
@@ -782,21 +1025,33 @@ export default function StitchExecutiveDashboard() {
                     <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400" />
                     <span>Osmar (Validado)</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                    <span>Aguardando Vera</span>
-                  </div>
+                  {conjugalApproved ? (
+                    <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span>Vera (Validado)</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                      <span>Aguardando Vera</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="flex gap-2 pt-2">
               <button
-                onClick={() => handleSendMessage('Confirmar acordo de retirada')}
-                className="flex-1 py-2.5 px-3 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-pill hover:bg-indigo-500 transition flex items-center justify-center gap-1.5"
+                onClick={handleApproveConjugal}
+                disabled={conjugalApproved}
+                className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  conjugalApproved
+                    ? 'bg-emerald-600/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 cursor-default'
+                    : 'bg-indigo-600 text-white shadow-pill hover:bg-indigo-500 cursor-pointer'
+                }`}
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>Confirmar Acordo Conjugal</span>
+                <span>{conjugalApproved ? '✓ Acordo Conjugal Homologado' : 'Confirmar Acordo Conjugal'}</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Detalhes da transferência Fix para PF')}
@@ -808,7 +1063,7 @@ export default function StitchExecutiveDashboard() {
           </div>
 
           {/* CARD 3: Quick Transfer & Frequent Contacts (Orbix Style) */}
-          <div className="lg:col-span-4 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card dark:shadow-card flex flex-col justify-between">
+          <div id="quick-transfer-card" className="lg:col-span-4 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card dark:shadow-card flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">Transferência Rápida</h3>
@@ -827,38 +1082,68 @@ export default function StitchExecutiveDashboard() {
                   <Plus className="w-4 h-4" />
                 </button>
 
-                {/* Vera (Active Selected Contact with Halo Ring) */}
-                <div className="flex flex-col items-center shrink-0 cursor-pointer" onClick={() => setTransferAmount('3.500,00')}>
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 p-0.5 shadow-md">
-                    <div className="w-full h-full rounded-full bg-white dark:bg-[#161c28] flex items-center justify-center font-bold text-xs text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500">
+                {/* Vera */}
+                <div
+                  className="flex flex-col items-center shrink-0 cursor-pointer"
+                  onClick={() => {
+                    setSelectedContact('Vera');
+                    setTransferAmount('3.500,00');
+                  }}
+                >
+                  <div className={`w-11 h-11 rounded-full p-0.5 shadow-md ${selectedContact === 'Vera' ? 'bg-gradient-to-tr from-indigo-500 to-purple-500' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                    <div className={`w-full h-full rounded-full bg-white dark:bg-[#161c28] flex items-center justify-center font-bold text-xs ${selectedContact === 'Vera' ? 'text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500' : 'text-slate-600 dark:text-slate-300'}`}>
                       Vera
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mt-1">Vera</span>
+                  <span className={`text-[10px] mt-1 ${selectedContact === 'Vera' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>Vera</span>
                 </div>
 
                 {/* Contador */}
-                <div className="flex flex-col items-center shrink-0 cursor-pointer" onClick={() => setTransferAmount('450,00')}>
-                  <div className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center font-semibold text-xs text-slate-700 dark:text-slate-300">
-                    Cont.
+                <div
+                  className="flex flex-col items-center shrink-0 cursor-pointer"
+                  onClick={() => {
+                    setSelectedContact('Contador');
+                    setTransferAmount('450,00');
+                  }}
+                >
+                  <div className={`w-11 h-11 rounded-full p-0.5 shadow-md ${selectedContact === 'Contador' ? 'bg-gradient-to-tr from-indigo-500 to-purple-500' : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10'}`}>
+                    <div className={`w-full h-full rounded-full bg-white dark:bg-[#161c28] flex items-center justify-center font-semibold text-xs ${selectedContact === 'Contador' ? 'text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500' : 'text-slate-700 dark:text-slate-300'}`}>
+                      Cont.
+                    </div>
                   </div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Contador</span>
+                  <span className={`text-[10px] mt-1 ${selectedContact === 'Contador' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>Contador</span>
                 </div>
 
                 {/* Fornecedor */}
-                <div className="flex flex-col items-center shrink-0 cursor-pointer" onClick={() => setTransferAmount('1.200,00')}>
-                  <div className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center font-semibold text-xs text-slate-700 dark:text-slate-300">
-                    Forn.
+                <div
+                  className="flex flex-col items-center shrink-0 cursor-pointer"
+                  onClick={() => {
+                    setSelectedContact('Fornecedor');
+                    setTransferAmount('1.200,00');
+                  }}
+                >
+                  <div className={`w-11 h-11 rounded-full p-0.5 shadow-md ${selectedContact === 'Fornecedor' ? 'bg-gradient-to-tr from-indigo-500 to-purple-500' : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10'}`}>
+                    <div className={`w-full h-full rounded-full bg-white dark:bg-[#161c28] flex items-center justify-center font-semibold text-xs ${selectedContact === 'Fornecedor' ? 'text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500' : 'text-slate-700 dark:text-slate-300'}`}>
+                      Forn.
+                    </div>
                   </div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Fornecedor</span>
+                  <span className={`text-[10px] mt-1 ${selectedContact === 'Fornecedor' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>Fornecedor</span>
                 </div>
 
                 {/* Advogado */}
-                <div className="flex flex-col items-center shrink-0 cursor-pointer" onClick={() => setTransferAmount('800,00')}>
-                  <div className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center font-semibold text-xs text-slate-700 dark:text-slate-300">
-                    Adv.
+                <div
+                  className="flex flex-col items-center shrink-0 cursor-pointer"
+                  onClick={() => {
+                    setSelectedContact('Advogado');
+                    setTransferAmount('800,00');
+                  }}
+                >
+                  <div className={`w-11 h-11 rounded-full p-0.5 shadow-md ${selectedContact === 'Advogado' ? 'bg-gradient-to-tr from-indigo-500 to-purple-500' : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10'}`}>
+                    <div className={`w-full h-full rounded-full bg-white dark:bg-[#161c28] flex items-center justify-center font-semibold text-xs ${selectedContact === 'Advogado' ? 'text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-500' : 'text-slate-700 dark:text-slate-300'}`}>
+                      Adv.
+                    </div>
                   </div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Advogado</span>
+                  <span className={`text-[10px] mt-1 ${selectedContact === 'Advogado' ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>Advogado</span>
                 </div>
 
                 {/* Next Arrow Circle (Orbix Style) */}
@@ -872,24 +1157,33 @@ export default function StitchExecutiveDashboard() {
             </div>
 
             {/* Transfer Input and Glowing Send Pill Button (Orbix Style) */}
-            <div className="flex items-center gap-3 pt-3 border-t border-slate-200/80 dark:border-white/10 mt-2">
-              <div className="relative flex-1">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-semibold text-slate-400">
-                  R$
-                </span>
-                <input
-                  type="text"
-                  value={transferAmount}
-                  onChange={(e) => setTransferAmount(e.target.value)}
-                  className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-[#121722] border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                />
+            <div className="flex flex-col gap-2 pt-3 border-t border-slate-200/80 dark:border-white/10 mt-2">
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-semibold text-slate-400">
+                    R$
+                  </span>
+                  <input
+                    type="text"
+                    value={transferAmount}
+                    onChange={(e) => setTransferAmount(e.target.value)}
+                    className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-[#121722] border border-slate-200 dark:border-white/10 rounded-xl text-sm font-bold font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                </div>
+                <button
+                  onClick={handleQuickTransfer}
+                  className="px-6 py-2.5 rounded-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-bold text-xs shadow-[0_4px_16px_rgba(99,102,241,0.45)] hover:shadow-[0_4px_22px_rgba(99,102,241,0.65)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>Enviar PIX</span>
+                </button>
               </div>
-              <button
-                onClick={() => handleSendMessage(`Enviar PIX de R$ ${transferAmount}`)}
-                className="px-6 py-2.5 rounded-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-bold text-xs shadow-[0_4px_16px_rgba(99,102,241,0.45)] hover:shadow-[0_4px_22px_rgba(99,102,241,0.65)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
-              >
-                <span>Enviar PIX</span>
-              </button>
+
+              {transferFeedback && (
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-xs font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 animate-in fade-in">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>{transferFeedback}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -897,7 +1191,7 @@ export default function StitchExecutiveDashboard() {
         {/* 5. LOWER ROW: Transaction Ledger & Fiscal Reconciliation + Money Movement Column Chart */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
           {/* TRANSACTION TABLE: Clean & Refined Ledger */}
-          <div className="lg:col-span-8 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card flex flex-col justify-between">
+          <div id="ledger-section" className="lg:col-span-8 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card flex flex-col justify-between">
             <div>
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div>
@@ -1483,6 +1777,22 @@ export default function StitchExecutiveDashboard() {
         isOpen={!!selectedAssetModal}
         onClose={() => setSelectedAssetModal(null)}
         assetSymbol={selectedAssetModal || 'IBOV'}
+      />
+
+      {/* 9. EXECUTIVE OPERATIONS & RUNWAY MODALS */}
+      <CobrancaModal
+        isOpen={isCobrançaOpen}
+        onClose={() => setIsCobrançaOpen(false)}
+      />
+
+      <DasModal
+        isOpen={isDasModalOpen}
+        onClose={() => setIsDasModalOpen(false)}
+      />
+
+      <RunwayModal
+        isOpen={isRunwayModalOpen}
+        onClose={() => setIsRunwayModalOpen(false)}
       />
     </div>
   );
