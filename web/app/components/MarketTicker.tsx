@@ -10,6 +10,7 @@ interface MarketData {
   rates?: Record<string, { code: string; name: string; value: number; reference_date: string; source: string }>;
   currencies?: Record<string, { pair: string; name: string; bid: number; ask: number; pct_change: number }>;
   crypto?: Record<string, { symbol: string; price_brl: number; currency: string; source: string }>;
+  indices?: Record<string, { code: string; symbol: string; name: string; value: number; pct_change: number; currency: string; fallback?: boolean }>;
   upcoming_holidays?: Array<{ date: string; name: string; type: string }>;
 }
 
@@ -46,6 +47,9 @@ export default function MarketTicker() {
   const usdBrl = data?.currencies?.['USD-BRL']?.bid ?? 5.72;
   const eurBrl = data?.currencies?.['EUR-BRL']?.bid ?? 6.18;
   const btcBrl = data?.crypto?.['BTC']?.price_brl ?? 540000;
+  const ibov = data?.indices?.['IBOV'];
+  const sp500 = data?.indices?.['SP500'];
+  const nasdaq = data?.indices?.['NASDAQ'];
 
   return (
     <div className="w-full bg-white dark:bg-[#161c28] border border-slate-200/80 dark:border-white/10 rounded-2xl p-3 mb-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 text-xs overflow-x-auto">
@@ -85,6 +89,43 @@ export default function MarketTicker() {
             R$ {(btcBrl / 1000).toFixed(0)}k
           </span>
         </div>
+
+        {/* Equity Indices (B3, S&P 500, Nasdaq) */}
+        {ibov && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+            <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">B3:</span>
+            <span className="font-mono font-bold text-slate-900 dark:text-white">
+              {ibov.value >= 1000 ? `${(ibov.value / 1000).toFixed(1)}k` : ibov.value.toLocaleString('pt-BR')}
+            </span>
+            <span className={`text-[10px] font-mono ${ibov.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
+              {ibov.pct_change >= 0 ? `+${ibov.pct_change}%` : `${ibov.pct_change}%`}
+            </span>
+          </div>
+        )}
+
+        {sp500 && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+            <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">S&P 500:</span>
+            <span className="font-mono font-bold text-slate-900 dark:text-white">
+              {sp500.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            </span>
+            <span className={`text-[10px] font-mono ${sp500.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
+              {sp500.pct_change >= 0 ? `+${sp500.pct_change}%` : `${sp500.pct_change}%`}
+            </span>
+          </div>
+        )}
+
+        {nasdaq && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-[#1f2738] border border-slate-200 dark:border-white/5 font-semibold text-slate-700 dark:text-slate-200">
+            <span className="text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">Nasdaq:</span>
+            <span className="font-mono font-bold text-slate-900 dark:text-white">
+              {nasdaq.value >= 1000 ? `${(nasdaq.value / 1000).toFixed(1)}k` : nasdaq.value.toLocaleString('en-US')}
+            </span>
+            <span className={`text-[10px] font-mono ${nasdaq.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
+              {nasdaq.pct_change >= 0 ? `+${nasdaq.pct_change}%` : `${nasdaq.pct_change}%`}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Meta & Refresh Action */}

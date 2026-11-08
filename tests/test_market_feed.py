@@ -22,11 +22,18 @@ class TestMarketFeedService(unittest.TestCase):
         self.assertIn("rates", data)
         self.assertIn("currencies", data)
         self.assertIn("crypto", data)
+        self.assertIn("indices", data)
         self.assertFalse(data["cached"])
 
         # Check Selic and PTAX existence
         self.assertIn("SELIC", data["rates"])
         self.assertGreater(data["rates"]["SELIC"]["value"], 0)
+
+        # Check Equity Indices
+        self.assertIn("IBOV", data["indices"])
+        self.assertIn("SP500", data["indices"])
+        self.assertIn("NASDAQ", data["indices"])
+        self.assertGreater(data["indices"]["IBOV"]["value"], 0)
 
         # Check FX
         self.assertTrue(len(data["currencies"]) > 0)

@@ -549,7 +549,7 @@ export default function StitchExecutiveDashboard() {
                   </div>
                 </div>
 
-                <button className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 bg-[#1a2232] border border-white/10 rounded-xl hover:bg-[#212a3d] text-slate-300 shadow-sm transition">
+                <button className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 bg-slate-100 dark:bg-[#1a2232] border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-200 dark:hover:bg-[#212a3d] text-slate-700 dark:text-slate-300 shadow-sm transition">
                   <span>Últimos 12 meses</span>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
@@ -558,18 +558,18 @@ export default function StitchExecutiveDashboard() {
 
             {/* SVG Double Wave Chart with Glowing Tooltip Box */}
             <div className="relative w-full h-56 pt-2">
-              <div className="absolute top-2 left-[48%] -translate-x-1/2 bg-[#1a2232]/95 backdrop-blur-md shadow-2xl border border-white/15 rounded-2xl p-2.5 z-20 flex gap-3 text-xs pointer-events-none">
+              <div className="absolute top-2 left-[48%] -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-3 text-xs pointer-events-none text-slate-900 dark:text-white">
                 <div>
-                  <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" /> 2026
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400" /> 2026
                   </div>
-                  <div className="font-mono font-bold text-white">R$ 148.420</div>
+                  <div className="font-mono font-bold text-slate-900 dark:text-white">R$ 148.420</div>
                 </div>
-                <div className="border-l border-white/10 pl-3">
-                  <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                <div className="border-l border-slate-200 dark:border-white/10 pl-3">
+                  <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#FB923C]" /> 2025
                   </div>
-                  <div className="font-mono font-semibold text-slate-300">R$ 112.500</div>
+                  <div className="font-mono font-semibold text-slate-700 dark:text-slate-300">R$ 112.500</div>
                 </div>
               </div>
 
@@ -825,8 +825,8 @@ export default function StitchExecutiveDashboard() {
 
         {/* 5. LOWER ROW: Transaction Ledger & Fiscal Reconciliation + Money Movement Column Chart */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-          {/* TRANSACTION TABLE: Clean & Refined Dark Ledger */}
-          <div className="lg:col-span-8 bg-[#161c28] rounded-3xl p-6 border border-white/10 shadow-card flex flex-col justify-between">
+          {/* TRANSACTION TABLE: Clean & Refined Ledger */}
+          <div className="lg:col-span-8 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card flex flex-col justify-between">
             <div>
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div>
@@ -1116,8 +1116,14 @@ export default function StitchExecutiveDashboard() {
 
       {/* 7. SLIDE-OVER ASSISTANT & OCR CAPTURE DRAWER */}
       {isAssistantOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity">
-          <div className="w-full sm:w-[460px] h-full bg-white dark:bg-[#161c28] border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 text-slate-900 dark:text-white">
+        <div
+          className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity"
+          onClick={() => setIsAssistantOpen(false)}
+        >
+          <div
+            className="w-full sm:w-[560px] md:w-[620px] max-w-full h-full bg-white dark:bg-[#161c28] border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 text-slate-900 dark:text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Drawer Header */}
             <div className="p-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-[#121722]">
               <div className="flex items-center gap-2">
@@ -1169,8 +1175,8 @@ export default function StitchExecutiveDashboard() {
                   <div
                     className={`max-w-[88%] rounded-2xl px-4 py-2.5 leading-relaxed ${
                       msg.sender === 'user'
-                        ? 'bg-indigo-600 text-white rounded-br-none'
-                        : 'bg-slate-100 dark:bg-[#121722] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-200 rounded-bl-none shadow-sm'
+                        ? 'bg-indigo-600 text-white rounded-br-none shadow-md'
+                        : 'bg-white dark:bg-[#121722] border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-100 rounded-bl-none shadow-sm'
                     }`}
                   >
                     {msg.attachmentName && (
@@ -1181,14 +1187,14 @@ export default function StitchExecutiveDashboard() {
                     )}
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                     {msg.sender === 'assistant' && (msg.model || msg.provider) && (
-                      <div className="mt-2 pt-1.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      <div className="mt-2 pt-1.5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-2 text-[10px] text-slate-600 dark:text-slate-400 font-mono">
                         <span className="inline-flex items-center gap-1">
                           <Sparkles className="w-2.5 h-2.5 text-indigo-500" />
-                          <span className="font-medium text-slate-700 dark:text-slate-300">{msg.model || msg.provider}</span>
-                          {msg.provider && msg.model && <span className="text-[9px] opacity-60">({msg.provider})</span>}
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">{msg.model || msg.provider}</span>
+                          {msg.provider && msg.model && <span className="text-[9px] opacity-75">({msg.provider})</span>}
                         </span>
                         {msg.latencyMs !== undefined && (
-                          <span className="text-[9px] opacity-70">{msg.latencyMs}ms</span>
+                          <span className="text-[9px] font-semibold opacity-80">{msg.latencyMs}ms</span>
                         )}
                       </div>
                     )}
@@ -1269,7 +1275,7 @@ export default function StitchExecutiveDashboard() {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Mensagem (ex: usei o inter cnpj, almoço R$ 45)..."
-                  className="flex-1 bg-[#161c28] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 outline-none focus:border-indigo-500"
+                  className="flex-1 bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
                 />
 
                 <button

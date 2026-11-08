@@ -28,6 +28,12 @@ class TestSmartRouterClassification(unittest.TestCase):
         decision_das = self.router.classify_intent("como emitir a guia DAS da Facilita Vistorias?")
         self.assertEqual(decision_das.intent, IntentKey.FINANCIAL_OPS)
 
+        decision_caixa = self.router.classify_intent("Resumo de Caixa")
+        self.assertEqual(decision_caixa.intent, IntentKey.FINANCIAL_OPS)
+
+        decision_status = self.router.classify_intent("Status das Contas")
+        self.assertEqual(decision_status.intent, IntentKey.FINANCIAL_OPS)
+
     def test_investment_macro_queries(self):
         decision = self.router.classify_intent("qual a melhor opção de investimento hoje com a Selic atual?")
         self.assertEqual(decision.intent, IntentKey.INVESTMENT_MACRO)
@@ -99,6 +105,25 @@ class TestSmartRouterExecution(unittest.TestCase):
         self.assertEqual(result["provider"], "Offline Heuristic Fallback")
         self.assertIn("renda fixa", result["reply"].lower())
         self.assertIn("selic", result["reply"].lower())
+
+    def test_system_prompt_includes_cash_and_indices(self):
+        prompt = self.router.build_system_prompt(IntentKey.FINANCIAL_OPS)
+        self.assertIn("Fix Serviços MEI", prompt)
+        self.assertIn("Facilita Vistorias MEI", prompt)
+        self.assertIn("Household PF", prompt)
+        self.assertIn("B3 Ibovespa", prompt)
+        self.assertIn("S&P 500", prompt)
+        self.assertIn("Nasdaq", prompt)
+
+    @patch("src.llm.client.UniversalLLMClient.generate")
+    def test_financial_ops_fallback_includes_cash(self, mock_generate):
+        mock_generate.side_effect = Exception("Service unavailable 503")
+
+        result = self.router.execute_chat("Resumo de Caixa")
+        self.assertEqual(result["provider"], "Offline Heuristic Fallback")
+        self.assertIn("Fix Serviços", result["reply"])
+        self.assertIn("Facilita Vistorias", result["reply"])
+        self.assertIn("47.730,00", result["reply"])
 
 
 if __name__ == "__main__":

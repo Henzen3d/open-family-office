@@ -119,6 +119,9 @@ class MarketFeedService:
                 "ETH": {"symbol": "ETH", "price_brl": 18500.0, "currency": "BRL", "source": "Crypto Fallback"},
             }
 
+        # Major Equity Indices (B3 Ibovespa, S&P 500, Nasdaq)
+        indices = self._fetch_indices()
+
         # Holidays
         holidays_list = []
         try:
@@ -140,9 +143,53 @@ class MarketFeedService:
             "rates": rates,
             "currencies": currencies,
             "crypto": crypto,
+            "indices": indices,
             "upcoming_holidays": holidays_list,
         }
 
         self._save_cache(snapshot)
         return snapshot
+
+    def _fetch_indices(self) -> Dict[str, Any]:
+        """Fetches major equity indices (B3 Ibovespa, S&P 500, Nasdaq) with robust fallbacks."""
+        import urllib.request
+        symbols = [
+            ("IBOV", "^BVSP", "B3 Ibovespa", 168000.0),
+            ("SP500", "^GSPC", "S&P 500", 7350.0),
+            ("NASDAQ", "^IXIC", "Nasdaq", 24500.0),
+        ]
+        results = {}
+        for code, sym, name, default_val in symbols:
+            try:
+                encoded_sym = sym.replace("^", "%5E")
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded_sym}?interval=1d"
+                req = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"},
+                )
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    payload = json.loads(resp.read().decode("utf-8"))
+                    meta = payload["chart"]["result"][0]["meta"]
+                    price = float(meta.get("regularMarketPrice") or default_val)
+                    prev_close = float(meta.get("chartPreviousClose") or price)
+                    pct = round(((price - prev_close) / prev_close) * 100, 2) if prev_close else 0.0
+                    results[code] = {
+                        "code": code,
+                        "symbol": sym,
+                        "name": name,
+                        "value": price,
+                        "pct_change": pct,
+                        "currency": meta.get("currency", "USD" if code != "IBOV" else "BRL"),
+                    }
+            except Exception:
+                results[code] = {
+                    "code": code,
+                    "symbol": sym,
+                    "name": name,
+                    "value": default_val,
+                    "pct_change": 0.0,
+                    "currency": "BRL" if code == "IBOV" else "USD",
+                    "fallback": True,
+                }
+        return results
 

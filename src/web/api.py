@@ -119,10 +119,16 @@ async def system_status():
 
 
 def get_smart_router() -> SmartRouter:
-    """Returns an active SmartRouter configured with dynamic providers and live market feed."""
+    """Returns an active SmartRouter configured with dynamic providers, live market feed, and ledger."""
     cfg_mgr = get_config_manager()
     market_svc = get_market_service()
-    return SmartRouter(config_manager=cfg_mgr, market_feed=market_svc, sanitizer=sanitizer)
+    ledger_mgr = get_ledger_manager()
+    return SmartRouter(
+        config_manager=cfg_mgr,
+        market_feed=market_svc,
+        ledger_manager=ledger_mgr,
+        sanitizer=sanitizer,
+    )
 
 
 @app.post("/api/chat")
