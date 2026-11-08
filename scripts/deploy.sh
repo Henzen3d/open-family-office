@@ -33,7 +33,14 @@ chmod -R 775 data reports || true
 
 # 3. Build and launch Docker containers
 echo "🐳 Building and updating Docker containers..."
-docker compose up -d --build --remove-orphans
+# Start the Cloudflare tunnel (ofo-tunnel, profile "tunnel") only when a token is set in .env.
+if grep -qE '^CLOUDFLARE_TUNNEL_TOKEN=.' .env 2>/dev/null; then
+  echo "🌐 CLOUDFLARE_TUNNEL_TOKEN found — enabling --profile tunnel"
+  docker compose --profile tunnel up -d --build --remove-orphans
+else
+  echo "ℹ️ No CLOUDFLARE_TUNNEL_TOKEN in .env — tunnel profile skipped"
+  docker compose up -d --build --remove-orphans
+fi
 
 # 4. Clean up dangling images to preserve server disk space
 echo "🧹 Pruning dangling docker images..."
