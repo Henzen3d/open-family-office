@@ -17,6 +17,9 @@ from src.engine.runway import RunwayCalculator
 from src.engine.tax_monitor import MEITaxMonitor
 from src.engine.cash_flow import CashFlowForecastEngine
 from src.intelligence.macro_aggregator import MacroAggregator
+from src.llm.config_manager import ProviderConfigManager, CustomProviderConfig
+from src.llm.importer import EnvImporter
+from src.llm.rate_limiter import ProviderLimits
 
 
 def run_full_audit(
@@ -135,14 +138,133 @@ def run_full_audit(
     }
 
 
+def handle_config_command(args):
+    """Handles LLM provider configuration commands (list, add, remove, import)."""
+    manager = ProviderConfigManager()
+
+    if args.config_action == "list":
+        providers = manager.list_providers()
+        print(f"# Configured LLM Providers ({len(providers)} registered)\n")
+        print("| Priority | ID | Name | Protocol | Model | Enabled | Base URL |")
+        print("|---|---|---|---|---|---|---|")
+        for p in providers:
+            status_str = "Yes" if p.enabled else "No"
+            masked_key = p.api_key[:6] + "..." if len(p.api_key) > 8 else (p.api_key or "None")
+            print(f"| {p.priority} | {p.id} | {p.name} | `{p.protocol}` | `{p.model}` | {status_str} | {p.base_url} |")
+
+    elif args.config_action == "add":
+        limits = ProviderLimits(
+            rpm_limit=args.rpm,
+            tpm_limit=args.tpm,
+            rpd_limit=args.rpd,
+        )
+        custom_headers = {}
+        if args.protocol == "anthropic":
+            custom_headers["anthropic-version"] = "2023-06-01"
+
+        cfg = CustomProviderConfig(
+            id=args.id,
+            name=args.name,
+            protocol=args.protocol,
+            base_url=args.base_url,
+            api_key=args.api_key,
+            model=args.model,
+            priority=args.priority,
+            enabled=True,
+            limits=limits,
+            custom_headers=custom_headers,
+        )
+        manager.add_provider(cfg)
+        print(f"Success: Provider '{cfg.name}' [{cfg.id}] added and saved to config/providers.json.")
+
+    elif args.config_action == "remove":
+        if manager.remove_provider(args.id):
+            print(f"Success: Provider '{args.id}' removed.")
+        else:
+            print(f"Error: Provider '{args.id}' not found.")
+
+    elif args.config_action == "import":
+        source_path = args.source
+        if not source_path:
+            # Default auto-discover paths
+            candidates = [
+                r"J:\Arquivos Osmar\Multi+\.env",
+                r"J:\Arquivos Osmar\Multi+\free.env",
+                ".env",
+            ]
+            for c in candidates:
+                if os.path.exists(c):
+                    source_path = c
+                    break
+
+        if not source_path or not os.path.exists(source_path):
+            print(f"Error: Source .env file not found at '{source_path}'. Specify with --source <path>")
+            sys.exit(1)
+
+        importer = EnvImporter()
+        imported = importer.import_from_env_file(source_path, manager)
+        print(f"Successfully imported {len(imported)} providers from '{source_path}':")
+        for pid, pname in imported:
+            print(f"- [{pid}] {pname}")
+
+
 def main():
-    parser = argparse.ArgumentParser(description="OpenFamilyOffice Deterministic Engine CLI")
-    parser.add_argument("--format", choices=["json", "markdown"], default="markdown", help="Output format")
-    parser.add_argument("--templates-dir", default="templates", help="Path to templates folder containing CSVs")
-    parser.add_argument("--include-macro", action="store_true", help="Fetch official BCB economic rates and headlines")
+    parser = argparse.ArgumentParser(description="OpenFamilyOffice CLI")
+    subparsers = parser.add_subparsers(dest="command")
 
-    args = parser.parse_args()
+    # Audit command (or default)
+    audit_parser = subparsers.add_parser("audit", help="Run deterministic financial audit")
+    audit_parser.add_argument("--format", choices=["json", "markdown"], default="markdown", help="Output format")
+    audit_parser.add_argument("--templates-dir", default="templates", help="Path to templates folder containing CSVs")
+    audit_parser.add_argument("--include-macro", action="store_true", help="Fetch official BCB economic rates and headlines")
 
+    # Config command
+    config_parser = subparsers.add_parser("config", help="Manage LLM providers & API keys")
+    config_sub = config_parser.add_subparsers(dest="config_action")
+
+    # config list
+    config_sub.add_parser("list", help="List registered LLM providers")
+
+    # config add
+    add_parser = config_sub.add_parser("add", help="Add custom LLM provider")
+    add_parser.add_argument("--id", required=True, help="Unique slug ID (e.g. cerebras, deepseek, my-proxy)")
+    add_parser.add_argument("--name", required=True, help="Human-readable provider name")
+    add_parser.add_argument("--protocol", choices=["openai", "anthropic", "gemini"], default="openai", help="API protocol")
+    add_parser.add_argument("--base-url", required=True, help="Base endpoint URL")
+    add_parser.add_argument("--api-key", required=True, help="API key or ${ENV_VAR}")
+    add_parser.add_argument("--model", required=True, help="Target model identifier")
+    add_parser.add_argument("--priority", type=int, default=1, help="Fallback priority (1 = highest)")
+    add_parser.add_argument("--rpm", type=int, default=30, help="Requests per minute limit")
+    add_parser.add_argument("--tpm", type=int, default=30000, help="Tokens per minute limit")
+    add_parser.add_argument("--rpd", type=int, default=5000, help="Requests per day limit")
+
+    # config remove
+    rem_parser = config_sub.add_parser("remove", help="Remove registered provider")
+    rem_parser.add_argument("--id", required=True, help="Provider ID to remove")
+
+    # config import
+    imp_parser = config_sub.add_parser("import", help="Import providers from .env file (NexusLocal / Multi+)")
+    imp_parser.add_argument("--source", help="Path to .env file to import from")
+
+    # If no subcommand passed, default to running audit
+    if len(sys.argv) == 1 or sys.argv[1] not in ["audit", "config"]:
+        # Parse audit directly from root args for backward compatibility
+        parser.add_argument("--format", choices=["json", "markdown"], default="markdown", help="Output format")
+        parser.add_argument("--templates-dir", default="templates", help="Path to templates folder containing CSVs")
+        parser.add_argument("--include-macro", action="store_true", help="Fetch official BCB economic rates and headlines")
+        args = parser.parse_args()
+        args.command = "audit"
+    else:
+        args = parser.parse_args()
+
+    if args.command == "config":
+        if not args.config_action:
+            config_parser.print_help()
+            sys.exit(0)
+        handle_config_command(args)
+        return
+
+    # Execute Audit
     entities_f = os.path.join(args.templates_dir, "entities_template.csv")
     categories_f = os.path.join(args.templates_dir, "categories_template.csv")
     transactions_f = os.path.join(args.templates_dir, "transactions_template.csv")

@@ -4,6 +4,7 @@ import time
 from typing import Dict, List, Optional, Tuple
 
 from src.llm.rate_limiter import ProviderLimits, SlidingWindowRateLimiter
+from src.llm.config_manager import CustomProviderConfig, ProviderConfigManager
 
 
 @dataclass
@@ -11,9 +12,10 @@ class ProviderProfile:
     """Configured LLM provider profile."""
     name: str
     model_name: str
-    provider_type: str  # "GEMINI_FREE", "GROQ_FREE", "OPENROUTER_FREE", "LOCAL_OLLAMA"
+    provider_type: str  # "GEMINI_FREE", "GROQ_FREE", "OPENROUTER_FREE", "LOCAL_OLLAMA", "CUSTOM"
     priority: int       # 1 is highest priority
     limits: ProviderLimits
+    config: Optional[CustomProviderConfig] = None
     rate_limiter: SlidingWindowRateLimiter = field(init=False)
 
     def __post_init__(self):
@@ -27,6 +29,27 @@ class LLMFallbackRouter:
         self.profiles: List[ProviderProfile] = profiles or self._build_default_profiles()
         # Sort by priority ascending (1 = primary)
         self.profiles.sort(key=lambda p: p.priority)
+
+    @classmethod
+    def from_config_manager(cls, manager: ProviderConfigManager) -> "LLMFallbackRouter":
+        """Builds a router populated with dynamic custom providers from the config manager."""
+        custom_configs = manager.list_providers(enabled_only=True)
+        if not custom_configs:
+            return cls()
+
+        profiles = []
+        for c in custom_configs:
+            profiles.append(
+                ProviderProfile(
+                    name=c.name,
+                    model_name=c.model,
+                    provider_type=c.protocol.upper(),
+                    priority=c.priority,
+                    limits=c.limits,
+                    config=c,
+                )
+            )
+        return cls(profiles)
 
     def _build_default_profiles(self) -> List[ProviderProfile]:
         """Builds recommended default free tier profiles."""
@@ -110,3 +133,4 @@ class LLMFallbackRouter:
             if p.name == provider_name:
                 p.rate_limiter.trigger_cooldown(cooldown_seconds, now=now)
                 break
+

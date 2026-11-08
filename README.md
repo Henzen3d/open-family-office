@@ -85,6 +85,12 @@ Grounds AI advisory agents in verified, real-world economic reality rather than 
 * **Public Financial RSS Ingestion**: Scans Google News Business and economic feeds for breaking headlines regarding exchange rates, interest rates, stock market trends, and MEI tax laws.
 * **Local Daily Caching**: Automatically caches the daily snapshot in `data/macro_cache/` to avoid redundant network calls. See [`docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md`](docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md).
 
+### 11. Universal Custom Provider Registry (Anthropic & OpenAI Compatible)
+Future-proof architecture allowing dynamic registration of any current or future LLM provider without touching code:
+* **Multi-Protocol Support**: Seamlessly dispatches requests to both **Anthropic-Compatible** (`/v1/messages`) and **OpenAI-Compatible** (`/v1/chat/completions`) endpoints.
+* **NexusLocal / Multi+ Importer**: Instantly imports configured API keys from existing `.env` files via `python -m src.cli config import`.
+* **Zero Lock-In**: Simply specify a `base_url`, `api_key`, `protocol`, and `model` to connect any enterprise proxy, custom cloud gateway, or local instance. See [`docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md`](docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md).
+
 ---
 
 ## System Architecture

@@ -85,6 +85,12 @@ Alimenta as IAs com o cenário econômico real do dia, garantindo análises fié
 * **Leitor de Notícias Econômicas RSS**: Varredura diária no Google News Economia e portais financeiros, filtrando notícias sobre juros, câmbio, bolsa e MEI.
 * **Cache Diário Local**: Salva um snapshot diário em `data/macro_cache/`, evitando chamadas repetidas de rede e economizando limites. Veja [`docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md`](docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md).
 
+### 11. Cadastro Dinâmico de Provedores Customizados (Compatível com Anthropic & OpenAI)
+Arquitetura flexível e à prova de futuro para cadastrar qualquer novo provedor de IA sem mexer no código do sistema:
+* **Suporte Multi-Protocolo Nativo**: Conecta tanto a endpoints **compatíveis com Anthropic** (`/v1/messages`) quanto **compatíveis com OpenAI** (`/v1/chat/completions`).
+* **Importador Automático do NexusLocal / Multi+**: Importa todas as chaves existentes do `.env` com um único comando: `python -m src.cli config import`.
+* **Zero Engessamento**: Cadastre novos provedores informando apenas a `base_url`, `api_key`, `protocol` e `model` via CLI (`python -m src.cli config add`) ou pelo arquivo `config/providers.json`. Veja [`docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md`](docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md).
+
 ---
 
 ## O Conselho Consultivo de IA (Equipe 7+1)

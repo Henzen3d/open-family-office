@@ -1,0 +1,72 @@
+[
+  {
+    "id": "gemini-free",
+    "name": "Google Gemini 2.0 Flash (Free Tier)",
+    "protocol": "gemini",
+    "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "api_key": "${GEMINI_API_KEY}",
+    "model": "gemini-2.0-flash",
+    "priority": 1,
+    "enabled": true,
+    "limits": {
+      "rpm_limit": 15,
+      "tpm_limit": 1000000,
+      "rpd_limit": 1500,
+      "proactive_threshold_pct": 0.80
+    },
+    "custom_headers": {}
+  },
+  {
+    "id": "groq-free",
+    "name": "Groq Ultra-Fast (Free Tier)",
+    "protocol": "openai",
+    "base_url": "https://api.groq.com/openai/v1",
+    "api_key": "${GROQ_API_KEY}",
+    "model": "llama-3.3-70b-versatile",
+    "priority": 2,
+    "enabled": true,
+    "limits": {
+      "rpm_limit": 30,
+      "tpm_limit": 30000,
+      "rpd_limit": 14400,
+      "proactive_threshold_pct": 0.80
+    },
+    "custom_headers": {}
+  },
+  {
+    "id": "anthropic-custom",
+    "name": "Anthropic Claude (or Custom Anthropic Gateway)",
+    "protocol": "anthropic",
+    "base_url": "https://api.anthropic.com/v1",
+    "api_key": "${ANTHROPIC_API_KEY}",
+    "model": "claude-3-5-sonnet-20241022",
+    "priority": 3,
+    "enabled": false,
+    "limits": {
+      "rpm_limit": 50,
+      "tpm_limit": 40000,
+      "rpd_limit": 1000,
+      "proactive_threshold_pct": 0.80
+    },
+    "custom_headers": {
+      "anthropic-version": "2023-06-01"
+    }
+  },
+  {
+    "id": "local-ollama",
+    "name": "Local Ollama / NexusLocal (Offline & Zero-Cost)",
+    "protocol": "openai",
+    "base_url": "http://localhost:11434/v1",
+    "api_key": "ollama",
+    "model": "qwen2.5:14b",
+    "priority": 4,
+    "enabled": true,
+    "limits": {
+      "rpm_limit": 9999,
+      "tpm_limit": 9999999,
+      "rpd_limit": 999999,
+      "proactive_threshold_pct": 0.99
+    },
+    "custom_headers": {}
+  }
+]

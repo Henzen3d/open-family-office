@@ -63,6 +63,11 @@ flowchart LR
   - Proactive switching at 80% capacity to avoid 429 errors.
   - Cascade: Google Gemini Free -> Groq Free -> OpenRouter Free -> Local Ollama.
   - Zero-latency switching for interactive user calls; smooth non-blocking delay queue for background batch tasks.
+- [x] Universal Custom Provider Registry & Multi-Protocol Client ([`docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md`](docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md), `src/llm/`):
+  - Full support for **Anthropic-Compatible** (`/v1/messages`) and **OpenAI-Compatible** (`/v1/chat/completions`) endpoints.
+  - Dynamic registration of any current or future provider by setting `base_url`, `api_key`, `protocol`, and `model`.
+  - Automated importer for **NexusLocal / Multi+** `.env` files (`python -m src.cli config import`).
+  - Interactive CLI management: `config list`, `config add`, `config remove`, `config import`.
 - [x] Daily Real-Time Macroeconomic Grounding & News Ingestion ([`docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md`](docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md), `src/intelligence/`):
   - Banco Central do Brasil (BCB/SGS) public API client for Selic Meta, Dólar PTAX, and IPCA 12M with zero API keys.
   - Financial RSS news ingestion and keyword filtering (Dólar, Selic, IPCA, Ibovespa, MEI).

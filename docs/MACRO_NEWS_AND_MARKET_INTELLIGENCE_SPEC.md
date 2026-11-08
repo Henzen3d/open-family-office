@@ -111,3 +111,4 @@ The aggregated `MacroSnapshot` is serialized into structured Markdown/JSON and p
 2. Dólar opera em oscilação frente ao real com atenção a dados de emprego nos EUA.
 3. Nova regra do MEI amplia limites de faturamento para próximos anos.
 ```
+

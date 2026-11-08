@@ -69,3 +69,4 @@ class BCBClient:
         for code in self.INDICATOR_SERIES:
             rates[code] = self.fetch_indicator(code)
         return rates
+

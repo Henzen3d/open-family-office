@@ -73,3 +73,4 @@ class EconomicNewsClient:
             )
 
         return headlines
+

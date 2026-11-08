@@ -114,3 +114,4 @@ class MacroAggregator:
             lines.append(f"{idx}. {h.title} *({h.source_name})*")
 
         return "\n".join(lines)
+

@@ -107,3 +107,4 @@ The system defines an ordered cascade of providers:
 * **Rule**: If all cloud free tiers are near capacity, the worker computes the exact sleep time:
   $$\text{Delay} = 60 - (\text{now} - \text{oldest\_request\_in\_window}) + 1.0\text{s}$$
 * Executes smoothly in the background without burning through interactive allowances.
+
