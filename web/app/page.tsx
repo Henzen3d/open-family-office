@@ -2,24 +2,32 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
-  RefreshCw,
-  TrendingUp,
-  Building2,
-  Users,
+  Home,
+  FileText,
   CreditCard,
+  TrendingUp,
+  ShieldCheck,
+  Settings,
+  Search,
   Calendar,
-  Camera,
   Send,
-  X,
-  MessageSquarePlus,
   ArrowUpRight,
   ArrowDownLeft,
-  DollarSign,
-  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Camera,
+  Plus,
+  X,
+  Fingerprint,
+  RefreshCw,
+  Bell,
+  HelpCircle,
+  ArrowRight,
+  ChevronRight,
+  QrCode,
+  Upload,
   Clock,
+  Sparkles,
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -30,28 +38,31 @@ interface ChatMessage {
   attachmentName?: string;
 }
 
-export default function ExecutiveDashboard() {
-  const [activeEntity, setActiveEntity] = useState<'all' | 'fix' | 'facilita' | 'pf'>('all');
+export default function StitchExecutiveDashboard() {
+  const [activeTab, setActiveTab] = useState<'all' | 'fix' | 'facilita' | 'pf'>('all');
+  const [ledgerFilter, setLedgerFilter] = useState<'all' | 'inter' | 'caixa' | 'nubank'>('all');
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
-  // Chat State
+  // Chat & Upload state
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       sender: 'assistant',
-      text: 'Assistente OpenFamilyOffice ativo. Padrão ASD-STE100 (~80%). Frases curtas, números primeiro. Anexe um cupom fiscal ou faça sua consulta.',
+      text: 'Assistente OpenFamilyOffice ativo. Padrão ASD-STE100 (~80%). Frases diretas e números operacionais primeiro. Fotografe o cupom fiscal ou digite sua consulta.',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);
-  const [input, setInput] = useState('');
+  const [chatInput, setChatInput] = useState('');
   const [selectedEntityChat, setSelectedEntityChat] = useState('inter_cnpj');
   const [loadingChat, setLoadingChat] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Check backend health
+  // Quick transfer state
+  const [transferAmount, setTransferAmount] = useState('200,00');
+
   useEffect(() => {
     fetch('/api/py/health')
       .then((res) => {
@@ -67,8 +78,8 @@ export default function ExecutiveDashboard() {
     }
   }, [messages, isAssistantOpen]);
 
-  const handleSendMessage = async (textToSend?: string) => {
-    const text = (textToSend || input).trim();
+  const handleSendMessage = async (customText?: string) => {
+    const text = (customText || chatInput).trim();
     if (!text && !attachedFile) return;
 
     const userMsgId = Date.now().toString();
@@ -81,7 +92,7 @@ export default function ExecutiveDashboard() {
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    setInput('');
+    setChatInput('');
     setLoadingChat(true);
 
     if (attachedFile) {
@@ -103,7 +114,7 @@ export default function ExecutiveDashboard() {
           {
             id: (Date.now() + 1).toString(),
             sender: 'assistant',
-            text: `Comprovante "${uploadData.file_name}" recebido. Conta: ${uploadData.target_entity}. Dados protegidos por cofre local. Lançamento adicionado à fila de conferência.`,
+            text: `Cupom "${uploadData.file_name}" arquivado com sucesso. Conta: ${uploadData.target_entity}. Dados protegidos por cofre local. Aguardando conciliação automática.`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           },
         ]);
@@ -125,17 +136,17 @@ export default function ExecutiveDashboard() {
         }),
       });
 
-      if (!res.ok) throw new Error('API request failed');
+      if (!res.ok) throw new Error('API call failed');
 
       const data = await res.json();
-      const replyText = data.reply || (data.facts ? data.facts.join(' ') : 'Comando processado com sucesso.');
+      const reply = data.reply || (data.facts ? data.facts.join(' ') : 'Comando executado com sucesso.');
 
       setMessages((prev) => [
         ...prev,
         {
           id: (Date.now() + 1).toString(),
           sender: 'assistant',
-          text: replyText,
+          text: reply,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -145,7 +156,7 @@ export default function ExecutiveDashboard() {
         {
           id: (Date.now() + 1).toString(),
           sender: 'assistant',
-          text: 'Resposta offline: Teto MEI 2026 em R$ 81.000,00. Runway atual de 11,2 meses.',
+          text: 'Resposta local: Limite MEI 2026 em R$ 81.000,00 anuais (R$ 6.750,00/mês). Posição de caixa protegida contra desenquadramento.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -155,492 +166,854 @@ export default function ExecutiveDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30">
-      {/* 1. Top Global Navigation */}
-      <header className="border-b border-white/[0.08] bg-slate-950/80 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-950/40">
-              O
+    <div className="min-h-screen flex bg-[#0c1017] text-[#f8fafc] font-sans antialiased">
+      {/* 1. LEFT COMPACT FLOATING ICON SIDEBAR */}
+      <aside className="w-18 md:w-20 bg-transparent flex flex-col items-center py-6 px-3 z-30 shrink-0 select-none border-r border-white/5">
+        {/* Brand Emblem */}
+        <div className="w-12 h-12 rounded-2xl bg-[#161c28] border border-white/10 shadow-lg flex items-center justify-center mb-8 hover:border-indigo-500/50 hover:bg-[#1a2232] transition group cursor-pointer">
+          <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-indigo-500 to-indigo-400 flex items-center justify-center text-white font-extrabold text-sm shadow-md shadow-indigo-900/50">
+            O
+          </div>
+        </div>
+
+        {/* Nav Items with pill active state */}
+        <nav className="flex flex-col items-center gap-4 w-full">
+          <button
+            title="Visão Geral"
+            className="w-12 h-12 rounded-2xl bg-indigo-600 text-white shadow-pill flex items-center justify-center transition-transform hover:scale-105"
+          >
+            <Home className="w-5 h-5" />
+          </button>
+
+          <button
+            title="Monitor de Liquidez & Faturas"
+            className="w-12 h-12 rounded-2xl bg-[#161c28] text-slate-400 hover:text-indigo-400 hover:bg-[#1f2738] border border-white/5 shadow-sm flex items-center justify-center transition"
+          >
+            <FileText className="w-5 h-5" />
+          </button>
+
+          <button
+            title="Cartões & Contas Multientidade"
+            className="w-12 h-12 rounded-2xl bg-[#161c28] text-slate-400 hover:text-indigo-400 hover:bg-[#1f2738] border border-white/5 shadow-sm flex items-center justify-center transition"
+          >
+            <CreditCard className="w-5 h-5" />
+          </button>
+
+          <button
+            title="Curva Patrimonial & Analytics"
+            className="w-12 h-12 rounded-2xl bg-[#161c28] text-slate-400 hover:text-indigo-400 hover:bg-[#1f2738] border border-white/5 shadow-sm flex items-center justify-center transition"
+          >
+            <TrendingUp className="w-5 h-5" />
+          </button>
+
+          <button
+            title="Governança Conjugal (Dual-Signature)"
+            className="w-12 h-12 rounded-2xl bg-[#161c28] text-slate-400 hover:text-indigo-400 hover:bg-[#1f2738] border border-white/5 shadow-sm flex items-center justify-center transition"
+          >
+            <ShieldCheck className="w-5 h-5" />
+          </button>
+        </nav>
+
+        {/* Bottom Settings & Status Pin */}
+        <div className="mt-auto flex flex-col items-center gap-3">
+          <button
+            title="Configurações & LGPD"
+            className="w-12 h-12 rounded-2xl bg-[#161c28] text-slate-400 hover:text-white hover:bg-[#1f2738] border border-white/5 shadow-sm flex items-center justify-center transition"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+
+          <div
+            className={`w-2.5 h-2.5 rounded-full ring-4 ${
+              apiOnline
+                ? 'bg-emerald-400 ring-emerald-500/20'
+                : 'bg-amber-400 ring-amber-500/20'
+            }`}
+            title="Local Air-Gapped Engine"
+          />
+        </div>
+      </aside>
+
+      {/* 2. MAIN VIEWPORT */}
+      <div className="flex-1 flex flex-col min-w-0 pr-4 sm:pr-8 pl-4 sm:pl-6 py-5 overflow-x-hidden">
+        {/* Top Header Bar */}
+        <header className="w-full flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+          {/* Search Input with ⌘K */}
+          <div className="w-full md:w-96 relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <Search className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm tracking-tight text-white">OpenFamilyOffice</span>
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 border border-white/[0.05]">
-                  Private Office
+            <input
+              type="text"
+              placeholder="Pesquisar lançamentos, guias DAS, CNPJ..."
+              className="w-full pl-10 pr-12 py-2.5 bg-[#161c28] border border-white/10 rounded-2xl text-xs placeholder-slate-400 text-slate-200 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/60 transition"
+            />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <kbd className="px-2 py-0.5 text-[10px] font-mono font-semibold bg-[#212a3d] text-slate-400 rounded-md border border-white/10">
+                ⌘K
+              </kbd>
+            </div>
+          </div>
+
+          {/* Quick Entity Filter Pill Switches */}
+          <div className="hidden xl:flex items-center bg-[#161c28] p-1 rounded-2xl border border-white/10 shadow-sm text-xs">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-3.5 py-1.5 rounded-xl font-semibold transition ${
+                activeTab === 'all'
+                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Consolidado
+            </button>
+            <button
+              onClick={() => setActiveTab('fix')}
+              className={`px-3.5 py-1.5 rounded-xl font-semibold transition ${
+                activeTab === 'fix'
+                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Fix Serviços MEI (Osmar)
+            </button>
+            <button
+              onClick={() => setActiveTab('facilita')}
+              className={`px-3.5 py-1.5 rounded-xl font-semibold transition ${
+                activeTab === 'facilita'
+                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Facilita Vistorias MEI (Vera)
+            </button>
+            <button
+              onClick={() => setActiveTab('pf')}
+              className={`px-3.5 py-1.5 rounded-xl font-semibold transition ${
+                activeTab === 'pf'
+                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Família PF (Casal)
+            </button>
+          </div>
+
+          {/* Right Action Bar */}
+          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/40 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Motor 24/7 Ativo</span>
+            </div>
+
+            <button className="flex items-center gap-1.5 px-3 py-2 bg-[#161c28] border border-white/10 rounded-2xl text-xs font-semibold text-slate-300 shadow-sm hover:border-white/20 transition">
+              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <span>Semana 45 • 2026</span>
+            </button>
+
+            <button
+              onClick={() => setIsAssistantOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#161c28] border border-white/10 hover:border-indigo-500/50 hover:bg-[#1f2738] rounded-2xl text-xs font-bold text-white shadow-sm transition"
+            >
+              <span>Mover Dinheiro</span>
+            </button>
+
+            <button
+              onClick={() => setIsAssistantOpen(true)}
+              className="relative w-10 h-10 rounded-2xl bg-[#161c28] border border-white/10 shadow-sm flex items-center justify-center text-slate-400 hover:text-indigo-400 hover:bg-[#1f2738] transition"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-indigo-500" />
+            </button>
+          </div>
+        </header>
+
+        {/* Welcome Greeting & Action Pills */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+                Olá, Osmar & Vera!
+              </h1>
+              <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold border border-indigo-500/30">
+                v1.0 • Privado
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-1 font-medium">
+              Gestão Patrimonial Consolidada • 2 CNPJs MEI (Titularidades Separadas) + 1 Household PF • Air-Gapped Local
+            </p>
+          </div>
+
+          {/* Quick Action Pill Group */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full text-xs">
+            <button
+              onClick={() => setIsAssistantOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-2xl font-bold shadow-pill hover:bg-indigo-500 transition whitespace-nowrap"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Enviar PIX</span>
+            </button>
+            <button
+              onClick={() => handleSendMessage('Cobrança de clientes')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#161c28] text-slate-300 hover:text-white border border-white/10 rounded-2xl font-semibold shadow-sm hover:border-white/20 hover:bg-[#1f2738] transition whitespace-nowrap"
+            >
+              <ArrowDownLeft className="w-3.5 h-3.5 text-slate-400" />
+              <span>Cobrança</span>
+            </button>
+            <button
+              onClick={() => handleSendMessage('Transferir recursos')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#161c28] text-slate-300 hover:text-white border border-white/10 rounded-2xl font-semibold shadow-sm hover:border-white/20 hover:bg-[#1f2738] transition whitespace-nowrap"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+              <span>Transferir</span>
+            </button>
+            <button
+              onClick={() => handleSendMessage('Pagar DAS MEI ou Fatura')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#161c28] text-slate-300 hover:text-white border border-white/10 rounded-2xl font-semibold shadow-sm hover:border-white/20 hover:bg-[#1f2738] transition whitespace-nowrap"
+            >
+              <FileText className="w-3.5 h-3.5 text-slate-400" />
+              <span>Pagar DAS / Fatura</span>
+            </button>
+            <button
+              onClick={() => handleSendMessage('Emitir NFS-e')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#161c28] text-slate-300 hover:text-white border border-white/10 rounded-2xl font-semibold shadow-sm hover:border-white/20 hover:bg-[#1f2738] transition whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5 text-slate-400" />
+              <span>Emitir NFS-e</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 3. MAIN BENTO GRID ROW 1: Multi-Entity Stacked Cards + Flow Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+          {/* LEFT CARD: Stacked Entity Wallets */}
+          <div className="lg:col-span-4 bg-[#161c28] rounded-3xl p-6 border border-white/10 shadow-card flex flex-col justify-between relative overflow-hidden">
+            <div className="relative w-full pt-1 pb-4">
+              {/* Card 1: Vibrant Indigo / Violet Nubank UV */}
+              <div className="relative z-10 w-full h-14 rounded-2xl bg-gradient-to-r from-[#4f46e5] to-[#3b82f6] text-white px-5 py-3 flex items-center justify-between shadow-lg border border-white/15">
+                <span className="text-xs font-semibold uppercase tracking-wider text-blue-100">Nubank UV (PF)</span>
+                <span className="font-mono text-xs font-bold text-white">R$ 68.200,00</span>
+              </div>
+              {/* Card 2: Warm Amber Banco Inter MEI */}
+              <div className="relative z-20 w-full h-14 -mt-6 rounded-2xl bg-gradient-to-r from-[#f59e0b] to-[#ea580c] text-white px-5 py-3 flex items-center justify-between shadow-lg border border-white/15">
+                <span className="text-xs font-semibold uppercase tracking-wider text-amber-100">
+                  Inter PJ • Fix Serviços (Osmar)
+                </span>
+                <span className="font-mono text-xs font-bold text-white">R$ 44.520,00</span>
+              </div>
+              {/* Card 3: Rose / Violet Caixa PJ */}
+              <div className="relative z-30 w-full rounded-2xl bg-gradient-to-r from-[#db2777] to-[#9333ea] text-white p-4 -mt-6 shadow-xl border border-white/20">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-pink-100">
+                    Caixa PJ • Facilita Vist. (Vera)
+                  </span>
+                  <span className="font-mono text-xs font-bold text-white">R$ 35.700,00</span>
+                </div>
+                <div className="bg-black/30 backdrop-blur-md rounded-xl p-2 flex items-center justify-between border border-white/15 text-xs">
+                  <span className="text-[11px] font-medium tracking-wide text-white">3 Entidades Segregadas</span>
+                  <button
+                    onClick={() => setIsAssistantOpen(true)}
+                    className="w-6 h-6 rounded-full bg-white text-purple-700 flex items-center justify-center hover:scale-105 transition shadow-sm font-bold"
+                    title="Adicionar Conta"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Balance Metric Display below cards */}
+            <div className="mt-4 pt-3 border-t border-white/10">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-1">
+                <span>Patrimônio Líquido Disponível</span>
+                <span className="text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-500/25 px-2 py-0.5 rounded-md text-[11px]">
+                  +3,8% mês
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                Gestão Patrimonial • Fix Serviços MEI • Facilita Vistorias MEI
+              <div className="text-3xl font-extrabold text-white tracking-tight font-mono">
+                R$ 148.420,00
+              </div>
+              <div className="flex items-center justify-between mt-3 text-xs text-slate-400 bg-[#121722] p-2.5 rounded-xl border border-white/5">
+                <span className="flex items-center gap-1.5 font-medium">
+                  <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                  Runway Familiar: <strong className="text-white font-semibold">11,2 meses</strong>
+                </span>
+                <span className="font-mono text-[11px] text-slate-500">Burn R$ 13.250/mês</span>
+              </div>
+            </div>
+          </div>
+
+          {/* CENTER / RIGHT HERO: Overview Multi-Curved Liquidity Chart */}
+          <div className="lg:col-span-8 bg-[#161c28] rounded-3xl p-6 border border-white/10 shadow-card flex flex-col justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-white">Visão Geral de Liquidez & Reservas</h3>
+                <p className="text-xs text-slate-400">Evolução do Fluxo de Caixa Consolidado vs. Histórico de 2025</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 bg-[#121722] px-3 py-1.5 rounded-xl border border-white/5 text-xs">
+                  <div className="flex items-center gap-1.5 font-medium text-slate-300">
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
+                    <span>Ano Atual (2026) <strong className="font-mono text-white ml-0.5">R$ 148,4k</strong></span>
+                  </div>
+                  <span className="text-slate-700">|</span>
+                  <div className="flex items-center gap-1.5 font-medium text-slate-400">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#FB923C] shadow-[0_0_8px_rgba(251,146,60,0.5)]" />
+                    <span>Ano Anterior <strong className="font-mono text-slate-300 ml-0.5">R$ 112,0k</strong></span>
+                  </div>
+                </div>
+
+                <button className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 bg-[#1a2232] border border-white/10 rounded-xl hover:bg-[#212a3d] text-slate-300 shadow-sm transition">
+                  <span>Últimos 12 meses</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+              </div>
+            </div>
+
+            {/* SVG Double Wave Chart with Glowing Tooltip Box */}
+            <div className="relative w-full h-56 pt-2">
+              <div className="absolute top-2 left-[48%] -translate-x-1/2 bg-[#1a2232]/95 backdrop-blur-md shadow-2xl border border-white/15 rounded-2xl p-2.5 z-20 flex gap-3 text-xs pointer-events-none">
+                <div>
+                  <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" /> 2026
+                  </div>
+                  <div className="font-mono font-bold text-white">R$ 148.420</div>
+                </div>
+                <div className="border-l border-white/10 pl-3">
+                  <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#FB923C]" /> 2025
+                  </div>
+                  <div className="font-mono font-semibold text-slate-300">R$ 112.500</div>
+                </div>
+              </div>
+
+              <svg className="w-full h-full overflow-visible" fill="none" preserveAspectRatio="none" viewBox="0 0 700 170">
+                <defs>
+                  <linearGradient id="blueGlowDark" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.32" />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
+                  </linearGradient>
+                  <linearGradient id="orangeGlowDark" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#FB923C" stopOpacity="0.22" />
+                    <stop offset="100%" stopColor="#FB923C" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+                <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="30" y2="30" />
+                <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="70" y2="70" />
+                <line stroke="#212a3d" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="700" y1="110" y2="110" />
+                <line stroke="#212a3d" strokeWidth="1" x1="0" x2="700" y1="150" y2="150" />
+
+                <path
+                  d="M 0,95 C 60,65 120,115 180,95 C 240,75 300,45 350,55 C 410,70 470,120 530,90 C 590,60 650,110 700,95 L 700,160 L 0,160 Z"
+                  fill="url(#orangeGlowDark)"
+                />
+                <path
+                  d="M 0,95 C 60,65 120,115 180,95 C 240,75 300,45 350,55 C 410,70 470,120 530,90 C 590,60 650,110 700,95"
+                  stroke="#FB923C"
+                  strokeLinecap="round"
+                  strokeWidth="2.5"
+                />
+
+                <path
+                  d="M 0,115 C 60,110 120,60 180,75 C 240,90 300,105 350,85 C 400,30 450,25 500,65 C 550,105 620,35 700,60 L 700,160 L 0,160 Z"
+                  fill="url(#blueGlowDark)"
+                />
+                <path
+                  d="M 0,115 C 60,110 120,60 180,75 C 240,90 300,105 350,85 C 400,30 450,25 500,65 C 550,105 620,35 700,60"
+                  stroke="#7c8cf8"
+                  strokeLinecap="round"
+                  strokeWidth="3"
+                />
+
+                <circle cx="350" cy="55" fill="#FB923C" r="5" stroke="#161c28" strokeWidth="2" />
+                <circle cx="350" cy="85" fill="#7c8cf8" r="6" stroke="#161c28" strokeWidth="2.5" />
+                <line stroke="#475569" strokeDasharray="3 3" strokeWidth="1.5" x1="350" x2="350" y1="20" y2="150" />
+              </svg>
+            </div>
+
+            <div className="flex justify-between items-center text-[11px] font-medium text-slate-400 mt-2 px-1">
+              <span>Jan</span>
+              <span>Fev</span>
+              <span>Mar</span>
+              <span>Abr</span>
+              <span className="text-indigo-400 font-bold">Mai</span>
+              <span>Jun</span>
+              <span>Jul</span>
+              <span>Ago</span>
+              <span>Set</span>
+              <span>Out</span>
+              <span>Nov</span>
+              <span>Dez</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. MIDDLE ROW: MEI Ceiling Monitor + Dual Signature + Quick Contacts */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+          {/* CARD 1: MEI Ceiling Monitor (LC 208) */}
+          <div className="lg:col-span-4 bg-[#161c28] rounded-3xl p-6 border border-white/10 shadow-card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-bold text-white">Monitor de Teto MEI • LC 208</h3>
+                <div className="w-8 h-8 rounded-xl bg-[#121722] border border-white/5 flex items-center justify-center text-slate-400">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-2xl font-extrabold text-white font-mono">R$ 81.000,00</span>
+                <span className="text-xs font-semibold text-slate-400">/ CNPJ Anual</span>
+              </div>
+              <p className="text-xs text-slate-400 mb-4">Exercício Fiscal 2026 • Titularidades 100% autônomas</p>
+
+              {/* MEI 1: Fix Serviços */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center text-xs mb-1.5">
+                  <span className="font-semibold text-slate-300">1. Fix Serviços MEI (Titular: Osmar)</span>
+                  <span className="font-mono font-bold text-indigo-400">42,2%</span>
+                </div>
+                <div className="flex gap-1 h-3.5 w-full items-center">
+                  {[...Array(9)].map((_, i) => (
+                    <span key={i} className="h-full flex-1 bg-indigo-500 rounded-full shadow-[0_0_6px_rgba(99,102,241,0.5)]" />
+                  ))}
+                  {[...Array(12)].map((_, i) => (
+                    <span key={i} className="h-full flex-1 bg-[#212a3d] rounded-full" />
+                  ))}
+                </div>
+                <div className="flex justify-between items-center text-[11px] text-slate-400 mt-1.5 font-mono">
+                  <span>Emitido: R$ 34.200,00</span>
+                  <span className="text-emerald-400 font-medium">Margem: R$ 46.800,00</span>
+                </div>
+              </div>
+
+              {/* MEI 2: Facilita Vistorias */}
+              <div>
+                <div className="flex justify-between items-center text-xs mb-1.5">
+                  <span className="font-semibold text-slate-300">2. Facilita Vistorias MEI (Titular: Vera)</span>
+                  <span className="font-mono font-bold text-indigo-400">31,0%</span>
+                </div>
+                <div className="flex gap-1 h-3.5 w-full items-center">
+                  {[...Array(6)].map((_, i) => (
+                    <span key={i} className="h-full flex-1 bg-indigo-500 rounded-full shadow-[0_0_6px_rgba(99,102,241,0.5)]" />
+                  ))}
+                  {[...Array(15)].map((_, i) => (
+                    <span key={i} className="h-full flex-1 bg-[#212a3d] rounded-full" />
+                  ))}
+                </div>
+                <div className="flex justify-between items-center text-[11px] text-slate-400 mt-1.5 font-mono">
+                  <span>Emitido: R$ 25.110,00</span>
+                  <span className="text-emerald-400 font-medium">Margem: R$ 55.890,00</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-xs">
+              <span className="text-slate-400">Status LC 123/2006:</span>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 font-semibold text-[11px]">
+                Segregação Correta • Sem Risco
+              </span>
+            </div>
+          </div>
+
+          {/* CARD 2: Dual-Signature Desk (Governança Conjugal Osmar & Vera) */}
+          <div className="lg:col-span-4 bg-[#161c28] rounded-3xl p-6 border border-white/10 shadow-card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Fingerprint className="w-5 h-5 text-amber-400" />
+                  <h3 className="text-sm font-bold text-white">Governança Familiar</h3>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-950/60 text-amber-300 font-bold text-[11px] border border-amber-500/30">
+                  1 Pendência
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                Distribuições acima de R$ 3.000 exigem validação mútua para blindar os CNPJs contra confusão patrimonial.
               </p>
-            </div>
-          </div>
-        </div>
 
-        {/* Entity Selector Tabs */}
-        <div className="hidden md:flex items-center gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06] text-xs">
-          <button
-            onClick={() => setActiveEntity('all')}
-            className={`px-3 py-1.5 rounded-lg transition font-medium ${
-              activeEntity === 'all'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Consolidado
-          </button>
-          <button
-            onClick={() => setActiveEntity('fix')}
-            className={`px-3 py-1.5 rounded-lg transition font-medium ${
-              activeEntity === 'fix'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Fix Serviços MEI (Osmar)
-          </button>
-          <button
-            onClick={() => setActiveEntity('facilita')}
-            className={`px-3 py-1.5 rounded-lg transition font-medium ${
-              activeEntity === 'facilita'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Facilita Vistorias MEI (Vera)
-          </button>
-          <button
-            onClick={() => setActiveEntity('pf')}
-            className={`px-3 py-1.5 rounded-lg transition font-medium ${
-              activeEntity === 'pf'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Família PF (Casal)
-          </button>
-        </div>
-
-        {/* Status Indicators */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs">
-            {apiOnline === true ? (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Motor 24/7 Ativo
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                <AlertCircle className="w-3 h-3" /> Conectando
-              </span>
-            )}
-          </div>
-
-          <div className="hidden lg:flex items-center gap-1.5 text-xs text-slate-400 bg-white/[0.04] px-2.5 py-1 rounded-lg border border-white/[0.05]">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>LGPD Air-Gapped</span>
-          </div>
-        </div>
-      </header>
-
-      {/* 2. Main Executive Dashboard Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Bento Grid: Row 1 */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Main Hero Card: Liquid Net Worth & Runway (7 Cols) */}
-          <div className="lg:col-span-7 rounded-3xl p-1 bg-white/[0.02] border border-white/[0.08] shadow-2xl">
-            <div className="rounded-[1.35rem] p-6 bg-gradient-to-b from-slate-900/90 to-slate-950 border border-white/[0.04] flex flex-col justify-between h-full space-y-6">
-              <div>
-                <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-                  <span className="uppercase tracking-wider font-mono text-[11px] text-slate-400">
-                    Posição Consolidada & Runway
-                  </span>
-                  <span className="flex items-center gap-1 text-emerald-400 font-mono">
-                    <TrendingUp className="w-3.5 h-3.5" /> +3,8% este mês
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-3">
-                  <h2 className="text-3xl sm:text-4xl font-extrabold font-mono text-white tracking-tight">
-                    R$ 148.420,00
-                  </h2>
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
-                    11,2 meses
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  Reserva calculada com queima média mensal familiar de R$ 13.250,00.
-                </p>
-              </div>
-
-              {/* Sub-Metric Horizon Pills */}
-              <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/[0.06] text-xs">
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <span className="text-[10px] text-slate-400 uppercase font-mono block">Nubank PF</span>
-                  <span className="text-sm font-mono font-semibold text-white">R$ 42.150,00</span>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">Disponível imediato</span>
-                </div>
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <span className="text-[10px] text-slate-400 uppercase font-mono block">Inter PJ (Fix)</span>
-                  <span className="text-sm font-mono font-semibold text-white">R$ 56.400,00</span>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">Capital de giro</span>
-                </div>
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                  <span className="text-[10px] text-slate-400 uppercase font-mono block">Caixa PJ (Vistorias)</span>
-                  <span className="text-sm font-mono font-semibold text-white">R$ 49.870,00</span>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">Operações correntes</span>
-                </div>
-              </div>
-
-              {/* Visual Area Sparkline */}
-              <div className="h-14 w-full flex items-end gap-1.5 pt-2">
-                {[35, 42, 40, 52, 48, 65, 59, 72, 68, 85, 92, 100].map((val, idx) => (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                    <div
-                      style={{ height: `${val}%` }}
-                      className="w-full rounded-sm bg-gradient-to-t from-emerald-600/20 to-emerald-400/80 hover:to-emerald-300 transition-all duration-300"
-                    />
+              {/* Pending Item Box */}
+              <div className="bg-[#121722] border border-white/5 rounded-2xl p-4 mb-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-indigo-400 uppercase tracking-wider block">
+                      Distribuição de Lucros Isenta
+                    </span>
+                    <span className="text-xs font-semibold text-white">Fix Serviços MEI → Conta Familiar PF</span>
+                    <div className="text-[11px] text-slate-400 mt-0.5">Banco Inter PJ → Nubank PF</div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* MEI Revenue Ceiling Monitor (5 Cols) */}
-          <div className="lg:col-span-5 rounded-3xl p-1 bg-white/[0.02] border border-white/[0.08] shadow-2xl flex flex-col">
-            <div className="rounded-[1.35rem] p-6 bg-gradient-to-b from-slate-900/90 to-slate-950 border border-white/[0.04] flex flex-col justify-between flex-1 space-y-5">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
-                    Teto MEI 2026 (LC 208/2026)
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
-                    R$ 81.000,00/ano
-                  </span>
+                  <span className="font-mono text-base font-extrabold text-white">R$ 3.500,00</span>
                 </div>
-                <h3 className="text-lg font-bold text-white tracking-tight">
-                  Painel de Conformidade Fiscal
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Monitoramento diário para evitar desenquadramento tributário involuntário.
-                </p>
-              </div>
-
-              {/* Progress 1: Fix Serviços */}
-              <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium text-slate-200 flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-emerald-400" /> Fix Serviços MEI
-                    <span className="text-[10px] text-slate-400 font-mono">(Titular: Osmar)</span>
-                  </span>
-                  <span className="font-mono text-emerald-400 font-semibold">
-                    R$ 34.200,00 (42,2%)
-                  </span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                    style={{ width: '42.2%' }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-400">
-                  <span>Limite restante: R$ 46.800,00</span>
-                  <span>Faixa Segura</span>
-                </div>
-              </div>
-
-              {/* Progress 2: Facilita Vistorias */}
-              <div className="space-y-1.5 p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium text-slate-200 flex items-center gap-1.5">
-                    <Building2 className="w-3.5 h-3.5 text-teal-400" /> Facilita Vistorias MEI
-                    <span className="text-[10px] text-slate-400 font-mono">(Titular: Vera)</span>
-                  </span>
-                  <span className="font-mono text-teal-400 font-semibold">
-                    R$ 25.110,00 (31,0%)
-                  </span>
-                </div>
-                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
-                  <div
-                    className="h-full bg-teal-500 rounded-full transition-all duration-500"
-                    style={{ width: '31.0%' }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-400">
-                  <span>Limite restante: R$ 55.890,00</span>
-                  <span>Faixa Segura</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bento Grid: Row 2 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {/* Card: Spousal Governance & Dual Approvals */}
-          <div className="rounded-3xl p-1 bg-white/[0.02] border border-white/[0.08]">
-            <div className="rounded-[1.35rem] p-5 bg-slate-900/80 border border-white/[0.04] h-full flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Users className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
-                    Governança Conjugal & Segregação Fiscal
-                  </span>
-                </div>
-                <h4 className="text-sm font-semibold text-white mb-1">
-                  1 Transferência Pendente de Conferência
-                </h4>
-                <p className="text-xs text-slate-400 mb-4">
-                  Titularidade individual estrita por CNPJ (Osmar na Fix e Vera na Facilita, conforme LC 123/2006). A governança audita a distribuição regular de lucros para a PF e blinda o casal contra confusão patrimonial.
-                </p>
-
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] text-xs space-y-1">
-                  <div className="flex justify-between font-medium">
-                    <span className="text-slate-200">Fix Serviços → Nubank PF</span>
-                    <span className="font-mono text-white">R$ 3.500,00</span>
+                <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/5 text-xs">
+                  <div className="flex items-center gap-1.5 text-slate-300">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span>Osmar (Validado)</span>
                   </div>
-                  <span className="text-[10px] text-amber-400 block">
-                    Motivo: Distribuição de Lucros • Aguarda validação
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex gap-2 mt-4 pt-3 border-t border-white/[0.06]">
-                <button
-                  onClick={() => handleSendMessage('Confirmar transferência de lucro Fix para PF')}
-                  className="flex-1 py-1.5 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-medium transition"
-                >
-                  Confirmar Acordo
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Card: 7-Day Obligations Horizon */}
-          <div className="rounded-3xl p-1 bg-white/[0.02] border border-white/[0.08]">
-            <div className="rounded-[1.35rem] p-5 bg-slate-900/80 border border-white/[0.04] h-full flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Calendar className="w-4 h-4 text-blue-400" />
-                  <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
-                    Horizonte de 7 a 15 Dias
-                  </span>
-                </div>
-                <h4 className="text-sm font-semibold text-white mb-2">
-                  Próximos Vencimentos de Caixa
-                </h4>
-
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-3.5 h-3.5 text-slate-400" />
-                      <div>
-                        <span className="text-slate-200 block font-medium">DAS-MEI Fix Serviços</span>
-                        <span className="text-[10px] text-slate-400">Vence em 12 dias</span>
-                      </div>
-                    </div>
-                    <span className="font-mono text-slate-300">R$ 75,90</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="w-3.5 h-3.5 text-purple-400" />
-                      <div>
-                        <span className="text-slate-200 block font-medium">Fatura Nubank PF</span>
-                        <span className="text-[10px] text-slate-400">Fecha em 8 dias</span>
-                      </div>
-                    </div>
-                    <span className="font-mono text-slate-300">R$ 2.410,00</span>
+                  <div className="flex items-center gap-1.5 text-amber-400 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                    <span>Aguardando Vera</span>
                   </div>
                 </div>
               </div>
-
-              <span className="text-[11px] text-slate-400 mt-3 block">
-                Nenhuma obrigação em atraso detectada no momento.
-              </span>
             </div>
-          </div>
 
-          {/* Card: Instant Receipt Capture Dropzone */}
-          <div className="rounded-3xl p-1 bg-white/[0.02] border border-white/[0.08]">
-            <div className="rounded-[1.35rem] p-5 bg-slate-900/80 border border-white/[0.04] h-full flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Camera className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-mono uppercase tracking-wider text-slate-400">
-                    Captura Rápida de Comprovante
-                  </span>
-                </div>
-                <h4 className="text-sm font-semibold text-white mb-1">
-                  Fotografe ou Anexe Cupons
-                </h4>
-                <p className="text-xs text-slate-400 mb-4">
-                  O sistema extrai CNPJ, itens e valor, anonimizando dados sensíveis antes do arquivamento.
-                </p>
-
-                <button
-                  onClick={() => setIsAssistantOpen(true)}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/30 transition"
-                >
-                  <Camera className="w-4 h-4" />
-                  <span>Abrir Câmera / Assistente</span>
-                </button>
-              </div>
-
-              <span className="text-[10px] text-slate-400 block mt-2 text-center">
-                Formatos aceitos: JPG, PNG, PDF ou texto direto via chat.
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Recent Reconciled Transactions Feed */}
-        <div className="rounded-3xl p-1 bg-white/[0.02] border border-white/[0.08]">
-          <div className="rounded-[1.35rem] p-6 bg-slate-900/80 border border-white/[0.04]">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-base font-bold text-white tracking-tight">
-                  Fluxo Recente & Reconciliação Bancária
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Transações alimentadas via extratos OFX e comprovantes processados localmente.
-                </p>
-              </div>
+            <div className="flex gap-2 pt-2">
               <button
-                onClick={() => handleSendMessage('Resumo de Caixa')}
-                className="text-xs text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-1 transition"
+                onClick={() => handleSendMessage('Confirmar acordo de retirada')}
+                className="flex-1 py-2.5 px-3 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-pill hover:bg-indigo-500 transition flex items-center justify-center gap-1.5"
               >
-                <span>Auditar no Assistente</span>
-                <ArrowUpRight className="w-3.5 h-3.5" />
+                <ShieldCheck className="w-4 h-4" />
+                <span>Confirmar Acordo Conjugal</span>
+              </button>
+              <button
+                onClick={() => handleSendMessage('Detalhes da transferência Fix para PF')}
+                className="py-2.5 px-3 bg-[#1a2232] border border-white/10 text-slate-300 hover:text-white rounded-xl text-xs font-semibold hover:bg-[#212a3d] transition"
+              >
+                Detalhes
               </button>
             </div>
+          </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-white/[0.06] text-slate-400 font-mono text-[11px]">
-                    <th className="pb-2.5">Data</th>
-                    <th className="pb-2.5">Descrição</th>
-                    <th className="pb-2.5">Conta / Origem</th>
-                    <th className="pb-2.5">Categoria</th>
-                    <th className="pb-2.5 text-right">Valor</th>
-                    <th className="pb-2.5 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.04]">
-                  <tr className="hover:bg-white/[0.01]">
-                    <td className="py-3 font-mono text-slate-400">Hoje, 09:30</td>
-                    <td className="py-3 font-medium text-white">Recebimento de Cliente PJ</td>
-                    <td className="py-3">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-[10px]">
-                        Inter CNPJ
-                      </span>
-                    </td>
-                    <td className="py-3 text-slate-400">Prestação de Serviços (Fix)</td>
-                    <td className="py-3 font-mono font-semibold text-emerald-400 text-right">
-                      + R$ 2.800,00
-                    </td>
-                    <td className="py-3 text-center">
-                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400">
-                        <CheckCircle2 className="w-3 h-3" /> Reconciliado
-                      </span>
-                    </td>
-                  </tr>
+          {/* CARD 3: Quick Transfer & Frequent Contacts */}
+          <div className="lg:col-span-4 bg-[#161c28] rounded-3xl p-6 border border-white/10 shadow-card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-white">Transferência Rápida</h3>
+                <button onClick={() => setIsAssistantOpen(true)} className="text-xs font-semibold text-indigo-400 hover:underline">
+                  Ver Todos
+                </button>
+              </div>
 
-                  <tr className="hover:bg-white/[0.01]">
-                    <td className="py-3 font-mono text-slate-400">Ontem, 16:45</td>
-                    <td className="py-3 font-medium text-white">Materiais e Ferramentas Obra</td>
-                    <td className="py-3">
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-[10px]">
-                        Inter CNPJ
-                      </span>
-                    </td>
-                    <td className="py-3 text-slate-400">Custos Operacionais</td>
-                    <td className="py-3 font-mono font-semibold text-slate-200 text-right">
-                      - R$ 342,50
-                    </td>
-                    <td className="py-3 text-center">
-                      <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400">
-                        <CheckCircle2 className="w-3 h-3" /> Comprovante OK
-                      </span>
-                    </td>
-                  </tr>
+              {/* Contacts Avatar Row */}
+              <div className="flex items-center gap-2.5 overflow-x-auto py-2">
+                <button
+                  onClick={() => setIsAssistantOpen(true)}
+                  className="w-11 h-11 rounded-full border border-dashed border-white/20 flex items-center justify-center text-slate-400 hover:text-indigo-400 hover:border-indigo-500/50 bg-[#121722] shrink-0 transition"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
 
-                  <tr className="hover:bg-white/[0.01]">
-                    <td className="py-3 font-mono text-slate-400">06/Nov</td>
-                    <td className="py-3 font-medium text-white">Supermercado Familiar</td>
-                    <td className="py-3">
-                      <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-mono text-[10px]">
-                        Nubank PF
-                      </span>
-                    </td>
-                    <td className="py-3 text-slate-400">Despesas Domésticas</td>
-                    <td className="py-3 font-mono font-semibold text-slate-200 text-right">
-                      - R$ 489,20
-                    </td>
-                    <td className="py-3 text-center">
-                      <span className="inline-flex items-center gap-1 text-[10px] text-slate-400">
-                        <Clock className="w-3 h-3" /> Reconciliado
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                <div className="flex flex-col items-center shrink-0 cursor-pointer">
+                  <div className="w-11 h-11 rounded-full bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-center font-bold text-xs text-indigo-300">
+                    Vera
+                  </div>
+                  <span className="text-[10px] font-semibold text-indigo-400 mt-1">Vera</span>
+                </div>
+
+                <div className="flex flex-col items-center shrink-0 cursor-pointer">
+                  <div className="w-11 h-11 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center font-semibold text-xs text-slate-300">
+                    Cont.
+                  </div>
+                  <span className="text-[10px] text-slate-400 mt-1">Contador</span>
+                </div>
+
+                <div className="flex flex-col items-center shrink-0 cursor-pointer">
+                  <div className="w-11 h-11 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center font-semibold text-xs text-slate-300">
+                    Forn.
+                  </div>
+                  <span className="text-[10px] text-slate-400 mt-1">Fornecedor</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Transfer Input and Send Pill Button */}
+            <div className="flex items-center gap-3 pt-3 border-t border-white/10 mt-2">
+              <div className="relative flex-1">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-semibold text-slate-400">
+                  R$
+                </span>
+                <input
+                  type="text"
+                  value={transferAmount}
+                  onChange={(e) => setTransferAmount(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 bg-[#121722] border border-white/10 rounded-xl text-sm font-bold font-mono text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                />
+              </div>
+              <button
+                onClick={() => handleSendMessage(`Enviar PIX de R$ ${transferAmount}`)}
+                className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-pill hover:bg-indigo-500 transition"
+              >
+                Enviar PIX
+              </button>
             </div>
           </div>
         </div>
-      </main>
 
-      {/* 4. Floating Action Trigger ("+" Button / Assistant Drawer) */}
+        {/* 5. LOWER ROW: Transaction Ledger & Fiscal Reconciliation + Money Movement Column Chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+          {/* TRANSACTION TABLE: Clean & Refined Dark Ledger */}
+          <div className="lg:col-span-8 bg-[#161c28] rounded-3xl p-6 border border-white/10 shadow-card flex flex-col justify-between">
+            <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-white">Livro Razão & Conciliação Fiscal Recente</h3>
+                  <p className="text-xs text-slate-400">Conciliação bancária automática com chaves XML e recibos fiscais</p>
+                </div>
+
+                <div className="flex items-center gap-1 bg-[#121722] p-1 rounded-xl border border-white/5 text-xs">
+                  <button
+                    onClick={() => setLedgerFilter('all')}
+                    className={`px-3 py-1 rounded-lg font-bold transition ${
+                      ledgerFilter === 'all' ? 'bg-[#212a3d] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Todas
+                  </button>
+                  <button
+                    onClick={() => setLedgerFilter('inter')}
+                    className={`px-3 py-1 rounded-lg font-medium transition ${
+                      ledgerFilter === 'inter' ? 'bg-[#212a3d] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Inter PJ (Fix)
+                  </button>
+                  <button
+                    onClick={() => setLedgerFilter('caixa')}
+                    className={`px-3 py-1 rounded-lg font-medium transition ${
+                      ledgerFilter === 'caixa' ? 'bg-[#212a3d] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Caixa PJ (Vistorias)
+                  </button>
+                  <button
+                    onClick={() => setLedgerFilter('nubank')}
+                    className={`px-3 py-1 rounded-lg font-medium transition ${
+                      ledgerFilter === 'nubank' ? 'bg-[#212a3d] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Nubank PF
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-white/10 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                      <th className="pb-3 pl-1">Data / Hora</th>
+                      <th className="pb-3">Entidade</th>
+                      <th className="pb-3">Descrição & Contraparte</th>
+                      <th className="pb-3 text-right">Valor</th>
+                      <th className="pb-3">Documento Fiscal</th>
+                      <th className="pb-3 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-medium">
+                    <tr className="hover:bg-white/[0.02] transition">
+                      <td className="py-3 pl-1 font-mono text-slate-400">Hoje, 14:22</td>
+                      <td className="py-3">
+                        <span className="px-2 py-0.5 rounded-md bg-amber-950/60 text-amber-300 font-semibold text-[10px] border border-amber-500/30">
+                          Inter PJ
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <div className="text-white font-semibold">PIX Cliente Condomínio Jardins</div>
+                        <div className="text-[11px] text-slate-400">Receita Bruta MEI • Prestação de Reparos</div>
+                      </td>
+                      <td className="py-3 text-right font-mono font-bold text-emerald-400">+R$ 1.850,00</td>
+                      <td className="py-3 font-mono text-[11px] text-slate-400">NFS-e #0084.xml</td>
+                      <td className="py-3 text-center">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> OK
+                        </span>
+                      </td>
+                    </tr>
+
+                    <tr className="hover:bg-white/[0.02] transition">
+                      <td className="py-3 pl-1 font-mono text-slate-400">Hoje, 10:15</td>
+                      <td className="py-3">
+                        <span className="px-2 py-0.5 rounded-md bg-purple-950/60 text-purple-300 font-semibold text-[10px] border border-purple-500/30">
+                          Caixa PJ
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <div className="text-white font-semibold">Locação Medidor Laser 3D</div>
+                        <div className="text-[11px] text-slate-400">Despesa Operacional • Georreferenciamento</div>
+                      </td>
+                      <td className="py-3 text-right font-mono font-semibold text-slate-300">-R$ 420,00</td>
+                      <td className="py-3 font-mono text-[11px] text-slate-400">Recibo_Loc_09.pdf</td>
+                      <td className="py-3 text-center">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> OK
+                        </span>
+                      </td>
+                    </tr>
+
+                    <tr className="hover:bg-white/[0.02] transition">
+                      <td className="py-3 pl-1 font-mono text-slate-400">Ontem, 19:40</td>
+                      <td className="py-3">
+                        <span className="px-2 py-0.5 rounded-md bg-blue-950/60 text-blue-300 font-semibold text-[10px] border border-blue-500/30">
+                          Nubank PF
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <div className="text-white font-semibold">Supermercado Pão de Açúcar</div>
+                        <div className="text-[11px] text-slate-400">Despesa Familiar • Cesta Alimentação</div>
+                      </td>
+                      <td className="py-3 text-right font-mono font-semibold text-slate-300">-R$ 684,30</td>
+                      <td className="py-3 font-mono text-[11px] text-slate-400">NFC-e 3526..8901</td>
+                      <td className="py-3 text-center">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> OK
+                        </span>
+                      </td>
+                    </tr>
+
+                    {/* Pending Row */}
+                    <tr className="hover:bg-amber-950/30 bg-amber-950/15 transition">
+                      <td className="py-3 pl-1 font-mono text-amber-300 font-semibold">04/Nov 11:05</td>
+                      <td className="py-3">
+                        <span className="px-2 py-0.5 rounded-md bg-amber-900/40 text-amber-200 font-semibold text-[10px] border border-amber-500/40">
+                          Inter PJ
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <div className="text-white font-semibold">Manutenção Veicular Utilitário</div>
+                        <div className="text-[11px] text-slate-400">Custo Operacional • Troca Pastilhas de Freio</div>
+                      </td>
+                      <td className="py-3 text-right font-mono font-bold text-amber-300">-R$ 1.250,00</td>
+                      <td className="py-3">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-400">
+                          <AlertCircle className="w-3.5 h-3.5" /> NF-e Pendente
+                        </span>
+                      </td>
+                      <td className="py-3 text-center">
+                        <button
+                          onClick={() => {
+                            setIsAssistantOpen(true);
+                            setSelectedEntityChat('inter_cnpj');
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-bold text-[10px] shadow-sm hover:bg-indigo-500 transition"
+                        >
+                          <Camera className="w-3 h-3" /> Anexar
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-white/10 mt-2">
+              <span>5 conciliações efetuadas nas últimas 48h</span>
+              <button onClick={() => setIsAssistantOpen(true)} className="font-bold text-indigo-400 hover:underline">
+                Ver extrato completo no Assistente
+              </button>
+            </div>
+          </div>
+
+          {/* MONEY MOVEMENT: Soft Column Bar Chart */}
+          <div className="lg:col-span-4 bg-[#161c28] rounded-3xl p-6 border border-white/10 shadow-card flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-white">Movimentação Financeira</h3>
+                <span className="text-xs font-semibold text-slate-400">Últimos 30 dias</span>
+              </div>
+
+              {/* In vs Out Header */}
+              <div className="flex items-center justify-between bg-[#121722] p-3 rounded-2xl border border-white/5 mb-4">
+                <div>
+                  <span className="text-[11px] text-slate-400 block font-medium">Entradas (Receita)</span>
+                  <span className="font-mono text-base font-extrabold text-emerald-400">R$ 28.450,00</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[11px] text-slate-400 block font-medium">Saídas (Despesas)</span>
+                  <span className="font-mono text-base font-extrabold text-white">R$ 13.250,00</span>
+                </div>
+              </div>
+
+              {/* Soft Column Bar Chart with Glow Highlight */}
+              <div className="relative w-full h-36 flex items-end justify-between gap-1.5 pt-6 px-1">
+                <div className="absolute inset-x-0 bottom-0 h-px bg-white/10" />
+                <div className="absolute top-0 left-[62%] -translate-x-1/2 bg-[#212a3d] border border-white/15 text-white text-[10px] font-mono px-2 py-0.5 rounded-md shadow-md pointer-events-none">
+                  05 Nov: R$ 3.8k
+                </div>
+
+                <div className="w-full bg-[#1e2638] rounded-t-xl h-[45%]" />
+                <div className="w-full bg-[#1e2638] rounded-t-xl h-[65%]" />
+                <div className="w-full bg-[#1e2638] rounded-t-xl h-[30%]" />
+                <div className="w-full bg-[#1e2638] rounded-t-xl h-[55%]" />
+                <div className="w-full bg-[#1e2638] rounded-t-xl h-[80%]" />
+                {/* Active Highlighted Column */}
+                <div className="w-full bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t-xl h-[95%] shadow-[0_0_16px_rgba(99,102,241,0.5)] relative">
+                  <div className="w-2 h-2 rounded-full bg-white mx-auto mt-1 opacity-90 shadow-sm" />
+                </div>
+                <div className="w-full bg-[#1e2638] rounded-t-xl h-[70%]" />
+                <div className="w-full bg-[#1e2638] rounded-t-xl h-[40%]" />
+                <div className="w-full bg-[#1e2638] rounded-t-xl h-[60%]" />
+                <div className="w-full bg-[#1e2638] rounded-t-xl h-[50%]" />
+              </div>
+            </div>
+
+            {/* Copilot Micro Drawer Trigger */}
+            <div className="mt-4 pt-3 border-t border-white/10">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-indigo-400" />
+                  <span className="font-bold text-white">OF-Copilot Fiscal</span>
+                </div>
+                <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                  Teto MEI 100% OK
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 6. FLOATING QUICK CONCILIATION ACTION BUTTON */}
       <div className="fixed bottom-6 right-6 z-40">
         <button
           onClick={() => setIsAssistantOpen(true)}
-          className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-medium text-xs shadow-2xl shadow-emerald-950/80 hover:scale-105 active:scale-95 transition-all duration-200 border border-white/20"
+          className="bg-indigo-600 text-white px-5 py-3 rounded-full shadow-pill flex items-center gap-2 hover:bg-indigo-500 transition-all hover:scale-105 active:scale-95 border border-white/20"
         >
-          <MessageSquarePlus className="w-4 h-4" />
-          <span className="font-semibold">+ Assistente & Cupom</span>
+          <Camera className="w-4 h-4" />
+          <span className="text-xs font-bold tracking-wide uppercase">Anexar Cupom Fiscal</span>
+          <span className="ml-1 text-[11px] bg-white text-indigo-600 font-extrabold px-1.5 py-0.2 rounded-full">
+            1
+          </span>
         </button>
       </div>
 
-      {/* 5. Slide-Over Assistant Drawer / Bottom Sheet */}
+      {/* 7. SLIDE-OVER ASSISTANT & OCR CAPTURE DRAWER */}
       {isAssistantOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity">
-          <div className="w-full sm:w-[480px] h-full bg-slate-900 border-l border-white/[0.08] shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+          <div className="w-full sm:w-[460px] h-full bg-[#161c28] border-l border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
             {/* Drawer Header */}
-            <div className="p-4 border-b border-white/[0.08] flex items-center justify-between bg-slate-950">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#121722]">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-xs">
                   IA
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Assistente OpenFamilyOffice</h3>
+                  <h3 className="text-sm font-bold text-white">Assistente & Conciliação</h3>
                   <p className="text-[10px] text-slate-400 font-mono">Padrão ASD-STE100 (~80%)</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsAssistantOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Quick Context Chips inside Drawer */}
-            <div className="px-4 py-2 border-b border-white/[0.06] bg-slate-950/50 flex gap-1.5 overflow-x-auto text-[11px]">
+            <div className="px-4 py-2 border-b border-white/5 bg-[#161c28] flex gap-1.5 overflow-x-auto text-[11px]">
               <button
                 onClick={() => handleSendMessage('Teto MEI')}
-                className="px-2.5 py-1 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.06] transition shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition shrink-0"
               >
                 📊 Teto MEI
               </button>
               <button
                 onClick={() => handleSendMessage('Resumo de Caixa')}
-                className="px-2.5 py-1 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.06] transition shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition shrink-0"
               >
                 💰 Caixa 7 Dias
               </button>
               <button
                 onClick={() => handleSendMessage('Status das Contas')}
-                className="px-2.5 py-1 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.06] transition shrink-0"
+                className="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition shrink-0"
               >
                 ⚙️ Status
               </button>
@@ -656,8 +1029,8 @@ export default function ExecutiveDashboard() {
                   <div
                     className={`max-w-[88%] rounded-2xl px-4 py-2.5 leading-relaxed ${
                       msg.sender === 'user'
-                        ? 'bg-emerald-600 text-white rounded-br-none'
-                        : 'bg-slate-950 border border-white/[0.06] text-slate-200 rounded-bl-none shadow-md'
+                        ? 'bg-indigo-600 text-white rounded-br-none'
+                        : 'bg-[#121722] border border-white/10 text-slate-200 rounded-bl-none shadow-md'
                     }`}
                   >
                     {msg.attachmentName && (
@@ -668,23 +1041,23 @@ export default function ExecutiveDashboard() {
                     )}
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                   </div>
-                  <span className="text-[9px] text-slate-400 mt-0.5 px-1 font-mono">{msg.timestamp}</span>
+                  <span className="text-[9px] text-slate-500 mt-0.5 px-1 font-mono">{msg.timestamp}</span>
                 </div>
               ))}
 
               {loadingChat && (
-                <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-white/[0.06] w-fit">
-                  <RefreshCw className="w-3 h-3 animate-spin text-emerald-400" />
-                  <span>Processando consulta...</span>
+                <div className="flex items-center gap-2 text-xs text-slate-400 bg-[#121722] p-2.5 rounded-xl border border-white/10 w-fit">
+                  <RefreshCw className="w-3 h-3 animate-spin text-indigo-400" />
+                  <span>Processando resposta com brevidade ASD-STE100...</span>
                 </div>
               )}
               <div ref={chatEndRef} />
             </div>
 
-            {/* Drawer Input / Camera Area */}
-            <div className="p-3 border-t border-white/[0.08] bg-slate-950">
+            {/* Drawer Input / OCR Dropzone Area */}
+            <div className="p-3 border-t border-white/10 bg-[#121722]">
               {attachedFile && (
-                <div className="mb-2 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-xs text-emerald-300 flex items-center justify-between">
+                <div className="mb-2 px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-xs text-indigo-300 flex items-center justify-between">
                   <div className="flex items-center gap-1.5 truncate">
                     <Camera className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">{attachedFile.name}</span>
@@ -699,15 +1072,15 @@ export default function ExecutiveDashboard() {
               )}
 
               <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-[11px] text-slate-400">Conta:</span>
+                <span className="text-[11px] text-slate-400">Destino:</span>
                 <select
                   value={selectedEntityChat}
                   onChange={(e) => setSelectedEntityChat(e.target.value)}
-                  className="text-xs bg-slate-900 border border-white/[0.1] text-slate-200 rounded-lg px-2 py-1 outline-none"
+                  className="text-xs bg-[#161c28] border border-white/10 text-slate-200 rounded-lg px-2 py-1 outline-none"
                 >
-                  <option value="inter_cnpj">Inter CNPJ (Fix Serviços)</option>
-                  <option value="caixa_pj">Caixa PJ (Facilita Vistorias)</option>
-                  <option value="nubank_pf">Nubank PF (Família)</option>
+                  <option value="inter_cnpj">Inter CNPJ (Fix Serviços • Osmar)</option>
+                  <option value="caixa_pj">Caixa PJ (Facilita Vistorias • Vera)</option>
+                  <option value="nubank_pf">Nubank PF (Família • Casal)</option>
                 </select>
               </div>
 
@@ -734,23 +1107,23 @@ export default function ExecutiveDashboard() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   title="Tirar foto ou anexar cupom"
-                  className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 border border-white/[0.08] transition"
+                  className="p-2.5 rounded-xl bg-[#161c28] hover:bg-[#1f2738] text-slate-300 border border-white/10 transition"
                 >
                   <Camera className="w-4 h-4" />
                 </button>
 
                 <input
                   type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Mensagem (ex: usei o inter cnpj, almoço R$ 45)..."
-                  className="flex-1 bg-slate-900 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 outline-none focus:border-emerald-500"
+                  className="flex-1 bg-[#161c28] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-400 outline-none focus:border-indigo-500"
                 />
 
                 <button
                   type="submit"
-                  disabled={loadingChat || (!input.trim() && !attachedFile)}
-                  className="p-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition"
+                  disabled={loadingChat || (!chatInput.trim() && !attachedFile)}
+                  className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white transition shadow-sm"
                 >
                   <Send className="w-4 h-4" />
                 </button>

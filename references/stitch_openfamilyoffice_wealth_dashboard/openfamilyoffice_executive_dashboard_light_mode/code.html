@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OpenFamilyOffice • Gestão Patrimonial Familiar</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#EEF2FF',
+              100: '#E0E7FE',
+              500: '#5B67F6',
+              600: '#4F5BE2',
+              700: '#3F48CC',
+            },
+            surface: '#F4F6FB',
+            card: '#FFFFFF',
+            slateText: {
+              900: '#0F172A',
+              700: '#334155',
+              500: '#64748B',
+              400: '#94A3B8'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          boxShadow: {
+            'card': '0 10px 30px -5px rgba(24, 39, 75, 0.05), 0 4px 12px -2px rgba(24, 39, 75, 0.02)',
+            'pill': '0 8px 20px -4px rgba(91, 103, 246, 0.35)',
+            'glow-orange': '0 8px 20px -4px rgba(254, 154, 75, 0.35)'
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      background-color: #F4F6FB;
+      color: #0F172A;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex text-slateText-900 selection:bg-brand-500 selection:text-white">
+<!-- LEFT COMPACT FLOATING ICON SIDEBAR (Inspired by Reference UI) -->
+<aside class="w-20 bg-transparent flex flex-col items-center py-6 px-3 z-30 shrink-0 select-none">
+<!-- Brand Emblem -->
+<a class="w-12 h-12 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex items-center justify-center mb-8 hover:shadow-md transition" href="#">
+<svg class="w-7 h-7 text-brand-500" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewbox="0 0 24 24">
+<circle cx="12" cy="12" r="9"></circle>
+<path d="M12 3a9 9 0 0 1 9 9"></path>
+<circle cx="12" cy="12" r="4"></circle>
+</svg>
+</a>
+<!-- Nav Items with pill active state -->
+<nav class="flex flex-col items-center gap-4 w-full">
+<!-- Active Overview Pill -->
+<a class="w-12 h-12 rounded-2xl bg-brand-500 text-white shadow-pill flex items-center justify-center transition-transform hover:scale-105" href="#" title="Visão Geral">
+<span class="material-symbols-outlined text-[24px]">home</span>
+</a>
+<!-- Inactive items styled exactly like reference -->
+<a class="w-12 h-12 rounded-2xl bg-white text-slateText-500 hover:text-brand-500 border border-slate-200/60 shadow-sm flex items-center justify-center transition hover:shadow" href="#" title="Liquidity Monitor &amp; Faturas">
+<span class="material-symbols-outlined text-[22px]">assignment</span>
+</a>
+<a class="w-12 h-12 rounded-2xl bg-white text-slateText-500 hover:text-brand-500 border border-slate-200/60 shadow-sm flex items-center justify-center transition hover:shadow" href="#" title="Cartões &amp; Contas Multientidade">
+<span class="material-symbols-outlined text-[22px]">credit_card</span>
+</a>
+<a class="w-12 h-12 rounded-2xl bg-white text-slateText-500 hover:text-brand-500 border border-slate-200/60 shadow-sm flex items-center justify-center transition hover:shadow" href="#" title="Curva Patrimonial &amp; Analytics">
+<span class="material-symbols-outlined text-[22px]">insights</span>
+</a>
+<a class="w-12 h-12 rounded-2xl bg-white text-slateText-500 hover:text-brand-500 border border-slate-200/60 shadow-sm flex items-center justify-center transition hover:shadow" href="#" title="Dual-Signature Desk">
+<span class="material-symbols-outlined text-[22px]">verified_user</span>
+</a>
+</nav>
+<!-- Bottom Settings & Security Pin -->
+<div class="mt-auto flex flex-col items-center gap-3">
+<a class="w-12 h-12 rounded-2xl bg-white text-slateText-500 hover:text-slateText-900 border border-slate-200/60 shadow-sm flex items-center justify-center transition hover:shadow" href="#" title="Configurações &amp; LGPD">
+<span class="material-symbols-outlined text-[22px]">settings</span>
+</a>
+<div class="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100" title="Local Air-Gapped Online"></div>
+</div>
+</aside>
+<!-- MAIN VIEWPORT -->
+<div class="flex-1 flex flex-col min-w-0 pr-6 pl-2 py-5 overflow-x-hidden">
+<!-- TOP HEADER BAR (Reference Clean Search + Move Money + User Profile) -->
+<header class="w-full flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+<!-- Search Input in reference style -->
+<div class="w-full md:w-96 relative">
+<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slateText-400">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="w-full pl-10 pr-12 py-2.5 bg-white border border-slate-200/80 rounded-2xl text-sm placeholder-slateText-400 text-slateText-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition" placeholder="Pesquisar lançamentos, guias DAS, CNPJ..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+<kbd class="px-2 py-0.5 text-[10px] font-mono font-semibold bg-slate-100 text-slateText-500 rounded-md border border-slate-200">⌘K</kbd>
+</div>
+</div>
+<!-- Quick Entity Filter Pill Switches -->
+<div class="hidden xl:flex items-center bg-white p-1 rounded-2xl border border-slate-200/80 shadow-sm">
+<button class="px-3.5 py-1.5 rounded-xl bg-brand-50 text-brand-600 font-semibold text-xs transition">Consolidado</button>
+<button class="px-3.5 py-1.5 rounded-xl text-slateText-500 hover:text-slateText-900 font-medium text-xs transition">Fix Serviços MEI</button>
+<button class="px-3.5 py-1.5 rounded-xl text-slateText-500 hover:text-slateText-900 font-medium text-xs transition">Facilita Vistorias MEI</button>
+<button class="px-3.5 py-1.5 rounded-xl text-slateText-500 hover:text-slateText-900 font-medium text-xs transition">Household PF</button>
+</div>
+<!-- Right Action Bar: Status, Period, Move Money dropdown, Profile -->
+<div class="flex items-center gap-3 w-full md:w-auto justify-end">
+<!-- Open Finance telemetry chip -->
+<div class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-xl text-xs font-medium">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>Open Finance Ativo</span>
+</div>
+<!-- Period Selector -->
+<button class="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200/80 rounded-2xl text-xs font-semibold text-slateText-700 shadow-sm hover:border-slate-300">
+<span class="material-symbols-outlined text-[16px] text-slateText-400">calendar_today</span>
+<span>Semana 45 • 2026</span>
+<span class="material-symbols-outlined text-[16px] text-slateText-400">expand_more</span>
+</button>
+<!-- Move Money Button (Style matching reference) -->
+<button class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200/80 hover:border-brand-500 rounded-2xl text-xs font-bold text-slateText-900 shadow-sm transition">
+<span>Mover Dinheiro</span>
+<span class="material-symbols-outlined text-[16px] text-slateText-400">expand_more</span>
+</button>
+<!-- Notifications -->
+<button class="relative w-10 h-10 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex items-center justify-center text-slateText-500 hover:text-brand-500 transition">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-brand-500"></span>
+</button>
+<!-- Profile Picture (Family Head) -->
+<div class="flex items-center gap-2.5 pl-1">
+<div class="w-10 h-10 rounded-2xl overflow-hidden ring-2 ring-white shadow-sm cursor-pointer">
+<img alt="Gestor Familiar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4zNBkk0OILggJtgCT-2A3DmuZNbNCvZGKNuNdexlava0oBKLI6EH3UpWV8oMpxUT81kseIxRIsLW0hWeovh0mV54ZSDJqeoxi9c-GSK4qT9woH4tqdueS0edX1fGOF_CTDSlwZ6POOF-3hbXWbMSjrpjp1TJqAeHPifj71vzxeGA_2WienC134gFO1FEKXXdo7dWVNIUj-sCPHG7gELd7gTRvzBPeyeq6eCcm7PI"/>
+</div>
+</div>
+</div>
+</header>
+<!-- WELCOME GREETING & ACTION PILLS (Exact Reference Vibe) -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+<div>
+<div class="flex items-center gap-2">
+<h1 class="text-2xl md:text-3xl font-extrabold text-slateText-900 tracking-tight">Olá, Família Silva !</h1>
+<span class="px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-600 text-xs font-semibold border border-brand-100">v1.0 • Privado</span>
+</div>
+<p class="text-xs text-slateText-500 mt-1 font-medium">Gestão Patrimonial Consolidada • 2 CNPJs MEI + 1 Household PF • Air-Gapped Local</p>
+</div>
+<!-- Quick Action Pill Group -->
+<div class="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+<button class="flex items-center gap-1.5 px-4 py-2 bg-brand-500 text-white rounded-2xl font-bold text-xs shadow-pill hover:bg-brand-600 transition whitespace-nowrap">
+<span class="material-symbols-outlined text-[16px]">send</span>
+<span>Enviar PIX</span>
+</button>
+<button class="flex items-center gap-1.5 px-4 py-2 bg-white text-slateText-700 hover:text-brand-600 border border-slate-200/80 rounded-2xl font-semibold text-xs shadow-sm hover:shadow transition whitespace-nowrap">
+<span class="material-symbols-outlined text-[16px] text-slateText-400">call_received</span>
+<span>Cobrança</span>
+</button>
+<button class="flex items-center gap-1.5 px-4 py-2 bg-white text-slateText-700 hover:text-brand-600 border border-slate-200/80 rounded-2xl font-semibold text-xs shadow-sm hover:shadow transition whitespace-nowrap">
+<span class="material-symbols-outlined text-[16px] text-slateText-400">sync_alt</span>
+<span>Transferir</span>
+</button>
+<button class="flex items-center gap-1.5 px-4 py-2 bg-white text-slateText-700 hover:text-brand-600 border border-slate-200/80 rounded-2xl font-semibold text-xs shadow-sm hover:shadow transition whitespace-nowrap">
+<span class="material-symbols-outlined text-[16px] text-slateText-400">receipt</span>
+<span>Pagar DAS / Fatura</span>
+</button>
+<button class="flex items-center gap-1.5 px-4 py-2 bg-white text-slateText-700 hover:text-brand-600 border border-slate-200/80 rounded-2xl font-semibold text-xs shadow-sm hover:shadow transition whitespace-nowrap">
+<span class="material-symbols-outlined text-[16px] text-slateText-400">post_add</span>
+<span>Emitir NFS-e</span>
+</button>
+</div>
+</div>
+<!-- MAIN BENTO GRID ROW 1: Multi-Entity Stacked Cards + Flow Chart -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+<!-- LEFT CARD: Stacked Entity Wallets (Faithful to Reference Card Stack) -->
+<div class="lg:col-span-4 bg-card rounded-3xl p-6 border border-slate-200/80 shadow-card flex flex-col justify-between relative overflow-hidden">
+<!-- Stacked Colorful Bank / Entity Cards -->
+<div class="relative w-full pt-1 pb-4">
+<!-- Card 1: Sky Blue Nubank UV -->
+<div class="relative z-10 w-full h-14 rounded-2xl bg-gradient-to-r from-[#60A5FA] to-[#3B82F6] text-white px-5 py-3 flex items-center justify-between shadow-sm">
+<span class="text-xs font-semibold uppercase tracking-wider">Nubank UV (PF)</span>
+<span class="font-mono text-xs font-bold">R$ 68.200,00</span>
+</div>
+<!-- Card 2: Honey Peach Banco Inter MEI -->
+<div class="relative z-20 w-full h-14 -mt-6 rounded-2xl bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-white px-5 py-3 flex items-center justify-between shadow-sm">
+<span class="text-xs font-semibold uppercase tracking-wider">Inter PJ • Fix Serviços</span>
+<span class="font-mono text-xs font-bold">R$ 44.520,00</span>
+</div>
+<!-- Card 3: Rose / Violet Caixa PJ -->
+<div class="relative z-30 w-full rounded-2xl bg-gradient-to-r from-[#F472B6] to-[#C084FC] text-white p-4 -mt-6 shadow-md">
+<div class="flex items-center justify-between mb-4">
+<span class="text-xs font-semibold uppercase tracking-wider">Caixa PJ • Facilita Vist.</span>
+<span class="font-mono text-xs font-bold">R$ 35.700,00</span>
+</div>
+<!-- Cutout Pill bar on card like reference -->
+<div class="bg-white/20 backdrop-blur-sm rounded-xl p-2 flex items-center justify-between">
+<span class="text-[11px] font-medium tracking-wide">3 Entidades Integradas</span>
+<button class="w-6 h-6 rounded-full bg-white text-brand-600 flex items-center justify-center hover:scale-105 transition" title="Adicionar Conta">
+<span class="material-symbols-outlined text-[16px] font-bold">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Balance Metric Display below cards -->
+<div class="mt-4 pt-2 border-t border-slate-100">
+<div class="flex items-center gap-1.5 text-xs font-medium text-slateText-500 mb-1">
+<span>Patrimônio Líquido Disponível</span>
+<span class="text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded-md text-[11px]">+3,8% mês</span>
+</div>
+<div class="text-3xl font-extrabold text-slateText-900 tracking-tight font-mono">
+            R$ 148.420,00
+          </div>
+<div class="flex items-center justify-between mt-3 text-xs text-slateText-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+<span class="flex items-center gap-1 font-medium">
+<span class="material-symbols-outlined text-[16px] text-brand-500">hourglass_top</span>
+              Runway Familiar: <strong class="text-slateText-900">11,2 meses</strong>
+</span>
+<span class="font-mono text-[11px] text-slateText-400">Burn R$ 13.250/mês</span>
+</div>
+</div>
+</div>
+<!-- CENTER / RIGHT HERO: Overview Multi-Curved Liquidity Chart (Exact Style from Reference) -->
+<div class="lg:col-span-8 bg-card rounded-3xl p-6 border border-slate-200/80 shadow-card flex flex-col justify-between">
+<!-- Header Rail & Filters -->
+<div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+<div>
+<h3 class="text-base font-bold text-slateText-900">Visão Geral de Liquidez &amp; Reservas</h3>
+<p class="text-xs text-slateText-500">Evolução do Fluxo de Caixa Consolidado vs. Histórico de 2025</p>
+</div>
+<!-- Chart Legend & Time Selector exactly like reference -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-xs">
+<div class="flex items-center gap-1.5 font-medium text-slateText-700">
+<span class="w-2.5 h-2.5 rounded-full bg-brand-500"></span>
+<span>Ano Atual (2026) <strong class="font-mono ml-0.5">R$ 148,4k</strong></span>
+</div>
+<span class="text-slate-300">|</span>
+<div class="flex items-center gap-1.5 font-medium text-slateText-500">
+<span class="w-2.5 h-2.5 rounded-full bg-[#FB923C]"></span>
+<span>Ano Anterior <strong class="font-mono ml-0.5">R$ 112,0k</strong></span>
+</div>
+</div>
+<button class="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slateText-700 shadow-sm">
+<span>Últimos 12 meses</span>
+<span class="material-symbols-outlined text-[14px]">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Smooth Vector Chart with Tooltip Box (matching reference image style) -->
+<div class="relative w-full h-56 pt-2">
+<!-- Tooltip simulation floating over May point -->
+<div class="absolute top-2 left-[48%] -translate-x-1/2 bg-white/95 backdrop-blur shadow-lg border border-slate-100 rounded-2xl p-2.5 z-20 flex gap-3 text-xs pointer-events-none">
+<div>
+<div class="flex items-center gap-1 text-[11px] text-slateText-400">
+<span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span> 2026
+              </div>
+<div class="font-mono font-bold text-slateText-900">R$ 148.420</div>
+</div>
+<div class="border-l border-slate-200 pl-3">
+<div class="flex items-center gap-1 text-[11px] text-slateText-400">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FB923C]"></span> 2025
+              </div>
+<div class="font-mono font-semibold text-slateText-700">R$ 112.500</div>
+</div>
+</div>
+<!-- SVG Double Wave Chart -->
+<svg class="w-full h-full overflow-visible" fill="none" preserveaspectratio="none" viewbox="0 0 700 170">
+<defs>
+<lineargradient id="blueGlow" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#5B67F6" stop-opacity="0.18"></stop>
+<stop offset="100%" stop-color="#5B67F6" stop-opacity="0.0"></stop>
+</lineargradient>
+<lineargradient id="orangeGlow" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#FB923C" stop-opacity="0.12"></stop>
+<stop offset="100%" stop-color="#FB923C" stop-opacity="0.0"></stop>
+</lineargradient>
+</defs>
+<!-- Horizontal Grid lines -->
+<line stroke="#F1F5F9" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="700" y1="30" y2="30"></line>
+<line stroke="#F1F5F9" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="700" y1="70" y2="70"></line>
+<line stroke="#F1F5F9" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="700" y1="110" y2="110"></line>
+<line stroke="#F1F5F9" stroke-width="1" x1="0" x2="700" y1="150" y2="150"></line>
+<!-- Past Year Orange Curve -->
+<path d="M 0,95 C 60,65 120,115 180,95 C 240,75 300,45 350,55 C 410,70 470,120 530,90 C 590,60 650,110 700,95 L 700,160 L 0,160 Z" fill="url(#orangeGlow)"></path>
+<path d="M 0,95 C 60,65 120,115 180,95 C 240,75 300,45 350,55 C 410,70 470,120 530,90 C 590,60 650,110 700,95" stroke="#FB923C" stroke-linecap="round" stroke-width="2.5"></path>
+<!-- Current Year Blue Smooth Wave -->
+<path d="M 0,115 C 60,110 120,60 180,75 C 240,90 300,105 350,85 C 400,30 450,25 500,65 C 550,105 620,35 700,60 L 700,160 L 0,160 Z" fill="url(#blueGlow)"></path>
+<path d="M 0,115 C 60,110 120,60 180,75 C 240,90 300,105 350,85 C 400,30 450,25 500,65 C 550,105 620,35 700,60" stroke="#5B67F6" stroke-linecap="round" stroke-width="3"></path>
+<!-- Interactive Marker Dots at Month May (index 350) -->
+<circle cx="350" cy="55" fill="#FB923C" r="5" stroke="#FFFFFF" stroke-width="2"></circle>
+<circle cx="350" cy="85" fill="#5B67F6" r="6" stroke="#FFFFFF" stroke-width="2.5"></circle>
+<line stroke="#CBD5E1" stroke-dasharray="3 3" stroke-width="1.5" x1="350" x2="350" y1="20" y2="150"></line>
+</svg>
+</div>
+<!-- Month Labels Axis (Jan - Dez) -->
+<div class="flex justify-between items-center text-[11px] font-medium text-slateText-400 mt-2 px-1">
+<span>Jan</span>
+<span>Fev</span>
+<span>Mar</span>
+<span>Abr</span>
+<span class="text-brand-600 font-bold">Mai</span>
+<span>Jun</span>
+<span>Jul</span>
+<span>Ago</span>
+<span>Set</span>
+<span>Out</span>
+<span>Nov</span>
+<span>Dez</span>
+</div>
+</div>
+</div>
+<!-- MIDDLE ROW: MEI Ceiling Monitor + Dual Signature + Quick Contacts -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+<!-- CARD 1: MEI Ceiling Monitor (Styled with Pill Markers like Spending Limit in Reference) -->
+<div class="lg:col-span-4 bg-card rounded-3xl p-6 border border-slate-200/80 shadow-card flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-2">
+<h3 class="text-sm font-bold text-slateText-900">Monitor de Teto MEI • LC 208</h3>
+<div class="w-8 h-8 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-slateText-500">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</div>
+</div>
+<div class="flex items-baseline gap-2 mb-1">
+<span class="text-2xl font-extrabold text-slateText-900 font-mono">R$ 81.000,00</span>
+<span class="text-xs font-semibold text-slateText-400">/ CNPJ Anual</span>
+</div>
+<p class="text-xs text-slateText-500 mb-4">Exercício Fiscal 2026 • Margem de enquadramento segura</p>
+<!-- MEI 1: Fix Serviços -->
+<div class="mb-4">
+<div class="flex justify-between items-center text-xs mb-1.5">
+<span class="font-semibold text-slateText-700">1. Fix Serviços MEI</span>
+<span class="font-mono font-bold text-brand-600">42,2% utilizado</span>
+</div>
+<!-- Striped Pill Bar (Inspired by spending limit bars in reference image) -->
+<div class="flex gap-1 h-3.5 w-full items-center">
+<!-- Filled active pills -->
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<!-- Empty inactive pills -->
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+</div>
+<div class="flex justify-between items-center text-[11px] text-slateText-500 mt-1.5 font-mono">
+<span>Emitido: R$ 34.200,00</span>
+<span class="text-emerald-600 font-medium">Margem: R$ 46.800,00</span>
+</div>
+</div>
+<!-- MEI 2: Facilita Vistorias -->
+<div>
+<div class="flex justify-between items-center text-xs mb-1.5">
+<span class="font-semibold text-slateText-700">2. Facilita Vistorias MEI</span>
+<span class="font-mono font-bold text-brand-600">31,0% utilizado</span>
+</div>
+<!-- Striped Pill Bar -->
+<div class="flex gap-1 h-3.5 w-full items-center">
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<span class="h-full flex-1 bg-brand-500 rounded-full"></span>
+<!-- Empty inactive pills -->
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+<span class="h-full flex-1 bg-slate-100 rounded-full"></span>
+</div>
+<div class="flex justify-between items-center text-[11px] text-slateText-500 mt-1.5 font-mono">
+<span>Emitido: R$ 25.110,00</span>
+<span class="text-emerald-600 font-medium">Margem: R$ 55.890,00</span>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+<span class="text-slateText-500">Status LC 208/2026:</span>
+<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[11px]">Regular • Sem Risco</span>
+</div>
+</div>
+<!-- CARD 2: Dual-Signature Desk (Spousal Governance) -->
+<div class="lg:col-span-4 bg-card rounded-3xl p-6 border border-slate-200/80 shadow-card flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px] text-amber-500">fingerprint</span>
+<h3 class="text-sm font-bold text-slateText-900">Governança Familiar</h3>
+</div>
+<span class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold text-[11px] border border-amber-200/60">1 Pendência</span>
+</div>
+<p class="text-xs text-slateText-500 mb-3">Aprovações financeiras acima de R$ 3.000 exigem chave de ambos os cônjuges.</p>
+<!-- Pending Item Box -->
+<div class="bg-slate-50 border border-slate-200/70 rounded-2xl p-4 mb-3">
+<div class="flex items-start justify-between">
+<div>
+<span class="text-[11px] font-bold text-brand-600 uppercase tracking-wider block">Pró-labore Mensal</span>
+<span class="text-xs font-semibold text-slateText-800">Fix Serviços MEI → Conta Familiar PF</span>
+<div class="text-[11px] text-slateText-400 mt-0.5">Banco Inter (0012) → Nubank UV</div>
+</div>
+<span class="font-mono text-base font-extrabold text-slateText-900">R$ 3.500,00</span>
+</div>
+<div class="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-200/60 text-xs">
+<div class="flex items-center gap-1.5 text-slateText-600">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>Liam (Assinado)</span>
+</div>
+<div class="flex items-center gap-1.5 text-amber-600 font-medium">
+<span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+<span>Aguardando Sophia</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex gap-2 pt-2">
+<button class="flex-1 py-2.5 px-3 bg-brand-500 text-white rounded-xl text-xs font-bold shadow-pill hover:bg-brand-600 transition flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">key</span>
+<span>Aprovar com YubiKey</span>
+</button>
+<button class="py-2.5 px-3 bg-white border border-slate-200 text-slateText-600 hover:text-slateText-900 rounded-xl text-xs font-semibold hover:bg-slate-50 transition">
+            Detalhes
+          </button>
+</div>
+</div>
+<!-- CARD 3: Quick Transfer & Frequent Contacts (Exact Style from Reference Image) -->
+<div class="lg:col-span-4 bg-card rounded-3xl p-6 border border-slate-200/80 shadow-card flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-3">
+<h3 class="text-sm font-bold text-slateText-900">Transferência Rápida</h3>
+<a class="text-xs font-semibold text-brand-600 hover:underline" href="#">Ver Todos</a>
+</div>
+<!-- Contacts Avatar Row with Add Button -->
+<div class="flex items-center gap-2.5 overflow-x-auto py-2">
+<!-- Add contact button -->
+<button class="w-11 h-11 rounded-full border border-dashed border-slate-300 flex items-center justify-center text-slateText-400 hover:text-brand-500 hover:border-brand-500 shrink-0 transition">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+<!-- Contact 1 -->
+<div class="flex flex-col items-center shrink-0 cursor-pointer group">
+<div class="w-11 h-11 rounded-full overflow-hidden ring-2 ring-slate-100 group-hover:ring-brand-500 transition">
+<img alt="Contador" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBuh1Ha0ntBECkaLdot0M1WpUkYfW_YnMkXdgpvPmhp9chUsrChGhf6m92GGXTPlOBjrYoZ8l_Kx8MrCrUUv-7tWuRvNzcUrt4fDQY5Jp-JfdkbxSVVqwpbLG6lp9bZGXzWYqbM35hoxAKKdA5n68Od7wK0toi6NPzFoMJfR9w0WQBvC_PiR9pihFzccx2hcesbJd5Lh4q488kPH0U-JEarpzrDEwMjmtPAMn1RP04"/>
+</div>
+<span class="text-[10px] text-slateText-500 mt-1">Contador</span>
+</div>
+<!-- Contact 2 (Selected like in reference with active blue ring) -->
+<div class="flex flex-col items-center shrink-0 cursor-pointer">
+<div class="w-11 h-11 rounded-full overflow-hidden ring-2 ring-brand-500 ring-offset-2 transition shadow-sm">
+<img alt="Sophia" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDCh4PyDWS9lm-iXIpzncsAUHQjzn_LEK0K_3vo5FuF7rzG2Sl1U5v3oY-Z2w7qwvn5Gs3mT3vXBJyIlhIOI7EOVkWPoEf6orlYgUyqAwgWzlhzlXKkj6vobj5_OnMm4fjzT5DU7iyWZq1kbVbwoPCJiWs2LFh_yw2EUh4FaQquSz_GFPjpsBQr6WIpXg_3iaktvwRsncoZRR3-2Wr_7QUI4XaS3Fi1CpCTOfWCWcQ"/>
+</div>
+<span class="text-[10px] font-semibold text-brand-600 mt-1">Sophia</span>
+</div>
+<!-- Contact 3 -->
+<div class="flex flex-col items-center shrink-0 cursor-pointer group">
+<div class="w-11 h-11 rounded-full overflow-hidden ring-2 ring-slate-100 group-hover:ring-brand-500 transition">
+<img alt="Fornecedor" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSOEE0VI44xJi1YQt95xTaEQ0NBHuYxjfdudfo1qBZ_r3cFUeBv5aDnE6KbGu2ODAaHn_rVrxINgvi3GSSJjed4KMaBjssHvkxPs8Y9gRcgTfAInnPQBET6DBB1EZlV_fs9EjSNVpoNim8oC7Yv12GKbelhzGKAh0URiq7F_xkyCP8ZaoN4LVTc7IpGfGeeBfgEEiNtPlQGRvaYHX5Mkk5MbrVj3TSQwldEdqnXRc"/>
+</div>
+<span class="text-[10px] text-slateText-500 mt-1">Fornecedor</span>
+</div>
+<!-- Contact 4 -->
+<div class="flex flex-col items-center shrink-0 cursor-pointer group">
+<div class="w-11 h-11 rounded-full overflow-hidden ring-2 ring-slate-100 group-hover:ring-brand-500 transition">
+<img alt="Imobiliária" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALTu9P9PUY3L87Au350xTcME7XzGNHpcaZ5eTVLtr8cGEdi5oCvN70aXmaI_Vh3biQ3G7bqgh16pHqz3T9vYAtsntowntLCUhjB0FFqHWk4-pz6HiqH7vbceinW51khCtkA2G65kZT4A6f-fv_AS7cTJHwQyQAxJxYMtu-2WWf7xcW_iRt8eH9CD11z-SdD9Qsq1qBURWDH2bL0tZwMgJmoMejjdaLT1FckdXNahY"/>
+</div>
+<span class="text-[10px] text-slateText-500 mt-1">Imóvel</span>
+</div>
+<!-- Chevron next -->
+<button class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slateText-400 hover:text-slateText-700 shrink-0">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Transfer Input and Send Pill Button (reference layout) -->
+<div class="flex items-center gap-3 pt-3 border-t border-slate-100 mt-2">
+<div class="relative flex-1">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-semibold text-slateText-400">R$</span>
+<input class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold font-mono text-slateText-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20" type="text" value="200,00"/>
+</div>
+<button class="px-5 py-2.5 bg-brand-500 text-white rounded-xl text-xs font-bold shadow-pill hover:bg-brand-600 transition">
+            Enviar PIX
+          </button>
+</div>
+</div>
+</div>
+<!-- LOWER ROW: Transaction Ledger & Fiscal Reconciliation + Money Movement Column Chart -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+<!-- TRANSACTION TABLE: Clean & Ultra-Refined Ledger -->
+<div class="lg:col-span-8 bg-card rounded-3xl p-6 border border-slate-200/80 shadow-card flex flex-col justify-between">
+<div>
+<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+<div>
+<h3 class="text-sm font-bold text-slateText-900">Livro Razão &amp; Conciliação Fiscal Recente</h3>
+<p class="text-xs text-slateText-500">Conciliação bancária automática com chaves XML e recibos fiscais</p>
+</div>
+<!-- Filter Tabs -->
+<div class="flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-200/60 text-xs">
+<button class="px-3 py-1 rounded-lg bg-white text-slateText-900 font-bold shadow-sm">Todas</button>
+<button class="px-3 py-1 rounded-lg text-slateText-500 hover:text-slateText-900 font-medium">Inter PJ</button>
+<button class="px-3 py-1 rounded-lg text-slateText-500 hover:text-slateText-900 font-medium">Caixa PJ</button>
+<button class="px-3 py-1 rounded-lg text-slateText-500 hover:text-slateText-900 font-medium">Nubank PF</button>
+</div>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs">
+<thead>
+<tr class="border-b border-slate-100 text-slateText-400 font-semibold uppercase tracking-wider text-[10px]">
+<th class="pb-3 pl-1">Data / Hora</th>
+<th class="pb-3">Entidade</th>
+<th class="pb-3">Descrição &amp; Contraparte</th>
+<th class="pb-3 text-right">Valor</th>
+<th class="pb-3">Documento Fiscal</th>
+<th class="pb-3 text-center">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 font-medium">
+<!-- Row 1: Income -->
+<tr class="hover:bg-slate-50/80 transition group">
+<td class="py-3 pl-1 font-mono text-slateText-500">05/Nov 14:22</td>
+<td class="py-3">
+<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 font-semibold text-[10px] border border-amber-200/60">Inter PJ</span>
+</td>
+<td class="py-3">
+<div class="text-slateText-900 font-semibold">PIX Cliente Condomínio Jardins</div>
+<div class="text-[11px] text-slateText-400">Receita Bruta MEI • Prestação de Reparos</div>
+</td>
+<td class="py-3 text-right font-mono font-bold text-emerald-600">+R$ 1.850,00</td>
+<td class="py-3 font-mono text-[11px] text-slateText-500">NF-e #0084.xml</td>
+<td class="py-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> OK
+                    </span>
+</td>
+</tr>
+<!-- Row 2: Expense -->
+<tr class="hover:bg-slate-50/80 transition group">
+<td class="py-3 pl-1 font-mono text-slateText-500">05/Nov 10:15</td>
+<td class="py-3">
+<span class="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-semibold text-[10px] border border-purple-200/60">Caixa PJ</span>
+</td>
+<td class="py-3">
+<div class="text-slateText-900 font-semibold">Locação Medidor Laser 3D</div>
+<div class="text-[11px] text-slateText-400">Despesa Operacional • Georreferenciamento</div>
+</td>
+<td class="py-3 text-right font-mono font-semibold text-slateText-800">-R$ 420,00</td>
+<td class="py-3 font-mono text-[11px] text-slateText-500">Recibo_Loc_09.pdf</td>
+<td class="py-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> OK
+                    </span>
+</td>
+</tr>
+<!-- Row 3: Supermarket -->
+<tr class="hover:bg-slate-50/80 transition group">
+<td class="py-3 pl-1 font-mono text-slateText-500">04/Nov 19:40</td>
+<td class="py-3">
+<span class="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-semibold text-[10px] border border-blue-200/60">Nubank PF</span>
+</td>
+<td class="py-3">
+<div class="text-slateText-900 font-semibold">Supermercado Pão de Açúcar</div>
+<div class="text-[11px] text-slateText-400">Despesa Familiar • Cesta Alimentação</div>
+</td>
+<td class="py-3 text-right font-mono font-semibold text-slateText-800">-R$ 684,30</td>
+<td class="py-3 font-mono text-[11px] text-slateText-500">NFC-e 3526..8901</td>
+<td class="py-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> OK
+                    </span>
+</td>
+</tr>
+<!-- Row 4: Pending Warning -->
+<tr class="hover:bg-amber-50/40 bg-amber-50/20 transition group">
+<td class="py-3 pl-1 font-mono text-amber-700 font-semibold">04/Nov 11:05</td>
+<td class="py-3">
+<span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 font-semibold text-[10px]">Inter PJ</span>
+</td>
+<td class="py-3">
+<div class="text-slateText-900 font-semibold">Manutenção Veicular Utilitário</div>
+<div class="text-[11px] text-slateText-500">Custo Operacional • Troca Pastilhas de Freio</div>
+</td>
+<td class="py-3 text-right font-mono font-bold text-amber-700">-R$ 1.250,00</td>
+<td class="py-3">
+<span class="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600">
+<span class="material-symbols-outlined text-[14px]">warning</span> NF-e Pendente
+                    </span>
+</td>
+<td class="py-3 text-center">
+<button class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-500 text-white font-bold text-[10px] shadow-sm hover:bg-brand-600 transition">
+<span class="material-symbols-outlined text-[13px]">add_a_photo</span> Anexar
+                    </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="flex items-center justify-between text-xs text-slateText-500 pt-3 border-t border-slate-100 mt-2">
+<span>5 conciliações efetuadas nas últimas 48h</span>
+<a class="font-bold text-brand-600 hover:underline" href="#">Ver extrato completo</a>
+</div>
+</div>
+<!-- MONEY MOVEMENT: Soft Column Bar Chart (Inspired by reference bottom right widget) -->
+<div class="lg:col-span-4 bg-card rounded-3xl p-6 border border-slate-200/80 shadow-card flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-sm font-bold text-slateText-900">Movimentação Financeira</h3>
+<button class="flex items-center gap-1 text-xs font-semibold text-slateText-500 hover:text-slateText-900">
+<span>Últimos 30 dias</span>
+<span class="material-symbols-outlined text-[14px]">expand_more</span>
+</button>
+</div>
+<!-- In vs Out Header -->
+<div class="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-100 mb-4">
+<div>
+<span class="text-[11px] text-slateText-400 block font-medium">Entradas (Receita)</span>
+<span class="font-mono text-base font-extrabold text-emerald-600">R$ 28.450,00</span>
+</div>
+<div class="text-right">
+<span class="text-[11px] text-slateText-400 block font-medium">Saídas (Despesas)</span>
+<span class="font-mono text-base font-extrabold text-slateText-800">R$ 13.250,00</span>
+</div>
+</div>
+<!-- Soft Column Bar Chart with Glow Highlight on active day -->
+<div class="relative w-full h-36 flex items-end justify-between gap-1.5 pt-6 px-1">
+<!-- Background baseline -->
+<div class="absolute inset-x-0 bottom-0 h-px bg-slate-100"></div>
+<!-- Tooltip over active bar -->
+<div class="absolute top-0 left-[62%] -translate-x-1/2 bg-slate-900 text-white text-[10px] font-mono px-2 py-0.5 rounded-md shadow-md pointer-events-none">
+              05 Nov: R$ 3.8k
+            </div>
+<!-- Soft bars (reference style rounded pills) -->
+<div class="w-full bg-slate-100 rounded-t-xl h-[45%]"></div>
+<div class="w-full bg-slate-100 rounded-t-xl h-[65%]"></div>
+<div class="w-full bg-slate-100 rounded-t-xl h-[30%]"></div>
+<div class="w-full bg-slate-100 rounded-t-xl h-[55%]"></div>
+<div class="w-full bg-slate-100 rounded-t-xl h-[80%]"></div>
+<!-- Active Highlighted Column matching reference glowing pillar -->
+<div class="w-full bg-gradient-to-t from-brand-600 to-brand-400 rounded-t-xl h-[95%] shadow-pill relative">
+<div class="w-2 h-2 rounded-full bg-white mx-auto mt-1 opacity-80"></div>
+</div>
+<div class="w-full bg-slate-100 rounded-t-xl h-[70%]"></div>
+<div class="w-full bg-slate-100 rounded-t-xl h-[40%]"></div>
+<div class="w-full bg-slate-100 rounded-t-xl h-[60%]"></div>
+<div class="w-full bg-slate-100 rounded-t-xl h-[50%]"></div>
+</div>
+</div>
+<!-- Copilot Micro Drawer Trigger -->
+<div class="mt-4 pt-3 border-t border-slate-100">
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-brand-500">auto_awesome</span>
+<span class="font-bold text-slateText-800">OF-Copilot Fiscal</span>
+</div>
+<span class="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Teto MEI 100% OK</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- FLOATING QUICK CONCILIATION ACTION BUTTON -->
+<div class="fixed bottom-6 right-6 z-40">
+<button class="bg-brand-500 text-white px-5 py-3 rounded-full shadow-pill flex items-center gap-2 hover:bg-brand-600 transition-all hover:scale-105" onclick="const d = document.getElementById('quick-modal'); if(d) d.classList.toggle('hidden');" type="button">
+<span class="material-symbols-outlined text-[20px]">add_a_photo</span>
+<span class="text-xs font-bold tracking-wide uppercase">Anexar Cupom Fiscal</span>
+<span class="ml-1 text-[11px] bg-white text-brand-600 font-extrabold px-1.5 py-0.2 rounded-full">1</span>
+</button>
+</div>
+<!-- LIGHT-MODE MODAL FOR QUICK OCR CAPTURE -->
+<div class="hidden fixed bottom-20 right-6 z-50 w-88 max-w-sm bg-white p-5 rounded-3xl shadow-2xl border border-slate-200" id="quick-modal">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-brand-500 text-[20px]">document_scanner</span>
+<h4 class="text-sm font-bold text-slateText-900">Upload Direto de Cupom NFC-e</h4>
+</div>
+<button class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slateText-500" onclick="document.getElementById('quick-modal').classList.add('hidden')" type="button">
+<span class="material-symbols-outlined text-[16px]">close</span>
+</button>
+</div>
+<p class="text-xs text-slateText-500 mb-3">
+      Fotografe o QR-Code do cupom fiscal para conciliação instantânea com a despesa de <strong>R$ 1.250,00</strong> da Fix Serviços MEI.
+    </p>
+<div class="p-6 bg-slate-50 border-2 border-dashed border-slate-200 hover:border-brand-500 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer transition group">
+<div class="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-brand-500 group-hover:scale-110 transition">
+<span class="material-symbols-outlined text-[26px]">qr_code_scanner</span>
+</div>
+<span class="text-xs font-semibold text-slateText-700">Clique para abrir a câmera ou arraste o PDF</span>
+<span class="text-[10px] text-slateText-400">Processamento via OCR Air-Gapped Local</span>
+</div>
+<button class="w-full mt-3 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-pill transition" type="button">
+      Processar OCR &amp; Conciliar
+    </button>
+</div>
+<script>
+    // Shortcut Command + K to toggle Quick Modal
+    document.addEventListener('keydown', function(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const modal = document.getElementById('quick-modal');
+        if (modal) modal.classList.toggle('hidden');
+      }
+    });
+  </script>
+</body></html>
