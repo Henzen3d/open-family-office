@@ -18,7 +18,9 @@ services:
       - ./reports:/app/reports
       - ./config:/app/config
     networks:
-      - ofo-network
+      ofo-network:
+        aliases:
+          - financas-api
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
@@ -41,7 +43,9 @@ services:
       ofo-api:
         condition: service_healthy
     networks:
-      - ofo-network
+      ofo-network:
+        aliases:
+          - financas-web
 
   ofo-tunnel:
     container_name: ofo-tunnel

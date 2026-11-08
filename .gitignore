@@ -83,3 +83,9 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# SSH Deploy Keys
+ofodeploy*
+*.key
+*.pem
+
+
