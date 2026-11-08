@@ -179,11 +179,11 @@ export default function AssetDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-sm animate-backdrop-in"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-4xl h-[720px] max-h-[92vh] flex flex-col bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100"
+        className="w-full max-w-4xl h-[720px] max-h-[92vh] flex flex-col bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100 animate-modal-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}

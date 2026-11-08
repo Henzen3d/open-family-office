@@ -32,8 +32,8 @@ Por favor, enviar o comprovante após a transferência para emissão da NFS-e. O
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-      <div className="w-full max-w-lg bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl text-slate-900 dark:text-slate-100" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-backdrop-in" onClick={onClose}>
+      <div className="w-full max-w-lg bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl text-slate-900 dark:text-slate-100 animate-modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-white/10">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
@@ -115,8 +115,8 @@ export function DasModal({ isOpen, onClose }: DasModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-      <div className="w-full max-w-lg bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl text-slate-900 dark:text-slate-100" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-backdrop-in" onClick={onClose}>
+      <div className="w-full max-w-lg bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl text-slate-900 dark:text-slate-100 animate-modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-white/10">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 font-bold">
@@ -205,8 +205,8 @@ export function RunwayModal({ isOpen, onClose, totalReserve = 508121.36, monthly
   const runwayMonths = (totalReserve / Math.max(monthlyBurn, 1)).toFixed(1);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={onClose}>
-      <div className="w-full max-w-lg bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl text-slate-900 dark:text-slate-100" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-backdrop-in" onClick={onClose}>
+      <div className="w-full max-w-lg bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-2xl text-slate-900 dark:text-slate-100 animate-modal-in" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-white/10">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold">

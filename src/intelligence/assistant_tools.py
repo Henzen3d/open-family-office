@@ -393,3 +393,4 @@ def extract_expense_proposal(text: str, default_entity: Optional[str] = None) ->
         "clean_description": f"Compra {counterparty} ({category})",
         "raw_text": clean_text,
     }
+

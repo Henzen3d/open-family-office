@@ -131,8 +131,8 @@ export default function StatementModal({ isOpen, onClose, onSuccess }: Statement
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-3xl max-h-[90vh] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-backdrop-in">
+      <div className="relative w-full max-w-3xl max-h-[90vh] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 animate-modal-in">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-white/10">
           <div className="flex items-center gap-3">

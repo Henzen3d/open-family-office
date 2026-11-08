@@ -146,3 +146,4 @@ def test_api_confirm_card_endpoint(api_client, tmp_path, monkeypatch):
     assert data["transaction"]["amount"] == -138.50
     assert data["transaction"]["entity_code"] == "HOUSEHOLD_OSMAR"
     assert data["transaction"]["counterparty"] == "Supermercado Giassi"
+

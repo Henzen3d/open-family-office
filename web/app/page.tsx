@@ -294,6 +294,17 @@ export default function StitchExecutiveDashboard() {
     }
   }, [messages, isAssistantOpen]);
 
+  // Impeccable Motion: Close assistant drawer on ESC key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isAssistantOpen) {
+        setIsAssistantOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAssistantOpen]);
+
   const handleSendMessage = async (customText?: string) => {
     const text = (customText || chatInput).trim();
     if (!text && !attachedFile) return;
@@ -805,7 +816,7 @@ export default function StitchExecutiveDashboard() {
 
             {/* View 1: 2026 vs 2025 Double Wave */}
             {liquidityView === 'compare' && (
-              <>
+              <div key="view-compare" className="animate-view-fade">
                 <div className="relative w-full h-56 pt-2">
                   <div className="absolute top-2 left-[48%] -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-3 text-xs pointer-events-none text-slate-900 dark:text-white">
                     <div>
@@ -880,12 +891,12 @@ export default function StitchExecutiveDashboard() {
                   <span>Nov</span>
                   <span>Dez</span>
                 </div>
-              </>
+              </div>
             )}
 
             {/* View 2: 7 Anos Historical Evolution (2020-2026) */}
             {liquidityView === 'history' && (
-              <>
+              <div key="view-history" className="animate-view-fade">
                 <div className="relative w-full h-56 pt-2 flex items-end justify-between gap-3 px-2">
                   <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-4 text-xs pointer-events-none text-slate-900 dark:text-white">
                     <div>
@@ -934,12 +945,12 @@ export default function StitchExecutiveDashboard() {
                   <span className="text-amber-600 dark:text-amber-400 font-bold">2025 (Pico)</span>
                   <span className="text-indigo-600 dark:text-indigo-400 font-extrabold underline underline-offset-4">2026 (YTD Set)</span>
                 </div>
-              </>
+              </div>
             )}
 
             {/* View 3: Patrimônio Acumulado & Reservas */}
             {liquidityView === 'cumulative' && (
-              <>
+              <div key="view-cumulative" className="animate-view-fade">
                 <div className="relative w-full h-56 pt-2">
                   <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-4 text-xs pointer-events-none text-slate-900 dark:text-white">
                     <div>
@@ -986,7 +997,7 @@ export default function StitchExecutiveDashboard() {
                     Hoje: R$ 508.121,36 (Protegido)
                   </span>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -1597,15 +1608,23 @@ export default function StitchExecutiveDashboard() {
       </div>
 
       {/* 7. SLIDE-OVER ASSISTANT & OCR CAPTURE DRAWER */}
-      {isAssistantOpen && (
+      <div
+        className={`fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-all duration-300 ${
+          isAssistantOpen
+            ? 'opacity-100 pointer-events-auto visible'
+            : 'opacity-0 pointer-events-none invisible'
+        }`}
+        style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
+        onClick={() => setIsAssistantOpen(false)}
+        aria-hidden={!isAssistantOpen}
+      >
         <div
-          className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm transition-opacity"
-          onClick={() => setIsAssistantOpen(false)}
+          className={`w-full sm:w-[560px] md:w-[620px] max-w-full h-full bg-white dark:bg-[#161c28] border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col text-slate-900 dark:text-white transition-transform duration-300 will-change-transform ${
+            isAssistantOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+          style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
+          onClick={(e) => e.stopPropagation()}
         >
-          <div
-            className="w-full sm:w-[560px] md:w-[620px] max-w-full h-full bg-white dark:bg-[#161c28] border-l border-slate-200 dark:border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 text-slate-900 dark:text-white"
-            onClick={(e) => e.stopPropagation()}
-          >
             {/* Drawer Header */}
             <div className="p-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-[#121722]">
               <div className="flex items-center gap-2">
@@ -1664,7 +1683,7 @@ export default function StitchExecutiveDashboard() {
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
+                  className={`flex flex-col animate-message-in ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   <div
                     className={`max-w-[88%] rounded-2xl px-4 py-2.5 leading-relaxed ${
@@ -1683,7 +1702,7 @@ export default function StitchExecutiveDashboard() {
 
                     {/* Phase 8: Interactive Expense Confirmation Card */}
                     {msg.confirmationCard && (
-                      <div className="mt-3 p-3.5 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm text-slate-900 dark:text-white">
+                      <div className="mt-3 p-3.5 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm text-slate-900 dark:text-white animate-card-reveal">
                         <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/10 mb-2.5">
                           <div className="flex items-center gap-1.5 text-xs font-bold">
                             <FileText className="w-4 h-4 text-indigo-500" />
@@ -1854,7 +1873,6 @@ export default function StitchExecutiveDashboard() {
             </div>
           </div>
         </div>
-      )}
 
       {/* 4. MOBILE BOTTOM NAVIGATION BAR (Fixed at bottom on mobile screens < md) */}
       <nav className="fixed bottom-0 inset-x-0 h-16 md:hidden z-40 bg-white/95 dark:bg-[#161c28]/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10 flex items-center justify-around px-2 shadow-lg select-none">

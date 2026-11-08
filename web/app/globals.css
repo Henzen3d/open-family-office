@@ -5,6 +5,9 @@
 :root {
   --background: #F4F6FB;
   --foreground: #0F172A;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-fast: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html.dark {
@@ -37,4 +40,116 @@ body {
 
 html.dark ::-webkit-scrollbar-thumb {
   background: #334155;
+}
+
+/* ==========================================================================
+   Impeccable Motion System (Operate & Financial Dashboard Mode)
+   Follows: https://impeccable.style/docs/animate/
+   Natural deceleration (cubic-bezier 0.16, 1, 0.3, 1), GPU-accelerated transforms
+   ========================================================================== */
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+@keyframes modalScaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes messageGlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.97) translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes viewCrossfade {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
+  }
+}
+
+.animate-backdrop-in {
+  animation: backdropFadeIn 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-modal-in {
+  animation: modalScaleIn 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-message-in {
+  animation: messageGlideIn 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-card-reveal {
+  animation: cardReveal 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-view-fade {
+  animation: viewCrossfade 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+/* Accessibility: Gracefully respect users preferring reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-backdrop-in,
+  .animate-modal-in,
+  .animate-message-in,
+  .animate-card-reveal,
+  .animate-view-fade {
+    animation-duration: 120ms !important;
+    animation-timing-function: ease-in-out !important;
+    transform: none !important;
+  }
 }
