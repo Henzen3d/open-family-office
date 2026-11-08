@@ -1,0 +1,61 @@
+services:
+  ofo-api:
+    container_name: ofo-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    environment:
+      - PORT=8000
+      - DATA_DIR=/data
+      - REPORTS_DIR=/app/reports
+    ports:
+      # Exposes to host on 8001 to avoid Portainer conflict on 8000
+      - "${HOST_API_PORT:-8001}:8000"
+    volumes:
+      - ./data:/data
+      - ./reports:/app/reports
+      - ./config:/app/config
+    networks:
+      - ofo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  ofo-web:
+    container_name: ofo-web
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    environment:
+      - PORT=3000
+      - BACKEND_INTERNAL_URL=http://ofo-api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      ofo-api:
+        condition: service_healthy
+    networks:
+      - ofo-network
+
+  ofo-tunnel:
+    container_name: ofo-tunnel
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - ofo-web
+    networks:
+      - ofo-network
+    profiles:
+      - tunnel
+
+networks:
+  ofo-network:
+    name: ofo-network
+    driver: bridge

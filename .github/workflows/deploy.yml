@@ -1,0 +1,28 @@
+name: Deploy to Linux Server
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README*.md'
+      - 'docs/**'
+      - '.gemini/**'
+
+jobs:
+  deploy:
+    name: Continuous Deployment via SSH
+    runs-on: ubuntu-latest
+    if: github.repository == 'Henzen3d/open-family-office'
+
+    steps:
+      - name: Trigger Remote Deploy Script via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            export DEPLOY_DIR="/home/osmar/openfamilyoffice"
+            bash /home/osmar/openfamilyoffice/scripts/deploy.sh
