@@ -19,12 +19,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from src.security.sanitizer import PIISanitizer, SecurityEgressException
+
 # Application Initialization
 app = FastAPI(
     title="OpenFamilyOffice API",
     version="1.0.0",
     description="Deterministic financial engine and executive assistant API.",
 )
+
+sanitizer = PIISanitizer()
+
 
 # CORS middleware for local development (Next.js reverse proxy handles production)
 app.add_middleware(
@@ -102,8 +107,16 @@ async def system_status():
 
 
 async def generate_chat_stream(user_message: str, entity: Optional[str] = None) -> AsyncGenerator[str, None]:
-    """Generates SSE chunks adhering to ASD-STE100 ~80% style."""
-    clean_msg = user_message.lower().strip()
+    """Generates SSE chunks adhering to ASD-STE100 ~80% style with PII masking."""
+    sanitized_msg, tokens = sanitizer.sanitize(user_message)
+    # Enforce egress safety: ensure no unmasked PII leaks
+    try:
+        sanitizer.verify_egress_safety(sanitized_msg)
+    except SecurityEgressException as exc:
+        yield f"id: 1\ndata: {json.dumps({'type': 'error', 'message': str(exc)}, ensure_ascii=False)}\n\n"
+        return
+
+    clean_msg = sanitized_msg.lower().strip()
 
     # Monotonic event ID counter
     event_id = 0
@@ -172,10 +185,16 @@ async def chat_endpoint(request: ChatMessageRequest):
         )
 
     # Non-streaming fallback
+    sanitized_msg, tokens = sanitizer.sanitize(request.message)
+    sanitizer.verify_egress_safety(sanitized_msg)
+    raw_reply = "Assistente ativo. Padrão ASD-STE100 ~80% habilitado. Envie mensagens para iniciar consulta."
+    final_reply = sanitizer.detokenize(raw_reply, tokens)
+
     return {
-        "reply": "Assistente ativo. Padrão ASD-STE100 ~80% habilitado. Envie mensagens para iniciar consulta.",
-        "received": request.message,
+        "reply": final_reply,
+        "received": sanitized_msg,
         "entity": request.context_entity,
+        "sanitized": True,
     }
 
 
