@@ -119,7 +119,7 @@ class TestSmartRouterExecution(unittest.TestCase):
     def test_financial_ops_fallback_includes_cash(self, mock_generate):
         mock_generate.side_effect = Exception("Service unavailable 503")
 
-        result = self.router.execute_chat("Resumo de Caixa")
+        result = self.router.execute_chat("Conciliação fiscal de despesas MEI")
         self.assertEqual(result["provider"], "Offline Heuristic Fallback")
         self.assertIn("Fix Serviços", result["reply"])
         self.assertIn("Facilita Vistorias", result["reply"])

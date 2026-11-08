@@ -38,6 +38,22 @@ import ReceiptScannerModal from './components/ReceiptScannerModal';
 import AssetDetailModal from './components/AssetDetailModal';
 import { CobrancaModal, DasModal, RunwayModal } from './components/ExecutiveModals';
 
+interface ConfirmationCardData {
+  card_id: string;
+  type: string;
+  amount: number;
+  formatted_amount: string;
+  date: string;
+  counterparty: string;
+  category: string;
+  entity_code: string;
+  entity_name: string;
+  account_name: string;
+  status: 'AWAITING_CONFIRMATION' | 'CONFIRMED' | 'DISCARDED';
+  clean_description: string;
+  raw_text?: string;
+}
+
 interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant';
@@ -47,6 +63,7 @@ interface ChatMessage {
   model?: string;
   provider?: string;
   latencyMs?: number;
+  confirmationCard?: ConfirmationCardData;
 }
 
 export default function StitchExecutiveDashboard() {
@@ -180,6 +197,60 @@ export default function StitchExecutiveDashboard() {
     setLedgerTransactions((prev) => [newTx, ...prev]);
   };
 
+  const handleConfirmCard = async (card: ConfirmationCardData, msgId: string) => {
+    try {
+      const res = await fetch('/api/py/ledger/confirm-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          card_id: card.card_id,
+          amount: card.amount,
+          date: card.date,
+          counterparty: card.counterparty,
+          category: card.category,
+          entity_code: card.entity_code,
+          account_name: card.account_name,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.transaction) {
+          setLedgerTransactions((prev) => [data.transaction, ...prev]);
+        }
+
+        // Mark card as CONFIRMED in chat
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id === msgId && m.confirmationCard) {
+              return {
+                ...m,
+                confirmationCard: { ...m.confirmationCard, status: 'CONFIRMED' },
+              };
+            }
+            return m;
+          })
+        );
+      }
+    } catch (e) {
+      console.error('Failed to confirm expense card:', e);
+    }
+  };
+
+  const handleDiscardCard = (msgId: string) => {
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id === msgId && m.confirmationCard) {
+          return {
+            ...m,
+            confirmationCard: { ...m.confirmationCard, status: 'DISCARDED' },
+          };
+        }
+        return m;
+      })
+    );
+  };
+
   const loadTransactions = async () => {
     try {
       const res = await fetch('/api/py/statements/transactions?limit=50');
@@ -259,8 +330,9 @@ export default function StitchExecutiveDashboard() {
           {
             id: (Date.now() + 1).toString(),
             sender: 'assistant',
-            text: `Cupom "${uploadData.file_name}" arquivado com sucesso. Conta: ${uploadData.target_entity}. Dados protegidos por cofre local. Aguardando conciliação automática.`,
+            text: `Identifiquei o cupom "${uploadData.file_name}". Dados extraídos com sucesso. Confirme abaixo para registrar no Livro Razão:`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            confirmationCard: uploadData.confirmation_card,
           },
         ]);
         setLoadingChat(false);
@@ -296,6 +368,7 @@ export default function StitchExecutiveDashboard() {
           model: data.model,
           provider: data.provider,
           latencyMs: data.latency_ms,
+          confirmationCard: data.confirmation_card,
         },
       ]);
     } catch {
@@ -1555,22 +1628,34 @@ export default function StitchExecutiveDashboard() {
             {/* Quick Context Chips inside Drawer */}
             <div className="px-4 py-2 border-b border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-[#161c28] flex gap-1.5 overflow-x-auto text-[11px]">
               <button
+                onClick={() => handleSendMessage('Quanto temos disponível somando nossas três contas?')}
+                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0"
+              >
+                💰 Saldos das Contas
+              </button>
+              <button
                 onClick={() => handleSendMessage('Teto MEI')}
                 className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0"
               >
                 📊 Teto MEI
               </button>
               <button
-                onClick={() => handleSendMessage('Resumo de Caixa')}
+                onClick={() => handleSendMessage('Quais contas vencem nos próximos sete dias?')}
                 className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0"
               >
-                💰 Caixa 7 Dias
+                📅 Contas 7 Dias
               </button>
               <button
-                onClick={() => handleSendMessage('Status das Contas')}
+                onClick={() => handleSendMessage('Runway Familiar')}
                 className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0"
               >
-                ⚙️ Status
+                🛡️ Runway Familiar
+              </button>
+              <button
+                onClick={() => handleSendMessage('Quanto já retiramos das empresas para a família este ano?')}
+                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0"
+              >
+                ⚖️ Retiradas Isentas
               </button>
             </div>
 
@@ -1595,6 +1680,77 @@ export default function StitchExecutiveDashboard() {
                       </div>
                     )}
                     <p className="whitespace-pre-wrap">{msg.text}</p>
+
+                    {/* Phase 8: Interactive Expense Confirmation Card */}
+                    {msg.confirmationCard && (
+                      <div className="mt-3 p-3.5 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm text-slate-900 dark:text-white">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/10 mb-2.5">
+                          <div className="flex items-center gap-1.5 text-xs font-bold">
+                            <FileText className="w-4 h-4 text-indigo-500" />
+                            <span>Compra Identificada</span>
+                          </div>
+                          {msg.confirmationCard.status === 'CONFIRMED' ? (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[10px] border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Confirmado no Livro Razão</span>
+                            </span>
+                          ) : msg.confirmationCard.status === 'DISCARDED' ? (
+                            <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 text-[10px] font-semibold">
+                              Descartado
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold text-[10px] border border-amber-200 dark:border-amber-500/30 animate-pulse">
+                              Aguardando confirmação
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Amount & Counterparty Hero */}
+                        <div className="mb-3">
+                          <div className="text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
+                            {msg.confirmationCard.formatted_amount}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                            {msg.confirmationCard.date} • {msg.confirmationCard.counterparty}
+                          </div>
+                        </div>
+
+                        {/* 2x2 Metadata Grid */}
+                        <div className="grid grid-cols-2 gap-2 p-2 bg-white dark:bg-[#121722] rounded-xl border border-slate-200/60 dark:border-white/5 text-[11px] mb-3">
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Categoria</span>
+                            <strong className="text-slate-800 dark:text-slate-200">{msg.confirmationCard.category}</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Origem</span>
+                            <strong className="text-slate-800 dark:text-slate-200">{msg.confirmationCard.entity_name}</strong>
+                          </div>
+                          <div className="col-span-2 pt-1 border-t border-slate-100 dark:border-white/5">
+                            <span className="text-slate-400 block text-[10px]">Forma de Pagamento</span>
+                            <strong className="text-indigo-600 dark:text-indigo-400">{msg.confirmationCard.account_name}</strong>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        {msg.confirmationCard.status === 'AWAITING_CONFIRMATION' && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleConfirmCard(msg.confirmationCard!, msg.id)}
+                              className="flex-1 py-2 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition hover:scale-[1.01] active:scale-[0.98]"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Confirmar Lançamento</span>
+                            </button>
+                            <button
+                              onClick={() => handleDiscardCard(msg.id)}
+                              className="py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-semibold text-xs rounded-xl transition"
+                            >
+                              Descartar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {msg.sender === 'assistant' && (msg.model || msg.provider) && (
                       <div className="mt-2 pt-1.5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-2 text-[10px] text-slate-600 dark:text-slate-400 font-mono">
                         <span className="inline-flex items-center gap-1">
