@@ -20,6 +20,10 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.security.sanitizer import PIISanitizer, SecurityEgressException
+from src.llm.client import UniversalLLMClient
+from src.llm.config_manager import CustomProviderConfig, ProviderConfigManager
+from src.llm.importer import EnvImporter
+from src.llm.rate_limiter import ProviderLimits
 
 # Application Initialization
 app = FastAPI(
@@ -243,4 +247,338 @@ async def get_latest_report():
         "last_modified": datetime.fromtimestamp(latest.stat().st_mtime, timezone.utc).isoformat(),
         "content": latest.read_text(encoding="utf-8"),
     }
+
+
+# ==============================================================================
+# SETTINGS & LLM PROVIDER REGISTRATION ENDPOINTS
+# ==============================================================================
+
+SETTINGS_FILE = DATA_DIR / "settings.json" if DATA_DIR.exists() else Path("config/settings.json")
+
+
+def get_config_manager() -> ProviderConfigManager:
+    """Returns an active ProviderConfigManager, resolving config path across environments."""
+    possible_paths = [
+        os.getenv("PROVIDERS_CONFIG_PATH"),
+        str(DATA_DIR / "providers.json"),
+        str(DATA_DIR / "config" / "providers.json"),
+        "config/providers.json",
+    ]
+    for p in possible_paths:
+        if p and os.path.exists(p):
+            return ProviderConfigManager(config_path=p)
+    # Default to config/providers.json
+    return ProviderConfigManager(config_path="config/providers.json")
+
+
+def mask_secret(secret: str) -> str:
+    """Masks secret key to prevent egress leakage."""
+    if not secret:
+        return ""
+    if secret.startswith("${") and secret.endswith("}"):
+        return secret
+    if len(secret) <= 8:
+        return "****"
+    return f"{secret[:4]}...{secret[-4:]}"
+
+
+class LimitsPayload(BaseModel):
+    rpm_limit: int = 30
+    tpm_limit: int = 30000
+    rpd_limit: int = 5000
+    proactive_threshold_pct: float = 0.80
+
+
+class ProviderPayload(BaseModel):
+    id: Optional[str] = None
+    name: str
+    protocol: str = "openai"
+    base_url: str
+    api_key: Optional[str] = ""
+    model: str
+    priority: int = 1
+    enabled: bool = True
+    limits: Optional[LimitsPayload] = None
+    custom_headers: Optional[dict] = None
+
+
+class ReorderPayload(BaseModel):
+    order: list[str]
+
+
+class TestProviderPayload(BaseModel):
+    id: Optional[str] = None
+    protocol: Optional[str] = None
+    base_url: Optional[str] = None
+    api_key: Optional[str] = None
+    model: Optional[str] = None
+
+
+class ImportNexusPayload(BaseModel):
+    raw_env_content: Optional[str] = None
+
+
+class GeneralSettingsPayload(BaseModel):
+    theme: Optional[str] = "dark"
+    default_entity: Optional[str] = "fix_servicos"
+    currency: Optional[str] = "BRL"
+    auto_sanitize: Optional[bool] = True
+    notifications_enabled: Optional[bool] = True
+
+
+@app.get("/api/settings/providers")
+@app.get("/settings/providers")
+async def list_providers():
+    """Lists all configured LLM providers with masked secret keys."""
+    mgr = get_config_manager()
+    providers = mgr.list_providers()
+    result = []
+    for p in providers:
+        result.append({
+            "id": p.id,
+            "name": p.name,
+            "protocol": p.protocol,
+            "base_url": p.base_url,
+            "api_key_masked": mask_secret(p.api_key),
+            "has_api_key": bool(p.api_key and len(p.api_key.strip()) > 0),
+            "model": p.model,
+            "priority": p.priority,
+            "enabled": p.enabled,
+            "limits": {
+                "rpm_limit": p.limits.rpm_limit,
+                "tpm_limit": p.limits.tpm_limit,
+                "rpd_limit": p.limits.rpd_limit,
+                "proactive_threshold_pct": p.limits.proactive_threshold_pct,
+            },
+            "custom_headers": p.custom_headers,
+        })
+    return {"providers": result, "count": len(result)}
+
+
+@app.post("/api/settings/providers")
+@app.post("/settings/providers")
+async def create_or_update_provider(payload: ProviderPayload):
+    """Creates or updates a custom provider with proactive rate limits."""
+    mgr = get_config_manager()
+
+    p_id = payload.id.strip() if payload.id and payload.id.strip() else payload.name.lower().replace(" ", "-")
+    # Clean id of non-alphanumeric except hyphen
+    p_id = "".join(c for c in p_id if c.isalnum() or c in ("-", "_"))
+
+    existing = mgr.providers.get(p_id)
+    raw_key = payload.api_key.strip() if payload.api_key else ""
+
+    # If key contains mask dots '...' and existing provider has key, preserve original key
+    if ("..." in raw_key or not raw_key) and existing:
+        raw_key = existing.api_key
+
+    limits_cfg = ProviderLimits(
+        rpm_limit=payload.limits.rpm_limit if payload.limits else 30,
+        tpm_limit=payload.limits.tpm_limit if payload.limits else 30000,
+        rpd_limit=payload.limits.rpd_limit if payload.limits else 5000,
+        proactive_threshold_pct=payload.limits.proactive_threshold_pct if payload.limits else 0.80,
+    )
+
+    config = CustomProviderConfig(
+        id=p_id,
+        name=payload.name.strip(),
+        protocol=payload.protocol.lower().strip(),
+        base_url=payload.base_url.rstrip("/").strip(),
+        api_key=raw_key,
+        model=payload.model.strip(),
+        priority=payload.priority,
+        enabled=payload.enabled,
+        limits=limits_cfg,
+        custom_headers=payload.custom_headers or {},
+    )
+
+    mgr.add_provider(config)
+    return {
+        "status": "success",
+        "provider": {
+            "id": config.id,
+            "name": config.name,
+            "protocol": config.protocol,
+            "base_url": config.base_url,
+            "model": config.model,
+            "priority": config.priority,
+            "enabled": config.enabled,
+            "api_key_masked": mask_secret(config.api_key),
+        },
+    }
+
+
+@app.delete("/api/settings/providers/{provider_id}")
+@app.delete("/settings/providers/{provider_id}")
+async def delete_provider(provider_id: str):
+    """Removes a provider from configuration."""
+    mgr = get_config_manager()
+    success = mgr.remove_provider(provider_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Provedor {provider_id} não encontrado.")
+    return {"status": "success", "deleted_id": provider_id}
+
+
+@app.patch("/api/settings/providers/{provider_id}/toggle")
+@app.patch("/settings/providers/{provider_id}/toggle")
+async def toggle_provider(provider_id: str):
+    """Toggles active status of an LLM provider."""
+    mgr = get_config_manager()
+    success = mgr.toggle_provider(provider_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Provedor {provider_id} não encontrado.")
+    p = mgr.providers[provider_id]
+    return {"status": "success", "id": p.id, "enabled": p.enabled}
+
+
+@app.post("/api/settings/providers/reorder")
+@app.post("/settings/providers/reorder")
+async def reorder_providers(payload: ReorderPayload):
+    """Reorders provider fallback priorities according to array sequence."""
+    mgr = get_config_manager()
+    mgr.reorder_providers(payload.order)
+    return {"status": "success", "order": payload.order}
+
+
+@app.post("/api/settings/providers/test")
+@app.post("/settings/providers/test")
+async def test_provider(payload: TestProviderPayload):
+    """Performs a live connectivity and latency probe on the specified provider."""
+    mgr = get_config_manager()
+
+    target_config: Optional[CustomProviderConfig] = None
+    if payload.id and payload.id in mgr.providers:
+        target_config = mgr.providers[payload.id]
+        if payload.api_key and "..." not in payload.api_key and payload.api_key.strip():
+            target_config.api_key = payload.api_key.strip()
+    elif payload.base_url and payload.model:
+        target_config = CustomProviderConfig(
+            id="test-probe",
+            name="Test Probe",
+            protocol=(payload.protocol or "openai").lower(),
+            base_url=payload.base_url.rstrip("/"),
+            api_key=payload.api_key or "",
+            model=payload.model,
+        )
+
+    if not target_config:
+        raise HTTPException(status_code=400, detail="Configuração do provedor incompleta para teste.")
+
+    client = UniversalLLMClient(timeout=15)
+    t0 = time.time()
+    try:
+        response = client.generate(
+            config=target_config,
+            user_prompt="Responda apenas com a palavra OK para teste de conectividade.",
+            max_tokens=10,
+        )
+        latency_ms = int((time.time() - t0) * 1000)
+        return {
+            "success": True,
+            "latency_ms": latency_ms,
+            "model": response.model_name,
+            "preview": response.content[:100],
+            "message": f"Conexão bem-sucedida em {latency_ms}ms.",
+        }
+    except Exception as exc:
+        latency_ms = int((time.time() - t0) * 1000)
+        return {
+            "success": False,
+            "latency_ms": latency_ms,
+            "error": str(exc),
+            "message": f"Falha na conexão: {str(exc)}",
+        }
+
+
+@app.post("/api/settings/import-nexus")
+@app.post("/settings/import-nexus")
+async def import_nexus_env(payload: Optional[ImportNexusPayload] = None):
+    """Imports LLM API keys and gateway configurations from NexusLocal / Hermes .env files."""
+    mgr = get_config_manager()
+    importer = EnvImporter()
+    imported_list = []
+
+    # 1. If raw text provided in payload
+    if payload and payload.raw_env_content and payload.raw_env_content.strip():
+        imported_list = importer.import_from_env_content(payload.raw_env_content, mgr)
+        return {
+            "status": "success",
+            "imported_count": len(imported_list),
+            "providers": [{"id": p[0], "name": p[1]} for p in imported_list],
+            "source": "raw_content",
+        }
+
+    # 2. Check known local paths on the server / container
+    candidate_paths = [
+        DATA_DIR / "nexus.env",
+        DATA_DIR / "hermes.env",
+        Path("data/nexus.env"),
+        Path("data/hermes.env"),
+        Path("/home/osmar/openfamilyoffice/data/nexus.env"),
+        Path("/home/osmar/nexuslocal/.env"),
+        Path("/home/osmar/.hermes/.env"),
+        Path(".env"),
+    ]
+
+    found_sources = []
+    for path in candidate_paths:
+        if path.exists():
+            res = importer.import_from_env_file(str(path), mgr)
+            if res:
+                imported_list.extend(res)
+                found_sources.append(str(path))
+
+    # Deduplicate imported items by id
+    seen = set()
+    unique_imported = []
+    for p_id, p_name in imported_list:
+        if p_id not in seen:
+            seen.add(p_id)
+            unique_imported.append({"id": p_id, "name": p_name})
+
+    return {
+        "status": "success",
+        "imported_count": len(unique_imported),
+        "providers": unique_imported,
+        "sources_scanned": [str(p) for p in candidate_paths if p.exists()],
+    }
+
+
+@app.get("/api/settings/general")
+@app.get("/settings/general")
+async def get_general_settings():
+    """Returns general preferences (theme, entity, currency)."""
+    default_settings = {
+        "theme": "dark",
+        "default_entity": "fix_servicos",
+        "currency": "BRL",
+        "auto_sanitize": True,
+        "notifications_enabled": True,
+    }
+    if SETTINGS_FILE.exists():
+        try:
+            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                default_settings.update(data)
+        except Exception:
+            pass
+    return default_settings
+
+
+@app.post("/api/settings/general")
+@app.post("/settings/general")
+async def update_general_settings(payload: GeneralSettingsPayload):
+    """Updates general preferences."""
+    SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    current = {
+        "theme": payload.theme or "dark",
+        "default_entity": payload.default_entity or "fix_servicos",
+        "currency": payload.currency or "BRL",
+        "auto_sanitize": payload.auto_sanitize if payload.auto_sanitize is not None else True,
+        "notifications_enabled": payload.notifications_enabled if payload.notifications_enabled is not None else True,
+    }
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(current, f, indent=2, ensure_ascii=False)
+    return {"status": "success", "settings": current}
+
 

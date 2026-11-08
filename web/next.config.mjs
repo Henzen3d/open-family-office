@@ -8,9 +8,12 @@ const nextConfig = {
         source: '/api/py/:path*',
         destination: `${backendUrl}/api/:path*`,
       },
+      {
+        source: '/api/settings/:path*',
+        destination: `${backendUrl}/api/settings/:path*`,
+      },
     ];
   },
 };
 
 export default nextConfig;
-

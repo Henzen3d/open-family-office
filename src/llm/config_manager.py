@@ -117,6 +117,24 @@ class ProviderConfigManager:
             return True
         return False
 
+    def toggle_provider(self, provider_id: str, enabled: Optional[bool] = None) -> bool:
+        """Toggles or sets the enabled status of a provider."""
+        if provider_id in self.providers:
+            if enabled is None:
+                self.providers[provider_id].enabled = not self.providers[provider_id].enabled
+            else:
+                self.providers[provider_id].enabled = enabled
+            self.save_providers()
+            return True
+        return False
+
+    def reorder_providers(self, id_order: List[str]):
+        """Updates provider priorities based on the provided list of IDs in order."""
+        for idx, p_id in enumerate(id_order):
+            if p_id in self.providers:
+                self.providers[p_id].priority = idx + 1
+        self.save_providers()
+
     def list_providers(self, enabled_only: bool = False) -> List[CustomProviderConfig]:
         """Returns sorted list of registered providers."""
         provs = list(self.providers.values())
@@ -124,4 +142,5 @@ class ProviderConfigManager:
             provs = [p for p in provs if p.enabled]
         provs.sort(key=lambda p: p.priority)
         return provs
+
 

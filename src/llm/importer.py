@@ -1,4 +1,4 @@
-"""Importer for environment variables (.env) from NexusLocal, Multi+, or local files."""
+"""Importer for environment variables (.env) from NexusLocal, Multi+, Hermes, or local files."""
 import os
 import re
 from typing import Dict, List, Tuple
@@ -43,13 +43,13 @@ class EnvImporter:
             "name": "Cerebras Fast Inference",
             "protocol": "openai",
             "base_url": "https://api.cerebras.ai/v1",
-            "model": "llama3.3-70b",
+            "model": "llama-3.3-70b",
             "priority": 4,
             "limits": ProviderLimits(rpm_limit=30, tpm_limit=60000, rpd_limit=14400, proactive_threshold_pct=0.80),
         },
         "SAMBANOVA_API_KEY": {
             "id": "sambanova-fast",
-            "name": "SambaNova Systems",
+            "name": "SambaNova Systems (Free Tier)",
             "protocol": "openai",
             "base_url": "https://api.sambanova.ai/v1",
             "model": "Meta-Llama-3.3-70B-Instruct",
@@ -74,15 +74,51 @@ class EnvImporter:
             "priority": 7,
             "limits": ProviderLimits(rpm_limit=30, tpm_limit=40000, rpd_limit=2000, proactive_threshold_pct=0.80),
         },
+        "NVIDIA_API_KEY": {
+            "id": "nvidia-nim",
+            "name": "NVIDIA NIM Inference",
+            "protocol": "openai",
+            "base_url": "https://integrate.api.nvidia.com/v1",
+            "model": "meta/llama-3.3-70b-instruct",
+            "priority": 8,
+            "limits": ProviderLimits(rpm_limit=40, tpm_limit=60000, rpd_limit=2000, proactive_threshold_pct=0.80),
+        },
+        "SILICONFLOW_API_KEY": {
+            "id": "siliconflow-api",
+            "name": "SiliconFlow Free Models",
+            "protocol": "openai",
+            "base_url": "https://api.siliconflow.cn/v1",
+            "model": "Qwen/Qwen2.5-72B-Instruct",
+            "priority": 9,
+            "limits": ProviderLimits(rpm_limit=30, tpm_limit=50000, rpd_limit=2000, proactive_threshold_pct=0.80),
+        },
+        "QWEN_API_KEY": {
+            "id": "qwen-dashscope",
+            "name": "Qwen DashScope",
+            "protocol": "openai",
+            "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "model": "qwen-plus",
+            "priority": 10,
+            "limits": ProviderLimits(rpm_limit=30, tpm_limit=50000, rpd_limit=2000, proactive_threshold_pct=0.80),
+        },
         "ANTHROPIC_API_KEY": {
             "id": "anthropic-claude",
             "name": "Anthropic Claude (Official/Compatible)",
             "protocol": "anthropic",
             "base_url": "https://api.anthropic.com/v1",
             "model": "claude-3-5-sonnet-20241022",
-            "priority": 8,
+            "priority": 11,
             "limits": ProviderLimits(rpm_limit=50, tpm_limit=40000, rpd_limit=1000, proactive_threshold_pct=0.80),
             "custom_headers": {"anthropic-version": "2023-06-01"},
+        },
+        "OPENAI_API_KEY": {
+            "id": "openai-official",
+            "name": "OpenAI Official (GPT-4o-mini)",
+            "protocol": "openai",
+            "base_url": "https://api.openai.com/v1",
+            "model": "gpt-4o-mini",
+            "priority": 12,
+            "limits": ProviderLimits(rpm_limit=60, tpm_limit=80000, rpd_limit=5000, proactive_threshold_pct=0.80),
         },
     }
 
@@ -106,21 +142,41 @@ class EnvImporter:
                         env_vars[key] = val
         return env_vars
 
-    def import_from_env_file(self, env_filepath: str, manager: ProviderConfigManager) -> List[Tuple[str, str]]:
-        """Imports recognized keys from .env file into the ProviderConfigManager.
-        Returns a list of (provider_id, provider_name) that were imported or updated.
-        """
-        env_vars = self.parse_env_file(env_filepath)
+    @staticmethod
+    def parse_env_content(content: str) -> Dict[str, str]:
+        """Parses raw .env text string into key-value pairs."""
+        env_vars = {}
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip().strip("'\"")
+                if key and val:
+                    env_vars[key] = val
+        return env_vars
+
+    def import_from_dict(self, env_vars: Dict[str, str], manager: ProviderConfigManager) -> List[Tuple[str, str]]:
+        """Imports recognized keys from an environment variable dictionary into the ProviderConfigManager."""
         imported: List[Tuple[str, str]] = []
 
+        # 1. Standard known mappings
         for env_key, meta in self.KNOWN_MAPPINGS.items():
-            if env_key in env_vars and env_vars[env_key]:
-                secret_key = env_vars[env_key]
+            val = env_vars.get(env_key)
+            if val and len(val.strip()) > 3:
+                secret_key = val.strip()
+                # Check for dynamic base URL overrides (e.g. GEMINI_BASE_URL)
+                base_url = meta["base_url"]
+                if env_key == "GEMINI_API_KEY" and env_vars.get("GEMINI_BASE_URL"):
+                    base_url = env_vars["GEMINI_BASE_URL"].rstrip("/")
+
                 cfg = CustomProviderConfig(
                     id=meta["id"],
                     name=meta["name"],
                     protocol=meta["protocol"],
-                    base_url=meta["base_url"],
+                    base_url=base_url,
                     api_key=secret_key,
                     model=meta["model"],
                     priority=meta["priority"],
@@ -131,7 +187,50 @@ class EnvImporter:
                 manager.add_provider(cfg)
                 imported.append((cfg.id, cfg.name))
 
-        # Check for custom Ollama / local URL
+        # 2. Check for Anthropic-compatible custom base URL and token
+        anthropic_url = env_vars.get("ANTHROPIC_BASE_URL")
+        anthropic_token = env_vars.get("ANTHROPIC_AUTH_TOKEN") or env_vars.get("ANTHROPIC_API_KEY")
+        if anthropic_url and anthropic_token:
+            cfg = CustomProviderConfig(
+                id="anthropic-custom",
+                name="Anthropic Compatible Gateway",
+                protocol="anthropic",
+                base_url=anthropic_url.rstrip("/"),
+                api_key=anthropic_token.strip(),
+                model=env_vars.get("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022"),
+                priority=13,
+                enabled=True,
+                limits=ProviderLimits(rpm_limit=40, tpm_limit=50000, rpd_limit=2000, proactive_threshold_pct=0.80),
+                custom_headers={"anthropic-version": "2023-06-01"},
+            )
+            manager.add_provider(cfg)
+            imported.append((cfg.id, cfg.name))
+
+        # 3. Dynamic Routers & Custom Gateways
+        custom_gateways = [
+            ("SEEKAI_BASE_URL", "SEEKAI_API_KEY", "seekai-gateway", "SeekAI Router", "openai"),
+            ("VYCEAI_BASE_URL", "VYCEAI_API_KEY", "vyceai-gateway", "VyceAI Router", "openai"),
+            ("GOROUTER_BASE_URL", "GOROUTER_API_KEY", "gorouter-gateway", "GoRouter App", "openai"),
+        ]
+        for url_key, key_key, p_id, p_name, proto in custom_gateways:
+            url_val = env_vars.get(url_key)
+            key_val = env_vars.get(key_key)
+            if url_val and key_val:
+                cfg = CustomProviderConfig(
+                    id=p_id,
+                    name=p_name,
+                    protocol=proto,
+                    base_url=url_val.rstrip("/"),
+                    api_key=key_val.strip(),
+                    model="default",
+                    priority=20,
+                    enabled=True,
+                    limits=ProviderLimits(rpm_limit=30, tpm_limit=40000, rpd_limit=2000, proactive_threshold_pct=0.80),
+                )
+                manager.add_provider(cfg)
+                imported.append((cfg.id, cfg.name))
+
+        # 4. Check for custom Ollama / local URL
         ollama_url = env_vars.get("OLLAMA_BASE_URL") or env_vars.get("LOCAL_LLM_URL")
         if ollama_url:
             local_cfg = CustomProviderConfig(
@@ -150,3 +249,12 @@ class EnvImporter:
 
         return imported
 
+    def import_from_env_file(self, env_filepath: str, manager: ProviderConfigManager) -> List[Tuple[str, str]]:
+        """Imports recognized keys from .env file into the ProviderConfigManager."""
+        env_vars = self.parse_env_file(env_filepath)
+        return self.import_from_dict(env_vars, manager)
+
+    def import_from_env_content(self, content: str, manager: ProviderConfigManager) -> List[Tuple[str, str]]:
+        """Imports recognized keys from raw .env text string into the ProviderConfigManager."""
+        env_vars = self.parse_env_content(content)
+        return self.import_from_dict(env_vars, manager)
