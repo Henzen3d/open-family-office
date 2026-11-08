@@ -42,6 +42,9 @@ interface ChatMessage {
   text: string;
   timestamp: string;
   attachmentName?: string;
+  model?: string;
+  provider?: string;
+  latencyMs?: number;
 }
 
 export default function StitchExecutiveDashboard() {
@@ -200,6 +203,9 @@ export default function StitchExecutiveDashboard() {
           sender: 'assistant',
           text: reply,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          model: data.model,
+          provider: data.provider,
+          latencyMs: data.latency_ms,
         },
       ]);
     } catch {
@@ -1174,6 +1180,18 @@ export default function StitchExecutiveDashboard() {
                       </div>
                     )}
                     <p className="whitespace-pre-wrap">{msg.text}</p>
+                    {msg.sender === 'assistant' && (msg.model || msg.provider) && (
+                      <div className="mt-2 pt-1.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-2 text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                        <span className="inline-flex items-center gap-1">
+                          <Sparkles className="w-2.5 h-2.5 text-indigo-500" />
+                          <span className="font-medium text-slate-700 dark:text-slate-300">{msg.model || msg.provider}</span>
+                          {msg.provider && msg.model && <span className="text-[9px] opacity-60">({msg.provider})</span>}
+                        </span>
+                        {msg.latencyMs !== undefined && (
+                          <span className="text-[9px] opacity-70">{msg.latencyMs}ms</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 px-1 font-mono">{msg.timestamp}</span>
                 </div>

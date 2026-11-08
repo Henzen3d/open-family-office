@@ -67,3 +67,4 @@ def test_receipt_store_triggers_indra_fallback_when_api_offline(tmp_path):
     assert receipt.entity_code == "FACILITA_VISTORIAS"
     assert receipt.parser_engine == "INDRA_OCR_CPU_LAZY"
     assert receipt.total_amount == Decimal("65.00")
+

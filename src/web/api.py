@@ -24,6 +24,7 @@ from src.llm.client import UniversalLLMClient
 from src.llm.config_manager import CustomProviderConfig, ProviderConfigManager
 from src.llm.importer import EnvImporter
 from src.llm.rate_limiter import ProviderLimits
+from src.llm.smart_router import SmartRouter
 from src.controller.ofx_parser import BankStatementParser, ParsedStatement, ParsedBankTransaction
 from src.controller.ledger_manager import LedgerManager
 from src.intelligence.market_feed import MarketFeedService
@@ -117,76 +118,33 @@ async def system_status():
     }
 
 
-async def generate_chat_stream(user_message: str, entity: Optional[str] = None) -> AsyncGenerator[str, None]:
-    """Generates SSE chunks adhering to ASD-STE100 ~80% style with PII masking."""
-    sanitized_msg, tokens = sanitizer.sanitize(user_message)
-    # Enforce egress safety: ensure no unmasked PII leaks
-    try:
-        sanitizer.verify_egress_safety(sanitized_msg)
-    except SecurityEgressException as exc:
-        yield f"id: 1\ndata: {json.dumps({'type': 'error', 'message': str(exc)}, ensure_ascii=False)}\n\n"
-        return
-
-    clean_msg = sanitized_msg.lower().strip()
-
-    # Monotonic event ID counter
-    event_id = 0
-
-    def format_sse(data: dict) -> str:
-        nonlocal event_id
-        event_id += 1
-        return f"id: {event_id}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
-
-    # Initial event: acknowledgment
-    yield format_sse({"type": "start", "timestamp": datetime.now(timezone.utc).isoformat()})
-    await asyncio.sleep(0.05)
-
-    # Deterministic responses based on keyword queries
-    if "mei" in clean_msg or "teto" in clean_msg:
-        facts = [
-            "Teto anual do MEI (2026): R$ 81.000,00.",
-            "Limite mensal de referência: R$ 6.750,00.",
-            "Fix Serviços MEI: Faturamento acumulado no ano sob controle.",
-            "Facilita Vistorias MEI: Faturamento acumulado no ano sob controle.",
-            "Nenhum desenquadramento iminente detectado.",
-        ]
-    elif "resumo" in clean_msg or "briefing" in clean_msg or "relatório" in clean_msg:
-        facts = [
-            "Posição de caixa consolidada: Normal.",
-            "Contas a pagar nos próximos 7 dias: Monitoradas.",
-            "Cartões Nubank e Inter: Sem faturas vencidas hoje.",
-            "Transferências entre PJ e PF: Reconciliadas.",
-        ]
-    elif "inter" in clean_msg or "cnpj" in clean_msg or "comprovante" in clean_msg or "cupom" in clean_msg:
-        facts = [
-            f"Transação recebida com contexto: {entity or 'Inter CNPJ'}.",
-            "Dados pessoais e bancários sensíveis anonimizados antes do processamento.",
-            "Comprovante indexado no livro-razão local.",
-            "Status: Aguardando conferência no fechamento semanal.",
-        ]
-    else:
-        facts = [
-            f"Mensagem processada: \"{user_message[:50]}\".",
-            "Assistente operacional ativo com padrão ASD-STE100 (~80%).",
-            "Frases curtas. Fatos numéricos primeiro. Sem jargão prolixo.",
-            "Pronto para lançar comprovantes, verificar faturas ou auditar tetos fiscais.",
-        ]
-
-    for fact in facts:
-        # Send heartbeat ping if needed
-        yield ": ping\n\n"
-        yield format_sse({"type": "chunk", "text": fact + " "})
-        await asyncio.sleep(0.08)
-
-    yield format_sse({"type": "done", "status": "completed"})
+def get_smart_router() -> SmartRouter:
+    """Returns an active SmartRouter configured with dynamic providers and live market feed."""
+    cfg_mgr = get_config_manager()
+    market_svc = get_market_service()
+    return SmartRouter(config_manager=cfg_mgr, market_feed=market_svc, sanitizer=sanitizer)
 
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatMessageRequest):
-    """Chat endpoint supporting SSE streaming."""
+    """Chat endpoint supporting SSE streaming and Smart Auto-Routing across active LLMs."""
+    router = get_smart_router()
+    result = router.execute_chat(request.message, entity_context=request.context_entity)
+
     if request.stream:
+        async def stream_generator() -> AsyncGenerator[str, None]:
+            event_id = 1
+            yield f"id: {event_id}\ndata: {json.dumps({'type': 'start', 'timestamp': datetime.now(timezone.utc).isoformat()}, ensure_ascii=False)}\n\n"
+            words = result["reply"].split(" ")
+            for i in range(0, len(words), 3):
+                event_id += 1
+                chunk = " ".join(words[i : i + 3]) + " "
+                yield f"id: {event_id}\ndata: {json.dumps({'type': 'chunk', 'text': chunk}, ensure_ascii=False)}\n\n"
+                await asyncio.sleep(0.04)
+            yield f"id: {event_id + 1}\ndata: {json.dumps({'type': 'done', 'provider': result.get('provider'), 'model': result.get('model'), 'latency_ms': result.get('latency_ms'), 'status': 'completed'}, ensure_ascii=False)}\n\n"
+
         return StreamingResponse(
-            generate_chat_stream(request.message, request.context_entity),
+            stream_generator(),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache, no-transform",
@@ -195,16 +153,14 @@ async def chat_endpoint(request: ChatMessageRequest):
             },
         )
 
-    # Non-streaming fallback
-    sanitized_msg, tokens = sanitizer.sanitize(request.message)
-    sanitizer.verify_egress_safety(sanitized_msg)
-    raw_reply = "Assistente ativo. Padrão ASD-STE100 ~80% habilitado. Envie mensagens para iniciar consulta."
-    final_reply = sanitizer.detokenize(raw_reply, tokens)
-
     return {
-        "reply": final_reply,
-        "received": sanitized_msg,
+        "reply": result["reply"],
+        "received": request.message,
         "entity": request.context_entity,
+        "provider": result.get("provider"),
+        "model": result.get("model"),
+        "latency_ms": result.get("latency_ms"),
+        "intent": result.get("intent"),
         "sanitized": True,
     }
 
