@@ -200,19 +200,33 @@ Copie os modelos da pasta `templates/`:
 * Configure suas categorias essenciais e empresariais em `categories_template.csv`.
 * Exporte seus lançamentos bancários e do cartão para `transactions_template.csv`.
 
-### 3. Execute os Prompts Especializados
-Alimente as IAs com seus dados conciliados usando a suíte em `prompts/`:
-* Use o [`prompts/02_financial_controller_ledger.md`](prompts/02_financial_controller_ledger.md) para auditar anomalias e transferências.
-* Passe os números verificados para o [`prompts/01_family_cfo.md`](prompts/01_family_cfo.md) gerar o briefing semanal.
-* Submeta o briefing ao teste de estresse do [`prompts/07_adversarial_auditor_goldfish.md`](prompts/07_adversarial_auditor_goldfish.md).
+### 3. Execute a Linha de Comando (CLI) e os Briefings
+Execute comandos práticos diretamente no terminal:
+```bash
+# Gerar briefing executivo semanal (Family CFO + Red Team Goldfish)
+python -m src.cli briefing [--dry-run]
+
+# Ingestão de cupom fiscal por foto ou QR-Code SEFAZ NFC-e
+python -m src.cli receipt "https://www.nfce.fazenda.sp.gov.br/qrcode?p=..."
+python -m src.cli receipt caminho/para/cupom.jpg
+
+# Consulta de mercado em tempo real (Câmbio, Cripto, Feriados, CNPJ)
+python -m src.cli market
+python -m src.cli holidays
+python -m src.cli cnpj 12345678000195
+
+# Gerenciamento de provedores LLM ou importação de .env (NexusLocal / Multi+)
+python -m src.cli config list
+python -m src.cli config import --source caminho/para/.env
+```
 
 ---
 
 ## Roteiro de Evolução (Roadmap)
 
-* **Fase 1 (Atual)**: Núcleo Determinístico & Dados (Modelos Python, neutralizador de transferências e cálculo de runway).
-* **Fase 2**: CLI do Conselho de IA & Briefings Automáticos (Executores locais via Ollama e nuvem anonimizada).
-* **Fase 3**: Painel Web Interativo & Importação Bancária (Parser de OFX/PDF e tela de aprovação do casal).
+* **Fase 1 (Concluída)**: Núcleo Determinístico & Dados (Modelos Python, neutralizador de transferências, reconciliador de cartões e cálculo de runway).
+* **Fase 2 (Concluída)**: CLI do Conselho de IA, Ingestão de Cupons com Visão & Briefings Automáticos (Executores locais via Ollama/NexusLocal, nuvem, APIs públicas do BCB e Red Team Goldfish).
+* **Fase 3 (Próxima)**: Painel Web Interativo & Ingestão Móvel (FastAPI + Interface moderna, foto via Telegram/WhatsApp e tela de aprovação do casal).
 * **Fase 4**: Orquestração Multi-Agente & Plugins Tributários Internacionais (EUA, Reino Unido, Espanha, Alemanha).
 
 Confira os detalhes em [ROADMAP.md](ROADMAP.md).

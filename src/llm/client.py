@@ -1,4 +1,5 @@
 """Universal Multi-Protocol HTTP Client supporting OpenAI, Anthropic, and Gemini formats."""
+import base64
 from dataclasses import dataclass
 import json
 from typing import Dict, List, Optional, Tuple
@@ -31,8 +32,10 @@ class UniversalLLMClient:
         system_prompt: str = "",
         max_tokens: int = 4096,
         temperature: float = 0.2,
+        image_data: Optional[bytes] = None,
+        image_mime_type: str = "image/jpeg",
     ) -> Tuple[str, Dict[str, str], bytes]:
-        """Formats the URL, headers, and request body based on provider protocol (OpenAI or Anthropic)."""
+        """Formats the URL, headers, and request body based on provider protocol (OpenAI or Anthropic), including multimodal vision support."""
         base_url = config.resolve_base_url().rstrip("/")
         api_key = config.resolve_api_key()
 
@@ -46,15 +49,30 @@ class UniversalLLMClient:
 
         if protocol == "anthropic":
             # Anthropic Protocol: POST /messages
-            # If base_url already contains /messages, keep it, else append
             url = base_url if base_url.endswith("/messages") else f"{base_url}/messages"
             headers["x-api-key"] = api_key
             if "anthropic-version" not in headers:
                 headers["anthropic-version"] = "2023-06-01"
 
+            if image_data:
+                b64_image = base64.b64encode(image_data).decode("utf-8")
+                user_content = [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": image_mime_type,
+                            "data": b64_image,
+                        },
+                    },
+                    {"type": "text", "text": user_prompt},
+                ]
+            else:
+                user_content = user_prompt
+
             body = {
                 "model": config.model,
-                "messages": [{"role": "user", "content": user_prompt}],
+                "messages": [{"role": "user", "content": user_content}],
                 "max_tokens": max_tokens,
                 "temperature": temperature,
             }
@@ -70,7 +88,21 @@ class UniversalLLMClient:
             messages = []
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": user_prompt})
+
+            if image_data:
+                b64_image = base64.b64encode(image_data).decode("utf-8")
+                user_content = [
+                    {"type": "text", "text": user_prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{image_mime_type};base64,{b64_image}"
+                        },
+                    },
+                ]
+                messages.append({"role": "user", "content": user_content})
+            else:
+                messages.append({"role": "user", "content": user_prompt})
 
             body = {
                 "model": config.model,
@@ -119,6 +151,8 @@ class UniversalLLMClient:
         system_prompt: str = "",
         max_tokens: int = 4096,
         temperature: float = 0.2,
+        image_data: Optional[bytes] = None,
+        image_mime_type: str = "image/jpeg",
     ) -> LLMResponse:
         """Executes an HTTP request to the provider and returns standardized LLMResponse."""
         url, headers, payload = self.format_request(
@@ -127,6 +161,8 @@ class UniversalLLMClient:
             system_prompt=system_prompt,
             max_tokens=max_tokens,
             temperature=temperature,
+            image_data=image_data,
+            image_mime_type=image_mime_type,
         )
 
         req = urllib.request.Request(url, data=payload, headers=headers, method="POST")

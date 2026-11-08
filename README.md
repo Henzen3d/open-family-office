@@ -208,19 +208,33 @@ Copy and adapt the templates in `templates/`:
 * Customize your chart of accounts in `categories_template.csv`.
 * Export your bank/credit card transactions into `transactions_template.csv`.
 
-### 3. Run Advisory Prompts
-Feed your reconciled data into the prompts in `prompts/`:
-* Ingest transaction logs into [`prompts/02_financial_controller_ledger.md`](prompts/02_financial_controller_ledger.md) to audit anomalies and transfers.
-* Pass the verified figures into [`prompts/01_family_cfo.md`](prompts/01_family_cfo.md) to generate your weekly briefing.
-* Stress-test the briefing with [`prompts/07_adversarial_auditor_goldfish.md`](prompts/07_adversarial_auditor_goldfish.md).
+### 3. Run CLI & AI Advisory Briefings
+Execute the CLI commands for deterministic audits and AI advisory briefings:
+```bash
+# Run weekly executive briefing (Family CFO + Goldfish Red Team audit)
+python -m src.cli briefing [--dry-run]
+
+# Ingest receipt photo or Brazilian SEFAZ NFC-e QR Code
+python -m src.cli receipt "https://www.nfce.fazenda.sp.gov.br/qrcode?p=..."
+python -m src.cli receipt path/to/cupom.jpg
+
+# Inspect live market FX, Crypto, Holidays, and CNPJ status
+python -m src.cli market
+python -m src.cli holidays
+python -m src.cli cnpj 12345678000195
+
+# Configure LLM providers or import keys from .env (NexusLocal / Multi+)
+python -m src.cli config list
+python -m src.cli config import --source path/to/.env
+```
 
 ---
 
 ## Roadmap
 
-* **Phase 1 (Current)**: Deterministic Core & Data Engine (Python data models, transfer neutralizer, runway math).
-* **Phase 2**: AI Advisory Suite CLI & Automated Briefings (Local Ollama / Cloud API runners).
-* **Phase 3**: Interactive Web Dashboard & Banking Ingestion (OFX parser, spousal approval UI).
+* **Phase 1 (Complete)**: Deterministic Core & Data Engine (Python data models, transfer neutralizer, card reconciler, runway math, MEI monitor).
+* **Phase 2 (Complete)**: AI Advisory Suite CLI, Receipt Vision Ingestion & Automated Briefings (Local Ollama / Cloud API runners, BCB macro & Public APIs, Family CFO + Goldfish Red Team).
+* **Phase 3 (Next)**: Interactive Web Dashboard & Mobile Ingestion (FastAPI + Modern UI, mobile camera upload, spousal approval UI).
 * **Phase 4**: Multi-Agent Autonomous Orchestration & Global Tax Plugins (US, UK, Spain, Germany).
 
 See the full [ROADMAP.md](ROADMAP.md) for detailed deliverables.

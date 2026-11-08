@@ -54,6 +54,53 @@ class TestUniversalLLMClient(unittest.TestCase):
         self.assertEqual(data["system"], "Be concise.")
         self.assertEqual(data["messages"][0]["content"], "Hello Anthropic!")
 
+    def test_format_openai_vision_request(self):
+        cfg = CustomProviderConfig(
+            id="openai-vision",
+            name="OpenAI Vision",
+            protocol="openai",
+            base_url="https://api.openai.com/v1",
+            api_key="sk-test",
+            model="gpt-4o",
+        )
+        fake_img = b"fake-jpeg-binary-data"
+        url, headers, payload = self.client.format_request(
+            config=cfg,
+            user_prompt="Analyze this receipt.",
+            image_data=fake_img,
+            image_mime_type="image/jpeg",
+        )
+        data = json.loads(payload.decode("utf-8"))
+        user_msg = data["messages"][0]
+        self.assertEqual(user_msg["role"], "user")
+        self.assertEqual(len(user_msg["content"]), 2)
+        self.assertEqual(user_msg["content"][0]["type"], "text")
+        self.assertEqual(user_msg["content"][1]["type"], "image_url")
+        self.assertTrue(user_msg["content"][1]["image_url"]["url"].startswith("data:image/jpeg;base64,"))
+
+    def test_format_anthropic_vision_request(self):
+        cfg = CustomProviderConfig(
+            id="anthropic-vision",
+            name="Anthropic Vision",
+            protocol="anthropic",
+            base_url="https://api.anthropic.com/v1",
+            api_key="sk-ant-test",
+            model="claude-3-5-sonnet-20241022",
+        )
+        fake_img = b"fake-png-binary-data"
+        url, headers, payload = self.client.format_request(
+            config=cfg,
+            user_prompt="Extract items.",
+            image_data=fake_img,
+            image_mime_type="image/png",
+        )
+        data = json.loads(payload.decode("utf-8"))
+        user_msg = data["messages"][0]
+        self.assertEqual(len(user_msg["content"]), 2)
+        self.assertEqual(user_msg["content"][0]["type"], "image")
+        self.assertEqual(user_msg["content"][0]["source"]["media_type"], "image/png")
+        self.assertEqual(user_msg["content"][1]["type"], "text")
+
     def test_parse_openai_response(self):
         cfg = CustomProviderConfig(
             id="test-1", name="Test", protocol="openai", base_url="http://x", api_key="k", model="m"

@@ -47,6 +47,7 @@ venv.bak/
 /data/statements/
 /data/exports/
 /data/macro_cache/
+/reports/briefing_*.md
 *.xlsx
 *.xls
 *.pdf

@@ -21,6 +21,8 @@ from src.llm.config_manager import ProviderConfigManager, CustomProviderConfig
 from src.llm.importer import EnvImporter
 from src.llm.rate_limiter import ProviderLimits
 from src.integrations.hub import PublicApiHub
+from src.controller.receipt_processor import ReceiptProcessor
+from src.engine.briefing_runner import BriefingRunner
 
 
 def run_full_audit(
@@ -209,6 +211,78 @@ def handle_config_command(args):
             print(f"- [{pid}] {pname}")
 
 
+def handle_briefing_command(args):
+    """Executes the executive briefing pipeline and displays output."""
+    runner = BriefingRunner()
+    print("⏳ Executing OpenFamilyOffice Executive Briefing Pipeline...")
+    res = runner.generate_briefing(
+        data_dir=args.data_dir,
+        output_file=args.output,
+        dry_run=args.dry_run,
+        include_goldfish=not args.no_goldfish,
+    )
+    print(f"\n✅ Briefing generated successfully! [{res['status']}]")
+    print(f"📄 Report File: {res['output_file']}")
+    if res.get("provider_used"):
+        print(f"🤖 AI Provider: {res['provider_used']} ({res['tokens_used']} tokens used)")
+    print("\n" + "=" * 60 + "\n")
+    print(res["report_content"])
+
+
+def handle_receipt_command(args):
+    """Ingests a receipt photo, PDF, or SEFAZ NFC-e QR code, extracting items and reconciling."""
+    processor = ReceiptProcessor()
+    raw_input = args.input.strip()
+
+    # Check if input is a SEFAZ access key or QR code URL
+    key_info = processor.parse_sefaz_access_key(raw_input)
+    if key_info:
+        print(f"📱 Detected Brazilian SEFAZ NFC-e QR Code / Chave de Acesso:")
+        print(f"  * Chave: {key_info['chave_acesso']}")
+        print(f"  * UF: {key_info['uf']} | Modelo: {key_info['modelo']} | Doc: {key_info['numero_doc']}")
+        rcp = processor.create_receipt_from_sefaz_key(
+            key_info=key_info,
+            merchant_name="Estabelecimento Comercial (SEFAZ)",
+            entity_code=args.entity or "HOUSEHOLD_OSMAR",
+        )
+    elif os.path.exists(raw_input):
+        print(f"📷 Analyzing receipt image via Vision AI: {raw_input}")
+        cfg_mgr = ProviderConfigManager()
+        providers = cfg_mgr.list_providers(enabled_only=True)
+        active_provider = next((p for p in providers if p.resolve_api_key()), None)
+        if not active_provider:
+            print("⚠️ No AI provider with API key found. Use 'python -m src.cli config add' or 'config import'.", file=sys.stderr)
+            sys.exit(1)
+        rcp = processor.process_image_with_vision(image_path=raw_input, provider_config=active_provider)
+    else:
+        print(f"Error: Input is neither a valid file path nor a recognized SEFAZ NFC-e QR code.", file=sys.stderr)
+        sys.exit(1)
+
+    # Ingest existing transactions to test bank matching
+    txs_path = os.path.join(args.data_dir, "transactions_template.csv")
+    if not os.path.exists(txs_path):
+        txs_path = os.path.join(args.data_dir, "transactions.csv")
+
+    existing_txs = load_transactions_csv(txs_path) if os.path.exists(txs_path) else []
+    rcp, matched_tx, new_tx = processor.process_and_reconcile(rcp, existing_txs)
+
+    print(f"\n# Receipt Ingestion Result")
+    print(f"- **ID**: {rcp.id}")
+    print(f"- **Estabelecimento**: {rcp.merchant_name} (CNPJ: {rcp.merchant_tax_id or 'N/A'})")
+    print(f"- **Data / Valor**: {rcp.issue_date} | R$ {rcp.total_amount:,.2f}")
+    print(f"- **Entidade Atribuída**: {rcp.entity_code}")
+    print(f"- **Status de Conciliação**: {rcp.status}")
+    if matched_tx:
+        print(f"  🔗 [ANTI-DUPLICIDADE] Vinculado à transação bancária existente: {matched_tx.id} ({matched_tx.account_name})")
+    elif new_tx:
+        print(f"  ➕ Novo lançamento gerado: {new_tx.id} ({new_tx.clean_description})")
+
+    if rcp.items:
+        print(f"\n### Itens do Cupom ({len(rcp.items)} itens):")
+        for it in rcp.items:
+            print(f"  - {it.description}: {it.quantity} {it.unit_measure} x R$ {it.unit_price} = R$ {it.total_price}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="OpenFamilyOffice CLI")
     subparsers = parser.add_subparsers(dest="command")
@@ -260,8 +334,23 @@ def main():
     holidays_parser.add_argument("--year", type=int, default=date.today().year, help="Year to query")
     holidays_parser.add_argument("--country", default="BR", help="ISO country code (default: BR)")
 
+    # Executive Briefing command (Family CFO + Goldfish)
+    briefing_parser = subparsers.add_parser("briefing", help="Generate Executive Weekly Family Office Briefing")
+    briefing_parser.add_argument("--data-dir", default="templates", help="Directory containing CSV files (default: templates)")
+    briefing_parser.add_argument("--output", help="Custom markdown report output path")
+    briefing_parser.add_argument("--dry-run", action="store_true", help="Run deterministic calculations without calling LLM APIs")
+    briefing_parser.add_argument("--no-goldfish", action="store_true", help="Skip EGM Goldfish Red Team audit")
+
+    # Receipt ingestion command (NFC-e QR / Vision AI)
+    receipt_parser = subparsers.add_parser("receipt", help="Ingest receipt photo or NFC-e QR code and reconcile")
+    receipt_parser.add_argument("input", help="Image path, PDF path, or SEFAZ NFC-e QR Code / 44-digit key")
+    receipt_parser.add_argument("--data-dir", default="templates", help="Directory containing transactions for bank matching")
+    receipt_parser.add_argument("--entity", help="Entity code (default: HOUSEHOLD_OSMAR)")
+    receipt_parser.add_argument("--dry-run", action="store_true", help="Parse without recording")
+
     # If no subcommand passed, default to running audit
-    if len(sys.argv) == 1 or sys.argv[1] not in ["audit", "config", "market", "cnpj", "holidays"]:
+    valid_commands = ["audit", "config", "market", "cnpj", "holidays", "briefing", "receipt"]
+    if len(sys.argv) == 1 or sys.argv[1] not in valid_commands:
         # Parse audit directly from root args for backward compatibility
         parser.add_argument("--format", choices=["json", "markdown"], default="markdown", help="Output format")
         parser.add_argument("--templates-dir", default="templates", help="Path to templates folder containing CSVs")
@@ -270,6 +359,14 @@ def main():
         args.command = "audit"
     else:
         args = parser.parse_args()
+
+    if args.command == "briefing":
+        handle_briefing_command(args)
+        return
+
+    if args.command == "receipt":
+        handle_receipt_command(args)
+        return
 
     if args.command == "market":
         hub = PublicApiHub()

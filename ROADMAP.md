@@ -27,16 +27,16 @@ flowchart LR
 
 - [x] Initial EGM architectural specification contracts (`PROJECT_CHARTER.md`, `FINANCIAL_DATA_ARCHITECTURE.md`, `AI_GOVERNANCE.md`).
 - [x] Multi-entity reference CSV schemas (transactions, entities, categories, briefing template).
-- [ ] Implement core Python data models (`dataclasses` / `Pydantic` / `SQLAlchemy`).
-- [ ] Build the **Internal Transfer Neutralizer**: algorithm matching complementary debit/credit transactions within 48-hour windows to eliminate artificial revenue/expense duplication.
-- [ ] Build the **Credit Card Settlement Reconciler**: ensuring card purchases are recorded on transaction dates without double-counting when invoice balances are settled.
-- [ ] Implement deterministic financial metrics calculators:
+- [x] Implement core Python data models (`dataclasses` / `Pydantic` / `SQLAlchemy`).
+- [x] Build the **Internal Transfer Neutralizer**: algorithm matching complementary debit/credit transactions within 48-hour windows to eliminate artificial revenue/expense duplication.
+- [x] Build the **Credit Card Settlement Reconciler**: ensuring card purchases are recorded on transaction dates without double-counting when invoice balances are settled.
+- [x] Implement deterministic financial metrics calculators:
   - Monthly essential living burn rate (Household).
   - Monthly operational fixed overhead (Business entities).
   - Exact liquid runway in months and days.
   - 13-week rolling cash flow forecast.
   - Brazilian MEI gross revenue ceiling tracker under Lei Complementar nº 238/2026 (R\$ 81.000, R\$ 110.000, R\$ 140.000).
-- [ ] Unit test suite verifying double-entry mathematical invariants with 100% test pass rate.
+- [x] Unit test suite verifying double-entry mathematical invariants with 100% test pass rate.
 
 ---
 
@@ -54,10 +54,10 @@ flowchart LR
   - `07_adversarial_auditor_goldfish.md`
   - `08_receipt_ocr_parser.md` (Photo & NFC-e Vision Parser)
 - [x] Author Receipt Photo & NFC-e OCR Ingestion Specification ([`docs/RECEIPT_OCR_INGESTION_SPEC.md`](docs/RECEIPT_OCR_INGESTION_SPEC.md)).
-- [ ] Build the **Receipt Ingestion Engine**:
+- [x] Build the **Receipt Ingestion Engine** (`src/controller/receipt_processor.py`):
   - Deterministic SEFAZ QR-Code / NFC-e decoder (100% exact itemized data for Brazilian retail).
   - Multimodal Vision AI parser fallback for non-QR receipts (via local `qwen2-vl` or cloud APIs).
-- [ ] Implement **Receipt-to-Bank Matching**: automatically attaching itemized receipts to card transactions to eliminate duplicate expense entries.
+- [x] Implement **Receipt-to-Bank Matching**: automatically attaching itemized receipts to card transactions to eliminate duplicate expense entries (`src/controller/receipt_matcher.py`).
 - [x] Multi-Provider Free-Tier LLM Rate Limiter & Fallback Router ([`docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md`](docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md), `src/llm/`):
   - Sliding-window tracking for RPM, TPM, and RPD.
   - Proactive switching at 80% capacity to avoid 429 errors.
@@ -77,15 +77,15 @@ flowchart LR
   - Cryptocurrency pricing via Coinbase Public Spot & AwesomeAPI Crypto.
   - Corporate CNPJ client/vendor legal validation via BrasilAPI (`python -m src.cli cnpj <cnpj>`).
   - Banking calendar & settlement day rollover via BrasilAPI Feriados and Nager.Date (`python -m src.cli holidays`).
-- [ ] Build CLI command `open-family-office briefing` to:
+- [x] Build CLI command `open-family-office briefing` (`src/engine/briefing_runner.py`):
   1. Ingest monthly CSV/OFX records;
   2. Run the deterministic engine;
   3. Feed the validated JSON payload to the Family CFO prompt;
   4. Automatically run the Red Team (Goldfish) audit pass;
-  5. Render the final 1-page Markdown Weekly Executive Briefing.
-- [ ] Add dual-LLM backend support:
+  5. Render the final 1-page Markdown Weekly Executive Briefing (`reports/briefing_YYYY-MM-DD.md`).
+- [x] Add dual-LLM backend support:
   - **Local Privacy Mode**: Ollama / NexusLocal (qwen2.5, llama3.3) for zero cloud transmission of sensitive financial data.
-  - **Cloud Mode**: Claude 3.5 Sonnet, GPT-4o, or Gemini 1.5/2.0 with automated PII sanitization.
+  - **Cloud Mode**: Claude 3.5 Sonnet, GPT-4o, or Gemini 1.5/2.0 with automated fallback and rate-limit avoidance.
 
 ---
 
