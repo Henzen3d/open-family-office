@@ -1780,12 +1780,12 @@ export default function StitchExecutiveDashboard() {
         >
             {/* Drawer Header */}
             <div className="p-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-[#121722]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/20 flex items-center justify-center">
-                  <Sliders className="w-4 h-4" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/20 flex items-center justify-center shrink-0">
+                  <Sliders className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Assistente Financeiro</h3>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Assistente Financeiro</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Conciliação fiscal e controle patrimonial</p>
                 </div>
               </div>
@@ -1799,85 +1799,85 @@ export default function StitchExecutiveDashboard() {
             </div>
 
             {/* Quick Context Chips inside Drawer (Crisp institutional icons, zero emoji slop) */}
-            <div className="px-4 py-2 border-b border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-[#161c28] flex gap-1.5 overflow-x-auto text-xs no-scrollbar">
+            <div className="px-4 py-2.5 border-b border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-[#161c28] flex gap-2 overflow-x-auto text-xs no-scrollbar">
               <button
                 onClick={() => handleSendMessage('Quanto temos disponível somando nossas três contas?')}
-                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium"
+                className="px-3 py-1.5 min-h-[38px] rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium text-xs active:scale-95"
               >
-                <Wallet className="w-3 h-3 text-slate-400" />
+                <Wallet className="w-3.5 h-3.5 text-slate-400" />
                 <span>Saldos das Contas</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Teto MEI')}
-                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium"
+                className="px-3 py-1.5 min-h-[38px] rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium text-xs active:scale-95"
               >
-                <ShieldCheck className="w-3 h-3 text-slate-400" />
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
                 <span>Teto MEI</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Quais contas vencem nos próximos sete dias?')}
-                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium"
+                className="px-3 py-1.5 min-h-[38px] rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium text-xs active:scale-95"
               >
-                <Calendar className="w-3 h-3 text-slate-400" />
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
                 <span>Contas 7 Dias</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Runway Familiar')}
-                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium"
+                className="px-3 py-1.5 min-h-[38px] rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium text-xs active:scale-95"
               >
-                <TrendingUp className="w-3 h-3 text-slate-400" />
+                <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
                 <span>Runway Familiar</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Quanto já retiramos das empresas para a família este ano?')}
-                className="px-2.5 py-1 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium"
+                className="px-3 py-1.5 min-h-[38px] rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium text-xs active:scale-95"
               >
-                <ArrowUpRight className="w-3 h-3 text-slate-400" />
+                <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
                 <span>Retiradas Isentas</span>
               </button>
             </div>
 
             {/* Drawer Messages Scroll */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={`flex flex-col animate-message-in ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   <div
-                    className={`max-w-[88%] rounded-2xl px-4 py-2.5 leading-relaxed ${
+                    className={`max-w-[92%] sm:max-w-[85%] rounded-2xl px-4 py-3 leading-relaxed ${
                       msg.sender === 'user'
-                        ? 'bg-indigo-600 text-white rounded-br-none shadow-md'
-                        : 'bg-white dark:bg-[#121722] border border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-100 rounded-bl-none shadow-sm'
+                        ? 'bg-indigo-600 text-white rounded-br-none shadow-sm'
+                        : 'bg-white dark:bg-[#121722] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 rounded-bl-none shadow-sm'
                     }`}
                   >
                     {msg.attachmentName && (
-                      <div className="mb-1.5 px-2 py-1 bg-black/10 dark:bg-black/30 rounded text-xs flex items-center gap-1 font-mono">
-                        <Camera className="w-3 h-3" />
+                      <div className="mb-2 px-2.5 py-1.5 bg-black/10 dark:bg-black/30 rounded-lg text-xs flex items-center gap-1.5 font-mono">
+                        <Camera className="w-3.5 h-3.5" />
                         <span>{msg.attachmentName}</span>
                       </div>
                     )}
-                    <p className="whitespace-pre-wrap">{msg.text}</p>
+                    <p className="whitespace-pre-wrap text-[15px] sm:text-sm leading-relaxed">{msg.text}</p>
 
                     {/* Phase 8: Interactive Expense Confirmation Card */}
                     {msg.confirmationCard && (
-                      <div className="mt-3 p-3.5 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm text-slate-900 dark:text-white animate-card-reveal">
-                        <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/10 mb-2.5">
-                          <div className="flex items-center gap-1.5 text-xs font-bold">
+                      <div className="mt-3.5 p-4 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm text-slate-900 dark:text-white animate-card-reveal">
+                        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-white/10 mb-3">
+                          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
                             <FileText className="w-4 h-4 text-indigo-500" />
                             <span>Compra Identificada</span>
                           </div>
                           {msg.confirmationCard.status === 'CONFIRMED' ? (
-                            <span className="px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>Confirmado no Livro Razão</span>
+                            <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Confirmado</span>
                             </span>
                           ) : msg.confirmationCard.status === 'DISCARDED' ? (
-                            <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 text-xs font-semibold">
+                            <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 text-xs font-semibold">
                               Descartado
                             </span>
                           ) : (
-                            <span className="px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold text-xs border border-amber-200 dark:border-amber-500/30 animate-pulse">
+                            <span className="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold text-xs border border-amber-200 dark:border-amber-500/30">
                               Aguardando confirmação
                             </span>
                           )}
@@ -1885,27 +1885,27 @@ export default function StitchExecutiveDashboard() {
 
                         {/* Amount & Counterparty Hero */}
                         <div className="mb-3">
-                          <div className="text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
+                          <div className="text-2xl sm:text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
                             {msg.confirmationCard.formatted_amount}
                           </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                          <div className="text-sm sm:text-xs text-slate-600 dark:text-slate-400 font-medium mt-0.5">
                             {msg.confirmationCard.date} • {msg.confirmationCard.counterparty}
                           </div>
                         </div>
 
                         {/* 2x2 Metadata Grid */}
-                        <div className="grid grid-cols-2 gap-2 p-2 bg-white dark:bg-[#121722] rounded-xl border border-slate-200/60 dark:border-white/5 text-xs mb-3">
+                        <div className="grid grid-cols-2 gap-2.5 p-2.5 bg-white dark:bg-[#121722] rounded-xl border border-slate-200/60 dark:border-white/5 mb-3.5">
                           <div>
-                            <span className="text-slate-400 block text-xs">Categoria</span>
-                            <strong className="text-slate-800 dark:text-slate-200">{msg.confirmationCard.category}</strong>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Categoria</span>
+                            <strong className="text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-semibold">{msg.confirmationCard.category}</strong>
                           </div>
                           <div>
-                            <span className="text-slate-400 block text-xs">Origem</span>
-                            <strong className="text-slate-800 dark:text-slate-200">{msg.confirmationCard.entity_name}</strong>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Origem</span>
+                            <strong className="text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-semibold">{msg.confirmationCard.entity_name}</strong>
                           </div>
-                          <div className="col-span-2 pt-1 border-t border-slate-100 dark:border-white/5">
-                            <span className="text-slate-400 block text-xs">Forma de Pagamento</span>
-                            <strong className="text-indigo-600 dark:text-indigo-400">{msg.confirmationCard.account_name}</strong>
+                          <div className="col-span-2 pt-2 border-t border-slate-100 dark:border-white/5">
+                            <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Forma de Pagamento</span>
+                            <strong className="text-sm sm:text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{msg.confirmationCard.account_name}</strong>
                           </div>
                         </div>
 
@@ -1914,14 +1914,14 @@ export default function StitchExecutiveDashboard() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleConfirmCard(msg.confirmationCard!, msg.id)}
-                              className="flex-1 py-2 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-1.5 transition hover:scale-[1.01] active:scale-[0.98]"
+                              className="flex-1 py-3 px-4 min-h-[44px] bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm sm:text-xs rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition active:scale-95"
                             >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <CheckCircle2 className="w-4 h-4" />
                               <span>Confirmar Lançamento</span>
                             </button>
                             <button
                               onClick={() => handleDiscardCard(msg.id)}
-                              className="py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-semibold text-xs rounded-xl transition"
+                              className="py-3 px-4 min-h-[44px] bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-semibold text-sm sm:text-xs rounded-xl transition active:scale-95"
                             >
                               Descartar
                             </button>
@@ -1930,25 +1930,25 @@ export default function StitchExecutiveDashboard() {
                       </div>
                     )}
                     {msg.sender === 'assistant' && (msg.model || msg.provider) && (
-                      <div className="mt-2 pt-1.5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-400 font-mono">
+                      <div className="mt-2.5 pt-2 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
                         <span className="inline-flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           <span className="font-semibold text-slate-800 dark:text-slate-200">{msg.model || msg.provider}</span>
-                          {msg.provider && msg.model && <span className="text-xs opacity-75">({msg.provider})</span>}
+                          {msg.provider && msg.model && <span className="opacity-75">({msg.provider})</span>}
                         </span>
                         {msg.latencyMs !== undefined && (
-                          <span className="text-xs font-semibold opacity-80">{msg.latencyMs}ms</span>
+                          <span className="font-semibold opacity-80">{msg.latencyMs}ms</span>
                         )}
                       </div>
                     )}
                   </div>
-                  <span className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 px-1 font-mono">{msg.timestamp}</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500 mt-1 px-1 font-mono">{msg.timestamp}</span>
                 </div>
               ))}
 
               {loadingChat && (
-                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-[#121722] p-2.5 rounded-xl border border-slate-200 dark:border-white/10 w-fit">
-                  <RefreshCw className="w-3 h-3 animate-spin text-indigo-500 dark:text-indigo-400" />
+                <div className="flex items-center gap-2 text-sm sm:text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-[#121722] p-3 rounded-xl border border-slate-200 dark:border-white/10 w-fit">
+                  <RefreshCw className="w-4 h-4 animate-spin text-indigo-500 dark:text-indigo-400" />
                   <span>Consultando base contábil e processando...</span>
                 </div>
               )}
@@ -1956,31 +1956,31 @@ export default function StitchExecutiveDashboard() {
             </div>
 
             {/* Drawer Input / OCR Dropzone Area */}
-            <div className="p-3 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121722]">
+            <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121722]">
               {attachedFile && (
-                <div className="mb-2 px-2.5 py-1 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-lg text-xs text-indigo-700 dark:text-indigo-300 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 truncate">
-                    <Camera className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{attachedFile.name}</span>
+                <div className="mb-2.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-xl text-xs text-indigo-700 dark:text-indigo-300 flex items-center justify-between">
+                  <div className="flex items-center gap-2 truncate">
+                    <Camera className="w-4 h-4 shrink-0" />
+                    <span className="truncate font-medium text-xs sm:text-xs">{attachedFile.name}</span>
                   </div>
                   <button
                     onClick={() => setAttachedFile(null)}
-                    className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white ml-2 text-xs"
+                    className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white ml-2 text-xs font-semibold py-1 px-2"
                   >
                     Remover
                   </button>
                 </div>
               )}
 
-              <div className="flex items-center gap-2 mb-2">
-                <label htmlFor="chat-entity-select" className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+              <div className="flex items-center gap-2 mb-2.5">
+                <label htmlFor="chat-entity-select" className="text-xs sm:text-xs text-slate-600 dark:text-slate-400 font-semibold whitespace-nowrap">
                   Destino:
                 </label>
                 <select
                   id="chat-entity-select"
                   value={selectedEntityChat}
                   onChange={(e) => setSelectedEntityChat(e.target.value)}
-                  className="w-full text-xs min-h-[44px] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/30"
+                  className="w-full text-sm sm:text-xs min-h-[44px] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/30"
                 >
                   <option value="inter_cnpj">Inter CNPJ (Fix Serviços • Osmar)</option>
                   <option value="caixa_pj">Caixa PJ (Facilita Vistorias • Vera)</option>
@@ -2012,7 +2012,7 @@ export default function StitchExecutiveDashboard() {
                   onClick={() => fileInputRef.current?.click()}
                   title="Tirar foto ou anexar cupom fiscal"
                   aria-label="Tirar foto ou anexar cupom fiscal"
-                  className="min-w-[44px] min-h-[44px] rounded-xl bg-white dark:bg-[#161c28] hover:bg-slate-100 dark:hover:bg-[#1f2738] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 flex items-center justify-center transition active:scale-95 shadow-xs"
+                  className="min-w-[48px] min-h-[48px] rounded-xl bg-white dark:bg-[#161c28] hover:bg-slate-100 dark:hover:bg-[#1f2738] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 flex items-center justify-center transition active:scale-95 shadow-xs shrink-0"
                 >
                   <Camera className="w-5 h-5 text-indigo-500" />
                 </button>
@@ -2023,7 +2023,7 @@ export default function StitchExecutiveDashboard() {
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Mensagem (ex: almoço R$ 45 no Inter)..."
                   aria-label="Mensagem para o assistente"
-                  className="flex-1 min-h-[44px] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
+                  className="flex-1 min-h-[48px] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-base sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
                 />
 
                 <button
@@ -2031,9 +2031,9 @@ export default function StitchExecutiveDashboard() {
                   disabled={loadingChat || (!chatInput.trim() && !attachedFile)}
                   title="Enviar mensagem"
                   aria-label="Enviar mensagem"
-                  className="min-w-[44px] min-h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white flex items-center justify-center transition active:scale-95 shadow-sm"
+                  className="min-w-[48px] min-h-[48px] rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white flex items-center justify-center transition active:scale-95 shadow-sm shrink-0"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-5 h-5" />
                 </button>
               </form>
             </div>
