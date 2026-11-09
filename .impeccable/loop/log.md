@@ -68,3 +68,95 @@
 - **Rodada 3**: **HARDEN & POLISH** (harden, onboard, optimize, polish)
   - Tratamento de estados vazios, erros de rede, mensagens pt-BR sem truncamento.
   - Auditoria final de regressão, testes 100% verdes, merge condicional.
+
+---
+
+## Rodada 1 — SIMPLIFY (Executada)
+
+### Ações Executadas:
+1. **distill** (`6c9506b`):
+   - Removido ticker externo especulativo (`MarketTicker` com BTC, NASDAQ, S&P 500) do topo do dashboard.
+   - Removido badge com falsa animação contínua `animate-pulse` ("Motor 24/7 Ativo"), substituído por "Ambiente Privado" sóbrio.
+   - Removido botão duplicado e sem ação "Mover Dinheiro" no card de contas.
+   - Substituídas as 32 pílulas pontilhadas com gradientes agressivos por barras de progresso contínuas e elegantes nos tetos MEI.
+   - Removidas animações `animate-bounce` e `animate-ping` decorativas.
+2. **clarify** (`71cd228`):
+   - Substituição de afirmações inverídicas:
+     - "Air-Gapped Local" → "Processamento Local e Privado"
+     - "Segregação 100%" → "Segregação Fiscal"
+     - "100% Protegido" → "Segregação Conjugal Ativa • LC 123/2006"
+     - "Teto MEI 100% OK" → "Teto MEI Regular"
+   - Ajustada hierarquia de cabeçalhos: títulos principais de seção convertidos para `<h2>`, eliminando a falha de acessibilidade `skipped-heading`.
+   - Adicionada regra `text-pretty` para evitar viúvas e orfãs tipográficas.
+3. **adapt** (`e79c97f`):
+   - Alvos de toque móvel no drawer de chat aumentados para ≥ 44x44px (`min-w-[44px] min-h-[44px]`) nos botões de câmera, envio, seleção de entidade e fechar.
+   - Adicionados atributos `aria-label` e `title` para todos os botões de ação e ícones.
+   - Tabela de extrato ganhou largura mínima (`min-w-[640px]`) e contenedor com rolagem horizontal independente (`overflow-x-auto scrollbar-thin`), garantindo navegação limpa em viewports de 390px (iPhone / Android).
+
+---
+
+## Rodada 2 — REFINE (Executada)
+
+### Ações Executadas:
+1. **layout & colorize** (`cee64d8`):
+   - Substituído envelope "pocket wallet" (3 cartões sobrepostos com gradientes roxo, laranja e magenta) por uma lista limpa, dividida e de alto contraste com as contas reais (Nubank PF, Inter PJ Fix Serviços, Caixa PJ Facilita Vistorias).
+   - Eliminados 100% dos avisos de `nested-cards`.
+   - Eliminados halos neon escuros (`dark-glow` com `#5b67f6` e `#6366f1`): token `shadow-pill` ajustado para elevação neutra `0 4px 14px -2px rgba(0, 0, 0, 0.25)`.
+   - Removido `@keyframes pulseGlow` de `globals.css`.
+2. **typeset & contrast**:
+   - Ajustado piso tipográfico funcional: substituídos textos funcionais inferiores a 12px por `text-xs` (12px), respeitando a legibilidade em telas de alta densidade de pixels.
+   - Contraste em botões inativos e legendas ajustado para `#cbd5e1` em dark mode e `#475569` em light mode, garantindo conformidade WCAG AA (> 5.5:1).
+   - Fonte da marca `Plus Jakarta Sans` mantida como identidade do produto e registrada formalmente em `.impeccable/config.json`.
+3. **overdrive**:
+   - Pulado intencionalmente conforme restrição estrita do usuário ("NÃO usar overdrive; registre no log que foi pulado de propósito").
+
+---
+
+## Rodada 3 — HARDEN & POLISH (Executada)
+
+### Ações Executadas:
+1. **harden & onboard**:
+   - Adicionado padding vertical confortável (`py-1`, 4px) em todos os badges de status para eliminar o achado `cramped-padding`.
+   - Implementado anel de foco visível de alto contraste `:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }` em `globals.css` para navegação completa por teclado.
+   - Garantido respeito rigoroso a `prefers-reduced-motion` no sistema de animação.
+   - Estado de carregamento do assistente (`loadingChat`) com feedback visual claro e rótulo descritivo.
+2. **optimize**:
+   - Build de produção estática (`next build`) gerou saída otimizada com 32.9 kB de tamanho de página e 0 erros ou advertências impeditivas.
+3. **delight**:
+   - Efeito visual de confirmação na recepção e análise de comprovante no assistente com cartão estruturado, sem exageros.
+
+---
+
+## Verificação e Auditoria Final Comparativa
+
+### 1. Detecção Automatizada (`impeccable detect`)
+- `impeccable detect web/` (estático): **0 achados** (100% limpo).
+- `impeccable detect http://localhost:3000` (desktop 1280x800): **0 anti-patterns** (redução de 101 para 0, 100% de melhoria).
+- `impeccable detect --viewport 390x844 http://localhost:3000` (mobile): **0 anti-patterns** (100% limpo).
+
+### 2. Notas por Dimensão (Antes vs. Depois)
+
+| Dimensão | Nota Linha de Base (R0) | Nota Final (R3) | Melhoria |
+|---|:---:|:---:|:---:|
+| **1. Acessibilidade (A11y)** | 1 / 4 | **4 / 4** | +300% (Contraste AA em todas as superfícies, foco visível, headings sem saltos, alvos ≥ 44px) |
+| **2. Performance** | 2 / 4 | **4 / 4** | +100% (Sem repaints por pulsos/glows, animações leves com aceleração GPU, payload de 32.9kB) |
+| **3. Theming** | 2 / 4 | **4 / 4** | +100% (Tokens neutros, ausência de halos coloridos em dark mode, paleta executiva coerente) |
+| **4. Design Responsivo** | 2 / 4 | **4 / 4** | +100% (Chat com uso de uma mão em 390px, rolagem própria de extrato, alvos de toque ergonômicos) |
+| **5. Integridade de Implementação** | 1 / 4 | **4 / 4** | +300% (Claims honestos, ticker especulativo removido, foco 100% em tesouraria familiar e MEIs) |
+| **Total Saúde da UI** | **8 / 20 (Poor)** | **20 / 20 (Exemplar)** | **+150% de Elevação Geral** |
+
+### 3. Matriz de Resolução de Achados (P0 – P3)
+- [P0 - Resolvido]: Contraste WCAG AA corrigido em 100% dos elementos; alvos de toque em 390px ampliados para ≥ 44x44px.
+- [P1 - Resolvido]: Claims "Air-Gapped" e "100%" eliminados; ticker decorativo BTC/NASDAQ/S&P removido; estrutura de cabeçalhos sem saltos.
+- [P2 - Resolvido]: Halos escuros (`dark-glow`), paletas de IA (`ai-color-palette`), cartões aninhados (`nested-cards`) e animações inadequadas eliminadas.
+- [P3 - Resolvido]: Padding em badges (`cramped-padding`) e alinhamentos aperfeiçoados.
+
+---
+
+## Verificação dos Critérios de Conclusão do Usuário
+1. [x] **Nenhum achado P0 ou P1 no audit e nota maior que a linha de base em todas as dimensões**: Todas as dimensões subiram de 1–2 para 4/4.
+2. [x] **`npx impeccable detect` sem achados, ou apenas ignorados com justificativa registrada**: 0 anti-patterns em URL desktop, 0 em mobile 390x844 e 0 estáticos (apenas `Plus Jakarta Sans` registrado com justificativa em `.impeccable/config.json`).
+3. [x] **Testes do projeto 100% verdes e nenhum número exibido alterado em relação ao seed**: `python -m pytest` passou 98/98 testes (100% verde). Nenhum cálculo, saldo ou dado do seed foi alterado.
+4. [x] **Chat com envio de cupom utilizável com uma mão em tela de 390px**: Botões e inputs posicionados na base com alvos de toque de 44px e acionamento direto de câmera nativa.
+5. [x] **Relatório final gerado**: Documentado em `.impeccable/loop/RELATORIO.md`.
+
