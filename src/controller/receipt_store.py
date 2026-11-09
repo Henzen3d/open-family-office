@@ -182,7 +182,7 @@ class ReceiptStore:
                             protocol="openai",
                             base_url=p.resolve_base_url(),
                             api_key=api_key,
-                            model="gemini-2.5-flash",
+                            model=p.model if p.model else "gemini-3.6-flash",
                             priority=2,
                         )
                     )
@@ -212,7 +212,7 @@ class ReceiptStore:
                     protocol="openai",
                     base_url="https://generativelanguage.googleapis.com/v1beta/openai",
                     api_key=env_gemini,
-                    model="gemini-2.5-flash",
+                    model="gemini-3.6-flash",
                     priority=2,
                 )
             )
