@@ -5,14 +5,14 @@
     "protocol": "gemini",
     "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
     "api_key": "${GEMINI_API_KEY}",
-    "model": "gemini-2.0-flash",
+    "model": "gemini-3.6-flash",
     "priority": 1,
     "enabled": true,
     "limits": {
       "rpm_limit": 15,
       "tpm_limit": 1000000,
       "rpd_limit": 1500,
-      "proactive_threshold_pct": 0.80
+      "proactive_threshold_pct": 0.8
     },
     "custom_headers": {}
   },
@@ -29,7 +29,7 @@
       "rpm_limit": 30,
       "tpm_limit": 30000,
       "rpd_limit": 14400,
-      "proactive_threshold_pct": 0.80
+      "proactive_threshold_pct": 0.8
     },
     "custom_headers": {}
   },
@@ -46,7 +46,7 @@
       "rpm_limit": 50,
       "tpm_limit": 40000,
       "rpd_limit": 1000,
-      "proactive_threshold_pct": 0.80
+      "proactive_threshold_pct": 0.8
     },
     "custom_headers": {
       "anthropic-version": "2023-06-01"
@@ -70,4 +70,3 @@
     "custom_headers": {}
   }
 ]
-
