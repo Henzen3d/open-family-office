@@ -109,3 +109,4 @@ OpenFamilyOffice adota uma estética executiva, sóbria e focada em densidade de
 - **DON'T**: Não usar gradientes decorativos pesados de roxo a azul ou ilustrações genéricas que disfarcem a seriedade dos dados.
 - **DON'T**: Nunca afirmar claims inverídicos (como "Air-Gapped" ou "100% Blindado" se houver integração externa ou nuvem).
 - **DON'T**: Não compactar alvos de toque em telas móveis abaixo de 44px.
+

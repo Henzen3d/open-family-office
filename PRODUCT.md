@@ -55,3 +55,4 @@ Sistema de tesouraria familiar privada com total segregação patrimonial entre 
 - Foco visual nítido para navegação completa por teclado.
 - Rótulos e descrições acessíveis para botões e campos de entrada de dados.
 - Respeito estrito a `prefers-reduced-motion`.
+

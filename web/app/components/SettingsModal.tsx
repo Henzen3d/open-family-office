@@ -353,12 +353,12 @@ export default function SettingsModal({
           {activeTab === 'providers' && (
             <div className="space-y-4">
               {/* Actions Header Bar */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-[#121722] border border-slate-200 dark:border-white/10">
                 <div>
-                  <h3 className="text-sm font-bold text-indigo-950 dark:text-indigo-200">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                     Roteamento Inteligente de IA (Fallback & Quota Zero)
                   </h3>
-                  <p className="text-xs text-indigo-800/80 dark:text-indigo-300/80 mt-0.5">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                     Orquestração multi-provedor (OpenAI, Anthropic, Gemini, Groq, Ollama) com prevenção proativa de Rate Limits.
                   </p>
                 </div>
@@ -579,10 +579,10 @@ export default function SettingsModal({
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-sm font-bold">{prov.name}</span>
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold uppercase tracking-wider bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                                   {prov.protocol}
                                 </span>
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/40">
+                                <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-800/40">
                                   {prov.model}
                                 </span>
                               </div>
@@ -800,7 +800,7 @@ export default function SettingsModal({
                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                       Entidade 01 • Serviços
                     </span>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
                       MEI Individual
                     </span>
                   </div>
@@ -818,7 +818,7 @@ export default function SettingsModal({
                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                       Entidade 02 • Vistorias
                     </span>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
+                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
                       MEI Individual
                     </span>
                   </div>
@@ -836,7 +836,7 @@ export default function SettingsModal({
                     <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
                       Entidade 03 • Núcleo Familiar
                     </span>
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                    <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
                       Patrimônio PF
                     </span>
                   </div>

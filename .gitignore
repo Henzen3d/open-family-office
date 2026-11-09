@@ -101,5 +101,14 @@ web/node_modules/
 .impeccable/config.local.json
 .impeccable/*.cache
 
+# Agent & Local CLI tooling
+.agent/
+.agents/
+.codex/
+.cursor/
+.gemini/
+.github/
+web/next-env.d.ts
+
 
 

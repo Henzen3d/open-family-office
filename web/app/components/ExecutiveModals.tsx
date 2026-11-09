@@ -138,7 +138,7 @@ export function DasModal({ isOpen, onClose }: DasModalProps) {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-900 dark:text-white">1. Fix Serviços MEI (Osmar)</span>
-                <span className="px-2 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold text-[10px] border border-emerald-200 dark:border-emerald-500/30">
+                <span className="px-2 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] border border-emerald-200 dark:border-emerald-500/30">
                   Em Dia
                 </span>
               </div>
@@ -154,7 +154,7 @@ export function DasModal({ isOpen, onClose }: DasModalProps) {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-900 dark:text-white">2. Facilita Vistorias MEI (Vera)</span>
-                <span className="px-2 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold text-[10px] border border-emerald-200 dark:border-emerald-500/30">
+                <span className="px-2 py-0.2 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] border border-emerald-200 dark:border-emerald-500/30">
                   Em Dia
                 </span>
               </div>
@@ -170,7 +170,7 @@ export function DasModal({ isOpen, onClose }: DasModalProps) {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-slate-900 dark:text-white">3. Fatura Nubank UV (Household PF)</span>
-                <span className="px-2 py-0.2 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold text-[10px] border border-blue-200 dark:border-blue-500/30">
+                <span className="px-2 py-0.2 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold text-[11px] border border-blue-200 dark:border-blue-500/30">
                   Débito Automático
                 </span>
               </div>
@@ -228,7 +228,7 @@ export function RunwayModal({ isOpen, onClose, totalReserve = 508121.36, monthly
               <span className="text-[11px] text-indigo-700 dark:text-indigo-300 font-semibold block uppercase tracking-wider">
                 Reserva Consolidada
               </span>
-              <span className="text-2xl font-extrabold font-mono text-indigo-900 dark:text-white">
+              <span className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white">
                 R$ {totalReserve.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
@@ -244,12 +244,12 @@ export function RunwayModal({ isOpen, onClose, totalReserve = 508121.36, monthly
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#121722] border border-slate-200 dark:border-white/10">
               <span className="text-[11px] text-slate-500 dark:text-slate-400 block">Cenário Padrão</span>
               <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">R$ 11.515/mês</span>
-              <span className="text-[10px] text-emerald-600 font-semibold block mt-1">44,1 meses de segurança</span>
+              <span className="text-[11px] text-emerald-600 font-semibold block mt-1">44,1 meses de segurança</span>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#121722] border border-slate-200 dark:border-white/10">
               <span className="text-[11px] text-slate-500 dark:text-slate-400 block">Cenário Conservador</span>
               <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">R$ 15.000/mês</span>
-              <span className="text-[10px] text-indigo-600 font-semibold block mt-1">33,8 meses de segurança</span>
+              <span className="text-[11px] text-indigo-600 font-semibold block mt-1">33,8 meses de segurança</span>
             </div>
           </div>
 

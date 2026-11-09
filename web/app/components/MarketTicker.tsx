@@ -129,7 +129,7 @@ export default function MarketTicker({ onSelectAsset }: MarketTickerProps) {
             <span className="font-mono font-bold text-slate-900 dark:text-white">
               {ibov.value >= 1000 ? `${(ibov.value / 1000).toFixed(1)}k` : ibov.value.toLocaleString('pt-BR')}
             </span>
-            <span className={`text-[10px] font-mono ${ibov.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
+            <span className={`text-[11px] font-mono ${ibov.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
               {ibov.pct_change >= 0 ? `+${ibov.pct_change}%` : `${ibov.pct_change}%`}
             </span>
           </button>
@@ -145,7 +145,7 @@ export default function MarketTicker({ onSelectAsset }: MarketTickerProps) {
             <span className="font-mono font-bold text-slate-900 dark:text-white">
               {sp500.value.toLocaleString('en-US', { maximumFractionDigits: 0 })}
             </span>
-            <span className={`text-[10px] font-mono ${sp500.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
+            <span className={`text-[11px] font-mono ${sp500.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
               {sp500.pct_change >= 0 ? `+${sp500.pct_change}%` : `${sp500.pct_change}%`}
             </span>
           </button>
@@ -161,7 +161,7 @@ export default function MarketTicker({ onSelectAsset }: MarketTickerProps) {
             <span className="font-mono font-bold text-slate-900 dark:text-white">
               {nasdaq.value >= 1000 ? `${(nasdaq.value / 1000).toFixed(1)}k` : nasdaq.value.toLocaleString('en-US')}
             </span>
-            <span className={`text-[10px] font-mono ${nasdaq.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
+            <span className={`text-[11px] font-mono ${nasdaq.pct_change >= 0 ? 'text-emerald-500 font-bold' : 'text-rose-500 font-bold'}`}>
               {nasdaq.pct_change >= 0 ? `+${nasdaq.pct_change}%` : `${nasdaq.pct_change}%`}
             </span>
           </button>
@@ -170,7 +170,7 @@ export default function MarketTicker({ onSelectAsset }: MarketTickerProps) {
 
       {/* Meta & Refresh Action */}
       <div className="flex items-center gap-3 shrink-0 ml-auto md:ml-0">
-        <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hidden xl:inline">
+        <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold hidden xl:inline">
           ✦ Clique no índice para abrir gráfico interativo
         </span>
         <span className="text-[11px] text-slate-400 hidden sm:inline">
