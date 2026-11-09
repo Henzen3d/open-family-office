@@ -328,6 +328,43 @@ risco de concentração de clientes e pontos cegos de liquidez. Entregue o relat
 """
         return markdown
 
+    def _generate_with_failover(
+        self, user_prompt: str, system_prompt: str, max_attempts: int = 4
+    ) -> Tuple[LLMResponse, CustomProviderConfig]:
+        """Runs LLM generation across the router's fallback chain.
+
+        On each 429/error the failure is reported to the router (cooldown),
+        and the next selection immediately moves to the next healthy provider
+        (interactive = zero wait). Raises RuntimeError only when every
+        enabled provider has failed."""
+        last_error: Optional[Exception] = None
+        tried: set = set()
+        for _ in range(max_attempts):
+            profile, _wait = self.router.select_provider(is_interactive=True)
+            if profile is None or profile.name in tried:
+                break
+            tried.add(profile.name)
+            cfg = profile.config
+            if cfg is None:
+                cfg = next(
+                    (c for c in self.config_manager.list_providers(enabled_only=False) if c.name == profile.name),
+                    None,
+                )
+            if cfg is None or not cfg.resolve_api_key():
+                last_error = RuntimeError(f"Provider {profile.name} has no resolvable API key")
+                self.router.report_failure(profile.name)
+                continue
+            try:
+                resp = self.client.generate(config=cfg, user_prompt=user_prompt, system_prompt=system_prompt)
+                self.router.record_success(profile.name, resp.tokens_used)
+                return resp, cfg
+            except Exception as exc:  # 429, HTTP error, timeout
+                last_error = exc
+                self.router.report_failure(profile.name)
+        raise RuntimeError(
+            f"All enabled LLM providers failed after {max_attempts} attempts; last error: {last_error}"
+        )
+
     def generate_briefing(
         self,
         data_dir: str = "templates",
@@ -367,13 +404,13 @@ risco de concentração de clientes e pontos cegos de liquidez. Entregue o relat
                 "tokens_used": 0,
             }
 
-        # 1. Family CFO Run
+        # 1. Family CFO Run (router failover: 429/error → next healthy provider)
         cfo_sys, cfo_user = self.format_cfo_prompt(payload, entities)
-        profile, wait_sec = self.router.select_provider(is_interactive=True)
-        
-        cfg = profile.config or self.config_manager.get_provider(profile.name)
-        if not cfg:
-            # Fallback to offline if config resolution fails
+
+        try:
+            cfo_resp, cfg = self._generate_with_failover(cfo_user, cfo_sys)
+        except Exception:
+            # All providers failed: fallback to deterministic offline briefing
             report_content = self.run_deterministic_briefing(payload, entities)
             with open(target_path, "w", encoding="utf-8") as f:
                 f.write(report_content)
@@ -386,20 +423,19 @@ risco de concentração de clientes e pontos cegos de liquidez. Entregue o relat
                 "tokens_used": 0,
             }
 
-        cfo_resp = self.client.generate(config=cfg, user_prompt=cfo_user, system_prompt=cfo_sys)
-        self.router.record_success(profile.name, cfo_resp.tokens_used)
-
         full_report = cfo_resp.content.strip()
         tokens_total = cfo_resp.tokens_used
 
         # 2. Risk & Adversarial Red Team Run
         if include_risk_audit:
             adv_sys, adv_user = self.format_adversarial_prompt(full_report)
-            adv_resp = self.client.generate(config=cfg, user_prompt=adv_user, system_prompt=adv_sys)
-            self.router.record_success(profile.name, adv_resp.tokens_used)
-            tokens_total += adv_resp.tokens_used
-
-            full_report += "\n\n---\n\n" + adv_resp.content.strip()
+            try:
+                adv_resp, _adv_cfg = self._generate_with_failover(adv_user, adv_sys)
+                tokens_total += adv_resp.tokens_used
+                full_report += "\n\n---\n\n" + adv_resp.content.strip()
+            except Exception:
+                # CFO report already in hand; ship it without the red-team pass
+                full_report += "\n\n---\n\n*(Red-team audit unavailable: all LLM providers failed this run.)*"
 
         with open(target_path, "w", encoding="utf-8") as f:
             f.write(full_report)
