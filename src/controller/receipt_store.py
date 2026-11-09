@@ -149,6 +149,76 @@ class ReceiptStore:
         with open(self.db_path, "w", encoding="utf-8") as f:
             json.dump(serializable, f, indent=2, ensure_ascii=False)
 
+    @staticmethod
+    def resolve_vision_providers() -> List[CustomProviderConfig]:
+        """Resolves active multimodal vision providers from ProviderConfigManager or environment."""
+        providers: List[CustomProviderConfig] = []
+        try:
+            cfg_mgr = ProviderConfigManager()
+            all_p = cfg_mgr.list_providers(enabled_only=True)
+            for p in all_p:
+                api_key = p.resolve_api_key()
+                if not api_key:
+                    continue
+                # 1. OpenRouter with free multimodal vision model
+                if "openrouter" in p.id or "openrouter.ai" in p.base_url:
+                    providers.append(
+                        CustomProviderConfig(
+                            id="openrouter-vision",
+                            name="OpenRouter Nemotron Vision",
+                            protocol="openai",
+                            base_url=p.resolve_base_url(),
+                            api_key=api_key,
+                            model="nvidia/nemotron-3.5-super-vl:free",
+                            priority=1,
+                        )
+                    )
+                # 2. Google Gemini vision
+                elif "gemini" in p.id or "generativelanguage" in p.base_url:
+                    providers.append(
+                        CustomProviderConfig(
+                            id="gemini-vision",
+                            name="Google Gemini Vision",
+                            protocol="openai",
+                            base_url=p.resolve_base_url(),
+                            api_key=api_key,
+                            model="gemini-2.5-flash",
+                            priority=2,
+                        )
+                    )
+        except Exception:
+            pass
+
+        env_openrouter = os.getenv("OPENROUTER_API_KEY", "")
+        if env_openrouter and not any(p.id == "openrouter-vision" for p in providers):
+            providers.append(
+                CustomProviderConfig(
+                    id="openrouter-env",
+                    name="OpenRouter Env",
+                    protocol="openai",
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=env_openrouter,
+                    model="nvidia/nemotron-3.5-super-vl:free",
+                    priority=1,
+                )
+            )
+
+        env_gemini = os.getenv("GEMINI_API_KEY", "")
+        if env_gemini and not any(p.id == "gemini-vision" for p in providers):
+            providers.append(
+                CustomProviderConfig(
+                    id="gemini-env",
+                    name="Google Gemini Env",
+                    protocol="openai",
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+                    api_key=env_gemini,
+                    model="gemini-2.5-flash",
+                    priority=2,
+                )
+            )
+
+        return providers
+
     def extract_from_image(
         self,
         image_path: str,
@@ -177,16 +247,11 @@ class ReceiptStore:
             )
         else:
             # 2. Multimodal Vision AI Extraction
-            if not provider_config:
-                # Use default fallback
-                provider_config = CustomProviderConfig(
-                    id="gemini-default",
-                    name="Google Gemini",
-                    protocol="openai",
-                    base_url="https://generativelanguage.googleapis.com/v1beta/openai",
-                    api_key=os.getenv("GEMINI_API_KEY", ""),
-                    model="gemini-2.5-flash",
-                )
+            candidate_providers: List[CustomProviderConfig] = []
+            if provider_config:
+                candidate_providers.append(provider_config)
+            else:
+                candidate_providers = self.resolve_vision_providers()
 
             # Strip EXIF metadata from image file
             if os.path.exists(image_path):
@@ -196,14 +261,20 @@ class ReceiptStore:
                 with open(image_path, "wb") as f:
                     f.write(clean_bytes)
 
-            try:
-                receipt = self.processor.process_image_with_vision(
-                    image_path=image_path,
-                    provider_config=provider_config,
-                )
-                if entity_hint:
-                    receipt.entity_code = entity_hint
-            except Exception as e:
+            receipt = None
+            for p_cfg in candidate_providers:
+                try:
+                    receipt = self.processor.process_image_with_vision(
+                        image_path=image_path,
+                        provider_config=p_cfg,
+                    )
+                    if entity_hint:
+                        receipt.entity_code = entity_hint
+                    break
+                except Exception:
+                    continue
+
+            if not receipt:
                 # Priority 3 Fallback: Lazy-loaded Indra OCR on CPU (datalab-to/indra)
                 # Model stays completely unloaded in RAM until this block is reached
                 target_entity = entity_hint or "HOUSEHOLD_OSMAR"

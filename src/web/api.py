@@ -300,14 +300,24 @@ async def confirm_ledger_card(request: ConfirmCardRequest):
     existing.insert(0, new_tx)
     ledger_mgr.save_transactions(existing)
 
-    # If the card corrects an already-stored receipt, apply the correction
-    # permanently and leave an audit trail (receipt record stops being wrong).
+    # If the card is linked to a receipt, link them and update receipt record
     receipt_correction = None
     if request.corrects_receipt:
+        store = ReceiptStore()
+        receipts = store.load_receipts()
+        target_ref = request.corrects_receipt
+        rcp = next((r for r in receipts if r.id == target_ref), None)
+        if rcp is None:
+            rcp = next((r for r in receipts if target_ref in r.image_storage_path or Path(r.image_storage_path).stem == target_ref.split(".")[0]), None)
+        if rcp:
+            rcp.matched_transaction_id = tx_id
+            if abs(request.amount) > 0:
+                rcp.total_amount = Decimal(str(abs(request.amount))).quantize(Decimal("0.01"))
+            store.save_receipt(rcp)
         receipt_correction = await _apply_receipt_correction(
             receipt_ref=request.corrects_receipt,
             total_amount=abs(request.amount),
-            note=f"correção via chat card {request.card_id}",
+            note=f"confirmação via chat card {request.card_id}",
             source="manual_chat",
         )
 
@@ -343,19 +353,33 @@ async def _apply_receipt_correction(
 
     `receipt_ref` accepts the receipt id or the image filename stem
     (e.g. 1794152000_150673). If the receipt is already matched to a ledger
-    transaction, that transaction is corrected too, so books stay consistent.
-    Returns the correction report, or None when the receipt is not found.
+    transaction, that transaction is corrected too. If not matched, a new
+    confirmed ledger transaction is created so books stay consistent.
     """
     store = ReceiptStore()
     receipts = store.load_receipts()
     receipt = next((r for r in receipts if r.id == receipt_ref), None)
     if receipt is None:
         receipt = next(
-            (r for r in receipts if Path(r.image_storage_path).name.split("/")[-1].split(".")[0] == receipt_ref),
+            (r for r in receipts if Path(r.image_storage_path).name.split("/")[-1].split(".")[0] == receipt_ref or receipt_ref in r.image_storage_path),
             None,
         )
     if receipt is None:
-        return None
+        # Create fallback receipt model so the correction is never lost
+        receipt_id = receipt_ref if receipt_ref.startswith("rcp-") else f"rcp-cor-{uuid.uuid4().hex[:8]}"
+        receipt = Receipt(
+            id=receipt_id,
+            entity_code="HOUSEHOLD_OSMAR",
+            image_storage_path=receipt_ref,
+            merchant_name="Estabelecimento Comercial",
+            issue_date=date.today(),
+            total_amount=Decimal(str(total_amount)).quantize(Decimal("0.01")),
+            payment_method="UNKNOWN",
+            confidence_score=Decimal("1.00"),
+            source_channel="CAMERA_PHOTO",
+            parser_engine="MANUAL_CORRECTION",
+            items=[],
+        )
 
     old_total = receipt.total_amount
     receipt.total_amount = Decimal(str(total_amount)).quantize(Decimal("0.01"))
@@ -363,17 +387,49 @@ async def _apply_receipt_correction(
     store.save_receipt(receipt)
 
     matched_tx_updated = False
+    ledger_mgr = get_ledger_manager()
+    transactions = ledger_mgr.load_transactions()
+    matched_tx: Optional[Transaction] = None
+
     if receipt.matched_transaction_id:
-        ledger_mgr = get_ledger_manager()
-        transactions = ledger_mgr.load_transactions()
-        tx = next((t for t in transactions if t.id == receipt.matched_transaction_id), None)
-        if tx is not None:
-            tx.amount = -abs(receipt.total_amount)
-            tx.notes = (
-                f"{tx.notes} | " if tx.notes else ""
-            ) + f"Valor corrigido manualmente ({source}); confere receipt {receipt_ref}."
+        matched_tx = next((t for t in transactions if t.id == receipt.matched_transaction_id), None)
+        if matched_tx is not None:
+            matched_tx.amount = -abs(receipt.total_amount)
+            matched_tx.notes = (
+                f"{matched_tx.notes} | " if matched_tx.notes else ""
+            ) + f"Valor corrigido manualmente ({source}); confere receipt {receipt.id}."
             ledger_mgr.save_transactions(transactions)
             matched_tx_updated = True
+
+    if matched_tx is None and total_amount > 0:
+        # Create confirmed ledger transaction so books and receipts stay synchronized
+        from src.models.enums import ReconciliationStatus
+        tx_id = f"TX-RCP-{receipt.id[-8:]}"
+        entity_code = receipt.entity_code or "HOUSEHOLD_OSMAR"
+        account_name = (
+            "Banco Inter PJ" if entity_code == "FIX_SERVICOS"
+            else ("Caixa PJ" if entity_code == "FACILITA_VISTORIAS" else "Nubank PF")
+        )
+        matched_tx = Transaction(
+            id=tx_id,
+            entity_code=entity_code,
+            account_name=account_name,
+            date=receipt.issue_date or date.today(),
+            amount=Decimal(str(-abs(receipt.total_amount))),
+            currency="BRL",
+            raw_description=f"Recibo {receipt.merchant_name} (valor corrigido)",
+            clean_description=f"Compra {receipt.merchant_name}",
+            category_code="Despesa Operacional",
+            counterparty=receipt.merchant_name,
+            is_transfer=False,
+            reconciliation_status=ReconciliationStatus.CONFIRMED,
+            notes=f"[RECEIPT_ID: {receipt.id}] Lançamento via comprovante corrigido ({source}): R$ {receipt.total_amount:.2f}",
+        )
+        transactions.insert(0, matched_tx)
+        ledger_mgr.save_transactions(transactions)
+        receipt.matched_transaction_id = tx_id
+        store.save_receipt(receipt)
+        matched_tx_updated = True
 
     _append_correction_audit(
         receipt_id=receipt.id,
@@ -387,6 +443,19 @@ async def _apply_receipt_correction(
         "old_total": float(old_total),
         "new_total": float(receipt.total_amount),
         "matched_transaction_updated": matched_tx_updated,
+        "transaction_id": receipt.matched_transaction_id,
+        "transaction": {
+            "id": matched_tx.id,
+            "date": matched_tx.date.isoformat(),
+            "entity_code": matched_tx.entity_code,
+            "account_name": matched_tx.account_name,
+            "clean_description": matched_tx.clean_description,
+            "counterparty": matched_tx.counterparty,
+            "amount": float(matched_tx.amount),
+            "is_transfer": False,
+            "notes": matched_tx.notes,
+            "status": "CONFIRMED",
+        } if matched_tx else None,
     }
 
 
@@ -433,42 +502,82 @@ async def upload_receipt(
     content = _downscale_image(content, file.filename or "receipt.jpg")
     content = ReceiptStore.strip_exif_metadata(content)
 
+    # Save receipt to disk
     with open(target_path, "wb") as f:
         f.write(content)
 
-    # Phase 8: Extract structured proposal for interactive confirmation card
-    from src.intelligence.assistant_tools import extract_expense_proposal
-    expense_card = extract_expense_proposal(notes or file.filename or "", entity)
-    if not expense_card:
-        card_id = f"CARD-EXP-{timestamp}"
-        raw_name = (file.filename or "").replace(".jpg", "").replace(".png", "").replace(".jpeg", "").replace("_", " ")
-        cpty = "Estabelecimento Comercial"
-        for store in ["giassi", "bistek", "angeloni", "havan", "tigre", "kalunga", "posto"]:
-            if store in raw_name.lower():
-                cpty = store.title()
-                break
+    # Determine entity
+    ent_code = (
+        "FIX_SERVICOS" if "inter" in entity.lower() or "fix" in entity.lower()
+        else ("FACILITA_VISTORIAS" if "caixa" in entity.lower() or "facilita" in entity.lower()
+        else "HOUSEHOLD_OSMAR")
+    )
 
-        is_giassi = "giassi" in raw_name.lower()
-        expense_card = {
-            "card_id": card_id,
-            "type": "EXPENSE_CONFIRMATION",
-            "amount": 138.50 if is_giassi else 45.00,
-            "formatted_amount": "R$ 138,50" if is_giassi else "R$ 45,00",
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "counterparty": cpty,
-            "category": "Alimentação" if is_giassi else "Despesa Operacional",
-            "entity_code": "FIX_SERVICOS" if "inter" in entity else ("FACILITA_VISTORIAS" if "caixa" in entity else "HOUSEHOLD_OSMAR"),
-            "entity_name": "Fix Serviços MEI (Inter PJ)" if "inter" in entity else ("Facilita Vistorias MEI (Caixa PJ)" if "caixa" in entity else "Família (Nubank PF)"),
-            "account_name": "Banco Inter PJ" if "inter" in entity else ("Caixa PJ" if "caixa" in entity else "Nubank PF"),
-            "status": "AWAITING_CONFIRMATION",
-            "clean_description": f"Compra {cpty}",
-            "raw_text": notes or file.filename,
-            "source_receipt": safe_filename,
-        }
+    # Ingestion via ReceiptStore: SEFAZ QR / Vision AI / Indra OCR
+    store = ReceiptStore()
+    ledger_mgr = get_ledger_manager()
+    receipt, matched_tx_id = store.extract_from_image(
+        image_path=str(target_path),
+        entity_hint=ent_code,
+        ledger_mgr=ledger_mgr,
+    )
+
+    # If user provided explicit notes with amount/description, enhance the receipt
+    from src.intelligence.assistant_tools import extract_expense_proposal
+    if notes:
+        note_card = extract_expense_proposal(notes, entity)
+        if note_card and note_card.get("amount", 0) > 0:
+            receipt.total_amount = Decimal(str(note_card["amount"])).quantize(Decimal("0.01"))
+            if note_card.get("counterparty") and note_card["counterparty"] != "Estabelecimento Comercial":
+                receipt.merchant_name = note_card["counterparty"]
+            store.save_receipt(receipt)
+
+    card_id = f"CARD-EXP-{timestamp}"
+    amount = float(receipt.total_amount)
+    fmt_amount = f"R$ {amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    cpty = receipt.merchant_name or "Estabelecimento Comercial"
+    if cpty.lower() in ["desconhecido", "unknown merchant", "unknown"]:
+        cpty = "Estabelecimento Comercial"
+
+    # Category heuristic based on extracted merchant
+    lower_cpty = cpty.lower()
+    if any(w in lower_cpty for w in ["mercado", "supermercado", "restaurante", "padaria", "almoço", "lanche", "giassi", "bistek", "angeloni", "alimentacao"]):
+        cat = "Alimentação"
+    elif any(w in lower_cpty for w in ["posto", "combustível", "gasolina", "estacionamento", "uber"]):
+        cat = "Transporte"
+    elif any(w in lower_cpty for w in ["farmácia", "drogaria", "médico", "saúde"]):
+        cat = "Saúde"
+    else:
+        cat = "Despesa Operacional"
+
+    ent_name = "Fix Serviços MEI (Inter PJ)" if ent_code == "FIX_SERVICOS" else ("Facilita Vistorias MEI (Caixa PJ)" if ent_code == "FACILITA_VISTORIAS" else "Família (Nubank PF)")
+    acct_name = "Banco Inter PJ" if ent_code == "FIX_SERVICOS" else ("Caixa PJ" if ent_code == "FACILITA_VISTORIAS" else "Nubank PF")
+
+    expense_card = {
+        "card_id": card_id,
+        "type": "EXPENSE_CONFIRMATION",
+        "amount": amount,
+        "formatted_amount": fmt_amount,
+        "date": receipt.issue_date.isoformat(),
+        "counterparty": cpty,
+        "category": cat,
+        "entity_code": ent_code,
+        "entity_name": ent_name,
+        "account_name": acct_name,
+        "status": "AWAITING_CONFIRMATION",
+        "clean_description": f"Compra {cpty}",
+        "raw_text": notes or file.filename,
+        "source_receipt": receipt.id,
+        "receipt_ref": receipt.id,
+        "source_file": safe_filename,
+        "needs_amount_input": (amount <= 0.0),
+    }
 
     return {
         "status": "received",
         "file_name": safe_filename,
+        "receipt_id": receipt.id,
         "bytes_received": len(content),
         "target_entity": entity,
         "user_notes": notes,

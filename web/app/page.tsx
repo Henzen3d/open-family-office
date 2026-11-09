@@ -335,6 +335,10 @@ export default function StitchExecutiveDashboard() {
         }),
       });
       if (res.ok) {
+        const data = await res.json();
+        if (data.transaction) {
+          setLedgerTransactions((prev) => [data.transaction, ...prev]);
+        }
         const fmt = (n: number) =>
           `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         setMessages((prev) =>
@@ -2063,7 +2067,7 @@ export default function StitchExecutiveDashboard() {
                                       setCorrectionDraft({
                                         msgId: msg.id,
                                         ref: msg.confirmationCard!.source_receipt || msg.confirmationCard!.receipt_ref!,
-                                        value: String(msg.confirmationCard!.amount),
+                                        value: msg.confirmationCard!.amount > 0 ? String(msg.confirmationCard!.amount) : '',
                                       })
                                     }
                                     className="w-full py-2.5 min-h-[44px] bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 font-semibold text-sm rounded-xl border border-amber-200 dark:border-amber-500/30 transition active:scale-95 flex items-center justify-center gap-1.5"

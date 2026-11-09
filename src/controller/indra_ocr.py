@@ -93,7 +93,7 @@ class IndraOCRAdapter:
             # Simulated ONNX run (image tensor preparation)
             # In production, indra preprocessor resizes and normalizes to tensor
             # output = session.run(None, {session.get_inputs()[0].name: input_tensor})
-            extracted_text = "RECIBO FISCAL ESTABELECIMENTO LOCAL\nCNPJ: 12.345.678/0001-95\nTOTAL R$ 45,00"
+            extracted_text = ""
 
             # 3. CRITICAL: Unload model from memory immediately
             del session
@@ -119,7 +119,7 @@ class IndraOCRAdapter:
         """Provides heuristic fallback parsing when ONNX weights are not present on disk."""
         filename = os.path.basename(image_path).lower()
         # Look for numbers in filename as potential total amount
-        amount = Decimal("45.00")
+        amount = Decimal("0.00")
         amount_match = re.search(r"(\d+[\.,]\d{2})", filename)
         if amount_match:
             try:
@@ -130,11 +130,11 @@ class IndraOCRAdapter:
         return IndraOCRResult(
             success=True,
             text="[Indra OCR Local Fallback - CPU i5 Mode]",
-            merchant_name="Estabelecimento Local (Recibo Anexado)",
-            cnpj="12.345.678/0001-95",
+            merchant_name="Estabelecimento Comercial (Comprovante Anexado)",
+            cnpj=None,
             date=date.today(),
             total_amount=amount,
-            line_items=[{"description": "Consumo / Despesa Comercial", "amount": str(amount)}],
+            line_items=[{"description": "Consumo / Despesa Comercial", "amount": str(amount)}] if amount > Decimal("0.00") else [],
             memory_cleared=True,
         )
 
@@ -194,7 +194,7 @@ class IndraOCRAdapter:
     def create_receipt_model(cls, ocr_result: IndraOCRResult, image_path: str, entity_hint: str) -> Receipt:
         """Converts an IndraOCRResult into standard OpenFamilyOffice Receipt model."""
         receipt_id = f"rcp-indra-{uuid.uuid4().hex[:8]}"
-        amount = ocr_result.total_amount if ocr_result.total_amount and ocr_result.total_amount > Decimal("0.00") else Decimal("45.00")
+        amount = ocr_result.total_amount if ocr_result.total_amount and ocr_result.total_amount > Decimal("0.00") else Decimal("0.00")
 
         return Receipt(
             id=receipt_id,

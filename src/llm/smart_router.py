@@ -175,6 +175,37 @@ class SmartRouter:
         except Exception:
             pass
 
+        # 3. Recent Receipts & Cupons Fiscais
+        recent_receipts_text = "Nenhum cupom fiscal anexado recentemente."
+        try:
+            from src.controller.receipt_store import ReceiptStore
+            store = ReceiptStore()
+            rcps = store.load_receipts()
+            if rcps:
+                rcp_lines = []
+                for r in reversed(rcps[-4:]):
+                    rcp_lines.append(
+                        f"  * {r.merchant_name}: R$ {r.total_amount:,.2f} ({r.issue_date.strftime('%d/%m/%Y')} | {r.entity_code} | ID: {r.id})"
+                    )
+                recent_receipts_text = "\n".join(rcp_lines)
+        except Exception:
+            pass
+
+        # 4. Recent Transactions from Ledger
+        recent_txs_text = "Sem lançamentos recentes."
+        try:
+            txs = self.ledger_manager.load_transactions()
+            if txs:
+                tx_lines = []
+                for t in txs[:5]:
+                    sign = "-" if t.amount < 0 else "+"
+                    tx_lines.append(
+                        f"  * {t.date.strftime('%d/%m/%Y')}: {t.clean_description} ({t.account_name}) -> {sign}R$ {abs(t.amount):,.2f} [{t.reconciliation_status}]"
+                    )
+                recent_txs_text = "\n".join(tx_lines)
+        except Exception:
+            pass
+
         system_prompt = (
             "Você é o assistente executivo e financeiro privado do OpenFamilyOffice.\n"
             "Entidades governadas:\n"
@@ -189,6 +220,8 @@ class SmartRouter:
             f"- Household PF (Nubank Ultravioleta): Reserva Familiar / Aluguéis e Lucros Acumulados R$ {pf_cash:,.2f}.\n"
             "- Teto MEI Individual: R$ 81.000,00/ano por CNPJ (Capacidade conjunta do casal: R$ 162.000,00/ano sob LC 123/2006). Segregação 100% blindada.\n"
             "- Contas a pagar e faturas nos próximos 7 dias: Monitoradas e 100% em dia. Sem pendências de atraso.\n\n"
+            f"Últimos Comprovantes e Cupons Fiscais Enviados:\n{recent_receipts_text}\n\n"
+            f"Últimos Lançamentos Registrados no Livro-Razão:\n{recent_txs_text}\n\n"
             "Dados de Mercado em Tempo Real:\n"
             f"- Taxa Selic Meta Copom: {selic}%\n"
             f"- Inflação IPCA 12m: {ipca}%\n"
@@ -290,6 +323,70 @@ class SmartRouter:
             }
 
         clean_lower = user_message.lower().strip()
+
+        # Tool: Query Recent Receipts & Fiscal Vouchers
+        _RE_RECEIPT_QUERY = re.compile(
+            r"\b(qual\s+(foi\s+)?(o\s+)?(último|ultimo)\s+cupom|(último|ultimo)\s+cupom|cupons\s+enviados|comprovante\s+enviado|comprovantes\s+enviados|últimos\s+cupons|ultimos\s+cupons|recibo\s+enviado|recibos\s+enviados|último\s+comprovante|ultimo\s+comprovante|último\s+recibo|ultimo\s+recibo)\b",
+            re.IGNORECASE,
+        )
+        if _RE_RECEIPT_QUERY.search(clean_lower):
+            from src.controller.receipt_store import ReceiptStore
+            store = ReceiptStore()
+            rcps = store.load_receipts()
+            if not rcps:
+                reply = (
+                    "Nenhum cupom fiscal ou comprovante foi enviado até o momento.\n"
+                    "Para registrar um novo comprovante, clique no ícone de câmera/anexo no chat ou envie uma foto do cupom."
+                )
+            else:
+                last_rcp = rcps[-1]
+                amt_fmt = f"R$ {last_rcp.total_amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                dt_fmt = last_rcp.issue_date.strftime("%d/%m/%Y")
+                status_txt = "Conciliado no Livro Razão" if last_rcp.matched_transaction_id else "Registrado no repositório de comprovantes"
+                reply = (
+                    f"Último comprovante/cupom registrado:\n"
+                    f"- Estabelecimento: {last_rcp.merchant_name}\n"
+                    f"- Valor: {amt_fmt}\n"
+                    f"- Data de Emissão: {dt_fmt}\n"
+                    f"- Entidade: {last_rcp.entity_code}\n"
+                    f"- Status: {status_txt}\n"
+                    f"- Canal/Motor: {last_rcp.parser_engine} (Confiança: {int(last_rcp.confidence_score * 100)}%)\n"
+                    f"- ID: {last_rcp.id}"
+                )
+            return {
+                "reply": reply,
+                "intent": "financial_ops",
+                "provider": "Motor de Comprovantes Local",
+                "model": "AssistantTool-ReceiptQuery",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+            }
+
+        # Tool: Query Latest Transactions / Expenses in Ledger
+        _RE_TX_QUERY = re.compile(
+            r"\b(qual\s+(foi\s+)?(o\s+)?(último|ultimo)\s+lan[çc]amento|(último|ultimo)\s+lan[çc]amento|últimos\s+lan[çc]amentos|ultimos\s+lan[çc]amentos|último\s+gasto|ultimo\s+gasto|últimas\s+despesas|ultimas\s+despesas|últimas\s+compras|ultimas\s+compras)\b",
+            re.IGNORECASE,
+        )
+        if _RE_TX_QUERY.search(clean_lower):
+            txs = self.ledger_manager.load_transactions()
+            if not txs:
+                reply = "Nenhum lançamento encontrado no Livro Razão."
+            else:
+                lines = ["Últimos lançamentos registrados no Livro Razão:"]
+                for tx in txs[:3]:
+                    amt_fmt = f"R$ {abs(tx.amount):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                    tipo = "Despesa" if tx.amount < 0 else "Receita"
+                    dt_fmt = tx.date.strftime("%d/%m/%Y")
+                    lines.append(f"- {dt_fmt}: {tx.clean_description} ({tx.account_name}) → {tipo} {amt_fmt} [{tx.reconciliation_status}]")
+                reply = "\n".join(lines)
+            return {
+                "reply": reply,
+                "intent": "financial_ops",
+                "provider": "Motor Financeiro Local",
+                "model": "AssistantTool-LatestTransactions",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+            }
 
         # Phase 7 Tool 1: Balances & Multi-Entity Cash Position
         if any(q in clean_lower for q in [

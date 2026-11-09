@@ -131,7 +131,7 @@ class ReceiptProcessor:
         )
 
     def parse_vision_json(self, raw_json_str: str, image_path: str = "") -> Receipt:
-        """Parses the JSON response produced by the Multimodal Vision AI parser (prompts/08_receipt_ocr_parser.md)."""
+        """Parses the JSON response produced by the Multimodal Vision AI parser."""
         # Strip potential markdown formatting (```json ... ```)
         cleaned_str = raw_json_str.strip()
         if cleaned_str.startswith("```"):
@@ -140,36 +140,86 @@ class ReceiptProcessor:
 
         data = json.loads(cleaned_str)
 
-        tx_data = data.get("transaction", {})
-        merchant_data = data.get("merchant", {})
-        payment_data = data.get("payment", {})
-        audit_data = data.get("audit", {})
+        tx_data = data.get("transaction", {}) if isinstance(data.get("transaction"), dict) else {}
+        merchant_data = data.get("merchant", {}) if isinstance(data.get("merchant"), dict) else {}
+        payment_data = data.get("payment", {}) if isinstance(data.get("payment"), dict) else {}
+        audit_data = data.get("audit", {}) if isinstance(data.get("audit"), dict) else {}
+
+        # Resolve merchant name
+        merchant_name = (
+            merchant_data.get("name")
+            or data.get("merchant_name")
+            or data.get("vendor_name")
+            or data.get("establishment")
+            or data.get("store_name")
+            or "Estabelecimento Comercial"
+        ).strip()
+
+        # Resolve tax ID (CNPJ / CPF)
+        merchant_tax_id = (
+            merchant_data.get("tax_id")
+            or merchant_data.get("cnpj")
+            or data.get("tax_id")
+            or data.get("cnpj")
+        )
 
         # Parse date
-        date_str = tx_data.get("date")
+        date_str = (
+            tx_data.get("date")
+            or data.get("transaction_date")
+            or data.get("date")
+            or data.get("issue_date")
+        )
+        issue_date = date.today()
         if date_str:
-            try:
-                issue_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            except ValueError:
-                issue_date = date.today()
-        else:
-            issue_date = date.today()
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+                try:
+                    issue_date = datetime.strptime(str(date_str).strip()[:10], fmt).date()
+                    break
+                except ValueError:
+                    continue
 
         # Parse time
-        time_str = tx_data.get("time")
+        time_str = (
+            tx_data.get("time")
+            or data.get("transaction_time")
+            or data.get("time")
+        )
         issue_time = None
         if time_str:
             try:
-                issue_time = datetime.strptime(time_str[:8], "%H:%M:%S").time()
+                issue_time = datetime.strptime(str(time_str).strip()[:8], "%H:%M:%S").time()
             except ValueError:
                 pass
 
-        total_amount = Decimal(str(tx_data.get("total_amount", "0.00")))
-        discount_amount = Decimal(str(tx_data.get("discount_amount", "0.00")))
-        tax_amount = Decimal(str(tx_data.get("tax_amount", "0.00")))
+        # Resolve total amount
+        raw_total = (
+            tx_data.get("total_amount")
+            or data.get("total_amount")
+            or data.get("total")
+            or data.get("amount")
+            or data.get("valor_total")
+            or "0.00"
+        )
+        if isinstance(raw_total, str):
+            clean_num = re.sub(r"[^\d,\.]", "", raw_total)
+            if "," in clean_num and "." in clean_num:
+                clean_num = clean_num.replace(".", "").replace(",", ".")
+            elif "," in clean_num:
+                clean_num = clean_num.replace(",", ".")
+            raw_total = clean_num or "0.00"
+
+        try:
+            total_amount = Decimal(str(raw_total)).quantize(Decimal("0.01"))
+        except Exception:
+            total_amount = Decimal("0.00")
+
+        # Discount & Tax amounts
+        discount_amount = Decimal(str(tx_data.get("discount_amount") or data.get("discount_amount") or "0.00"))
+        tax_amount = Decimal(str(tx_data.get("tax_amount") or data.get("tax_amount") or "0.00"))
 
         # Parse line items
-        raw_items = data.get("items", [])
+        raw_items = data.get("items") or data.get("line_items") or []
         items: List[ReceiptItem] = []
         for idx, item in enumerate(raw_items, start=1):
             qty = Decimal(str(item.get("quantity", "1.00")))
@@ -178,7 +228,7 @@ class ReceiptProcessor:
             items.append(
                 ReceiptItem(
                     item_index=item.get("item_index", idx),
-                    description=item.get("description", "Unknown Item").strip(),
+                    description=item.get("description", "Item").strip(),
                     quantity=qty,
                     unit_measure=item.get("unit_measure", "UN"),
                     unit_price=u_price,
@@ -192,27 +242,42 @@ class ReceiptProcessor:
         expected_total = (total_amount + discount_amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         items_sum_quantized = items_sum.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
-        confidence = Decimal(str(audit_data.get("confidence_score", "0.95")))
+        confidence = Decimal(str(audit_data.get("confidence_score") or data.get("confidence") or "0.95"))
         # If discrepancy exists between items sum and receipt total, adjust confidence
         if items and abs(items_sum_quantized - expected_total) > Decimal("0.05"):
             confidence = (confidence * Decimal("0.80")).quantize(Decimal("0.01"))
 
-        target_entity = audit_data.get("target_entity_inferred", "HOUSEHOLD_OSMAR")
+        target_entity = (
+            audit_data.get("target_entity_inferred")
+            or data.get("suggested_routing", {}).get("target_entity")
+            or data.get("target_entity")
+            or "HOUSEHOLD_OSMAR"
+        )
         receipt_id = f"rcp-vis-{uuid.uuid4().hex[:8]}"
+
+        # Payment method
+        pay_method = (
+            payment_data.get("method")
+            or data.get("payment_method")
+            or data.get("payment")
+            or "UNKNOWN"
+        )
+        if isinstance(pay_method, dict):
+            pay_method = pay_method.get("method", "UNKNOWN")
 
         return Receipt(
             id=receipt_id,
             entity_code=target_entity,
             image_storage_path=image_path,
-            merchant_name=merchant_data.get("name", "Unknown Merchant"),
-            merchant_tax_id=merchant_data.get("tax_id"),
+            merchant_name=merchant_name,
+            merchant_tax_id=merchant_tax_id,
             issue_date=issue_date,
             issue_time=issue_time,
             total_amount=total_amount,
             tax_amount=tax_amount,
             discount_amount=discount_amount,
-            payment_method=payment_data.get("method", "UNKNOWN"),
-            card_last_digits=payment_data.get("card_last_digits"),
+            payment_method=str(pay_method),
+            card_last_digits=payment_data.get("card_last_digits") if isinstance(payment_data, dict) else None,
             fiscal_access_key=data.get("fiscal_access_key"),
             confidence_score=confidence,
             source_channel="CAMERA_PHOTO",
@@ -247,8 +312,18 @@ class ReceiptProcessor:
             image_bytes = f.read()
 
         prompt_text = (
-            "Analyze this receipt or fiscal cupom image. Extract all data into strictly formatted JSON "
-            "matching the required OpenFamilyOffice schema. Verify all mathematical line-item additions."
+            "Analyze this Brazilian fiscal cupom, receipt, or invoice photo. "
+            "Extract the merchant name (vendor_name), CNPJ or CPF (tax_id), date (transaction_date: YYYY-MM-DD), "
+            "and total amount paid in BRL (total_amount: float number, e.g. 89.50). "
+            "Return ONLY valid JSON matching this schema:\n"
+            "{\n"
+            '  "vendor_name": "string",\n'
+            '  "tax_id": "string or null",\n'
+            '  "transaction_date": "YYYY-MM-DD",\n'
+            '  "total_amount": 0.00,\n'
+            '  "payment_method": "DEBIT_CARD | CREDIT_CARD | PIX | CASH | UNKNOWN",\n'
+            '  "line_items": []\n'
+            "}"
         )
 
         sys_prompt = system_prompt or (
