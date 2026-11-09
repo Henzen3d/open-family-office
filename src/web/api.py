@@ -55,6 +55,55 @@ app.add_middleware(
 DATA_DIR = Path(os.getenv("DATA_DIR", "/data" if os.path.exists("/data") else "data"))
 REPORTS_DIR = Path(os.getenv("REPORTS_DIR", "reports"))
 
+# Receipt record sizing: keep on-disk photos small (longest edge 1600px, JPEG q80)
+MAX_RECEIPT_IMAGE_EDGE = 1600
+JPEG_QUALITY = 80
+
+
+def _downscale_image(content: bytes, filename: str) -> bytes:
+    """Shrinks receipt photos so the local record stays small.
+
+    Longest side is capped at MAX_RECEIPT_IMAGE_EDGE pixels (Lanczos) and the
+    result is re-encoded as JPEG quality 80 — a 12MP phone photo (~2.3 MB)
+    becomes roughly 200-400 KB, still sharp for OCR. Non-image payloads and
+    environments without Pillow return the content unchanged.
+    """
+    try:
+        import io
+        from PIL import Image
+    except ImportError:
+        return content
+    try:
+        img = Image.open(io.BytesIO(content))
+        img.load()
+        if max(img.size) > MAX_RECEIPT_IMAGE_EDGE:
+            resampling = getattr(getattr(Image, "Resampling", Image), "LANCZOS")
+            img.thumbnail((MAX_RECEIPT_IMAGE_EDGE, MAX_RECEIPT_IMAGE_EDGE), resampling)
+        out = io.BytesIO()
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+        img.save(out, "JPEG", quality=JPEG_QUALITY, optimize=True)
+        return out.getvalue()
+    except Exception:
+        return content
+
+
+def _append_correction_audit(receipt_id: str, old_total: str, new_total: str, note: Optional[str], source: str):
+    """Append-only governance trail for every manual receipt correction."""
+    audit_path = DATA_DIR / "governance" / "receipt_corrections.jsonl"
+    audit_path.parent.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "receipt_id": receipt_id,
+        "old_total": old_total,
+        "new_total": new_total,
+        "note": note,
+        "source": source,
+    }
+    with open(audit_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    return audit_path
+
 
 class ChatMessageRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=4000)
@@ -181,6 +230,13 @@ class ConfirmCardRequest(BaseModel):
     entity_code: str
     account_name: str
     notes: Optional[str] = None
+    corrects_receipt: Optional[str] = Field(default=None, description="Receipt id or image filename stem being corrected by this confirmation")
+
+
+class ReceiptCorrectionRequest(BaseModel):
+    total_amount: float = Field(..., gt=0)
+    note: Optional[str] = None
+    source: str = "manual_chat"
 
 
 @app.post("/api/ledger/confirm-card")
@@ -215,6 +271,17 @@ async def confirm_ledger_card(request: ConfirmCardRequest):
     existing.insert(0, new_tx)
     ledger_mgr.save_transactions(existing)
 
+    # If the card corrects an already-stored receipt, apply the correction
+    # permanently and leave an audit trail (receipt record stops being wrong).
+    receipt_correction = None
+    if request.corrects_receipt:
+        receipt_correction = await _apply_receipt_correction(
+            receipt_ref=request.corrects_receipt,
+            total_amount=abs(request.amount),
+            note=f"correção via chat card {request.card_id}",
+            source="manual_chat",
+        )
+
     return {
         "status": "CONFIRMED",
         "card_id": request.card_id,
@@ -231,8 +298,89 @@ async def confirm_ledger_card(request: ConfirmCardRequest):
             "notes": new_tx.notes,
             "status": "CONFIRMED",
         },
+        "receipt_correction": receipt_correction,
         "message": f"Lançamento de R$ {request.amount:,.2f} registrado com sucesso no Livro Razão.",
     }
+
+
+async def _apply_receipt_correction(
+    receipt_ref: str,
+    total_amount: float,
+    note: Optional[str],
+    source: str,
+) -> Optional[dict]:
+    """Corrects a stored receipt amount and records the change in the
+    append-only governance audit (data/governance/receipt_corrections.jsonl).
+
+    `receipt_ref` accepts the receipt id or the image filename stem
+    (e.g. 1794152000_150673). If the receipt is already matched to a ledger
+    transaction, that transaction is corrected too, so books stay consistent.
+    Returns the correction report, or None when the receipt is not found.
+    """
+    store = ReceiptStore()
+    receipts = store.load_receipts()
+    receipt = next((r for r in receipts if r.id == receipt_ref), None)
+    if receipt is None:
+        receipt = next(
+            (r for r in receipts if Path(r.image_storage_path).name.split("/")[-1].split(".")[0] == receipt_ref),
+            None,
+        )
+    if receipt is None:
+        return None
+
+    old_total = receipt.total_amount
+    receipt.total_amount = Decimal(str(total_amount)).quantize(Decimal("0.01"))
+    receipt.confidence_score = Decimal("1.00")  # human-verified value
+    store.save_receipt(receipt)
+
+    matched_tx_updated = False
+    if receipt.matched_transaction_id:
+        ledger_mgr = get_ledger_manager()
+        transactions = ledger_mgr.load_transactions()
+        tx = next((t for t in transactions if t.id == receipt.matched_transaction_id), None)
+        if tx is not None:
+            tx.amount = -abs(receipt.total_amount)
+            tx.notes = (
+                f"{tx.notes} | " if tx.notes else ""
+            ) + f"Valor corrigido manualmente ({source}); confere receipt {receipt_ref}."
+            ledger_mgr.save_transactions(transactions)
+            matched_tx_updated = True
+
+    _append_correction_audit(
+        receipt_id=receipt.id,
+        old_total=str(old_total),
+        new_total=str(receipt.total_amount),
+        note=note,
+        source=source,
+    )
+    return {
+        "receipt_id": receipt.id,
+        "old_total": float(old_total),
+        "new_total": float(receipt.total_amount),
+        "matched_transaction_updated": matched_tx_updated,
+    }
+
+
+@app.post("/api/receipts/{receipt_ref}/correction")
+@app.post("/receipts/{receipt_ref}/correction")
+async def correct_receipt(receipt_ref: str, request: ReceiptCorrectionRequest):
+    """Corrige permanentemente o valor de um recibo guardado, com trilha de
+    auditoria append-only em data/governance/receipt_corrections.jsonl."""
+    result = await _apply_receipt_correction(
+        receipt_ref=receipt_ref,
+        total_amount=request.total_amount,
+        note=request.note,
+        source=request.source,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Receipt {receipt_ref} not found")
+    result["status"] = "CORRECTED"
+    result["audit_file"] = str(DATA_DIR / "governance" / "receipt_corrections.jsonl")
+    result["message"] = (
+        f"Valor corrigido de R$ {result['old_total']:,.2f} para R$ {result['new_total']:,.2f}. "
+        "Registro auditado com sucesso."
+    )
+    return result
 
 
 @app.post("/api/receipts/upload")
@@ -250,6 +398,12 @@ async def upload_receipt(
     target_path = receipts_dir / safe_filename
 
     content = await file.read()
+
+    # Keep the on-disk record small and EXIF-free: shrink to 1600px max edge
+    # and strip camera metadata (LGPD) before persisting.
+    content = _downscale_image(content, file.filename or "receipt.jpg")
+    content = ReceiptStore.strip_exif_metadata(content)
+
     with open(target_path, "wb") as f:
         f.write(content)
 
@@ -280,6 +434,7 @@ async def upload_receipt(
             "status": "AWAITING_CONFIRMATION",
             "clean_description": f"Compra {cpty}",
             "raw_text": notes or file.filename,
+            "source_receipt": safe_filename,
         }
 
     return {
