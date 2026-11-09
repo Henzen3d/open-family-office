@@ -612,8 +612,8 @@ export default function StitchExecutiveDashboard() {
           {/* Right Action Bar */}
           <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-xs font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-              <span>Motor 24/7 Ativo</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+              <span>Ambiente Privado</span>
             </div>
 
             <button className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-2xl text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm hover:border-slate-300 dark:hover:border-white/20 transition">
@@ -641,13 +641,6 @@ export default function StitchExecutiveDashboard() {
 
             <button
               onClick={() => setIsAssistantOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 hover:border-indigo-500/50 hover:bg-slate-50 dark:hover:bg-[#1f2738] rounded-2xl text-xs font-bold text-slate-900 dark:text-white shadow-sm transition"
-            >
-              <span>Mover Dinheiro</span>
-            </button>
-
-            <button
-              onClick={() => setIsAssistantOpen(true)}
               className="relative w-10 h-10 rounded-2xl bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 shadow-sm flex items-center justify-center text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition"
             >
               <Bell className="w-4 h-4" />
@@ -655,11 +648,6 @@ export default function StitchExecutiveDashboard() {
             </button>
           </div>
         </header>
-
-        {/* Real-time Macroeconomic & Financial API Feed Ticker (Sticky Top on Scroll) */}
-        <div className="sticky top-0 z-20 -mx-4 sm:-mx-8 px-4 sm:px-8 py-2.5 bg-[#F4F6FB]/90 dark:bg-[#0c1017]/90 backdrop-blur-md border-b border-slate-200/80 dark:border-white/5 mb-6 transition-all shadow-xs">
-          <MarketTicker onSelectAsset={(sym) => setSelectedAssetModal(sym)} />
-        </div>
 
         {/* Welcome Greeting & Action Pills */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
@@ -1180,14 +1168,12 @@ export default function StitchExecutiveDashboard() {
                   <span className="font-semibold text-slate-700 dark:text-slate-300">1. Fix Serviços MEI (Titular: Osmar)</span>
                   <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{meiOsmarPct}%</span>
                 </div>
-                {/* 32 Individual Capsule Pill Tracks (Orbix Style) - 23 of 32 filled (71.8%) */}
-                <div className="flex gap-1 h-3.5 w-full items-center my-1.5">
-                  {[...Array(23)].map((_, i) => (
-                    <span key={i} className="h-full flex-1 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-full shadow-[0_0_6px_rgba(99,102,241,0.5)]" />
-                  ))}
-                  {[...Array(9)].map((_, i) => (
-                    <span key={i} className="h-full flex-1 bg-slate-200 dark:bg-[#212a3d] rounded-full" />
-                  ))}
+                {/* Clean continuous progress bar */}
+                <div className="w-full bg-slate-100 dark:bg-[#121722] rounded-full h-2.5 overflow-hidden border border-slate-200/80 dark:border-white/10 my-2">
+                  <div
+                    className="h-full bg-indigo-600 dark:bg-indigo-500 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, Math.max(0, meiOsmarPct))}%` }}
+                  />
                 </div>
                 <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-mono">
                   <span>Emitido: {formatBRL(meiOsmarIssued)}</span>
@@ -1201,14 +1187,12 @@ export default function StitchExecutiveDashboard() {
                   <span className="font-semibold text-slate-700 dark:text-slate-300">2. Facilita Vistorias MEI (Titular: Vera)</span>
                   <span className="font-mono font-bold text-purple-600 dark:text-pink-400">{meiVeraPct}%</span>
                 </div>
-                {/* 32 Individual Capsule Pill Tracks (Orbix Style) - 17 of 32 filled (52.0%) */}
-                <div className="flex gap-1 h-3.5 w-full items-center my-1.5">
-                  {[...Array(17)].map((_, i) => (
-                    <span key={i} className="h-full flex-1 bg-gradient-to-t from-purple-600 to-pink-500 rounded-full shadow-[0_0_6px_rgba(219,39,119,0.5)]" />
-                  ))}
-                  {[...Array(15)].map((_, i) => (
-                    <span key={i} className="h-full flex-1 bg-slate-200 dark:bg-[#212a3d] rounded-full" />
-                  ))}
+                {/* Clean continuous progress bar */}
+                <div className="w-full bg-slate-100 dark:bg-[#121722] rounded-full h-2.5 overflow-hidden border border-slate-200/80 dark:border-white/10 my-2">
+                  <div
+                    className="h-full bg-indigo-600 dark:bg-indigo-500 rounded-full transition-all"
+                    style={{ width: `${Math.min(100, Math.max(0, meiVeraPct))}%` }}
+                  />
                 </div>
                 <div className="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-mono">
                   <span>Emitido: {formatBRL(meiVeraIssued)}</span>
@@ -1271,7 +1255,7 @@ export default function StitchExecutiveDashboard() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                      <span className="w-2 h-2 rounded-full bg-amber-500" />
                       <span>Aguardando Vera</span>
                     </div>
                   )}
