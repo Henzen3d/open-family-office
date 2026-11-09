@@ -669,39 +669,39 @@ export default function StitchExecutiveDashboard() {
           <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full text-xs">
             <button
               onClick={() => setIsStatementOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-2xl font-bold shadow-pill hover:bg-indigo-500 transition whitespace-nowrap"
+              className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] bg-indigo-600 text-white rounded-2xl font-bold shadow-pill hover:bg-indigo-500 transition whitespace-nowrap active:scale-95"
             >
-              <Upload className="w-3.5 h-3.5" />
+              <Upload className="w-4 h-4" />
               <span>Extrato OFX / CSV</span>
             </button>
             <button
               onClick={() => setIsReceiptOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
+              className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap active:scale-95"
             >
-              <Camera className="w-3.5 h-3.5 text-slate-400" />
+              <Camera className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
               <span>Escanear Cupom</span>
             </button>
             <button
               onClick={() => {
                 document.getElementById('quick-transfer-card')?.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
+              className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap active:scale-95"
             >
-              <Send className="w-3.5 h-3.5 text-slate-400" />
+              <Send className="w-4 h-4 text-slate-400" />
               <span>Enviar PIX</span>
             </button>
             <button
               onClick={() => setIsCobrançaOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
+              className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap active:scale-95"
             >
-              <ArrowDownLeft className="w-3.5 h-3.5 text-slate-400" />
+              <ArrowDownLeft className="w-4 h-4 text-slate-400" />
               <span>Cobrança</span>
             </button>
             <button
               onClick={() => setIsDasModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap"
+              className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap active:scale-95"
             >
-              <FileText className="w-3.5 h-3.5 text-slate-400" />
+              <FileText className="w-4 h-4 text-slate-400" />
               <span>Pagar DAS / Fatura</span>
             </button>
           </div>
@@ -1484,8 +1484,8 @@ export default function StitchExecutiveDashboard() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <div className="overflow-x-auto scrollbar-thin">
+                <table className="w-full min-w-[640px] text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-200/80 dark:border-white/10 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                       <th className="pb-3 pl-1">Data / Hora</th>
@@ -1782,7 +1782,8 @@ export default function StitchExecutiveDashboard() {
               </div>
               <button
                 onClick={() => setIsAssistantOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition"
+                aria-label="Fechar assistente"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1962,12 +1963,15 @@ export default function StitchExecutiveDashboard() {
                 </div>
               )}
 
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Destino:</span>
+              <div className="flex items-center gap-2 mb-2">
+                <label htmlFor="chat-entity-select" className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                  Destino:
+                </label>
                 <select
+                  id="chat-entity-select"
                   value={selectedEntityChat}
                   onChange={(e) => setSelectedEntityChat(e.target.value)}
-                  className="text-xs bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-200 rounded-lg px-2 py-1 outline-none"
+                  className="w-full text-xs min-h-[44px] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/30"
                 >
                   <option value="inter_cnpj">Inter CNPJ (Fix Serviços • Osmar)</option>
                   <option value="caixa_pj">Caixa PJ (Facilita Vistorias • Vera)</option>
@@ -1980,7 +1984,7 @@ export default function StitchExecutiveDashboard() {
                   e.preventDefault();
                   handleSendMessage();
                 }}
-                className="flex items-center gap-1.5"
+                className="flex items-center gap-2"
               >
                 <input
                   type="file"
@@ -1997,24 +2001,28 @@ export default function StitchExecutiveDashboard() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  title="Tirar foto ou anexar cupom"
-                  className="p-2.5 rounded-xl bg-white dark:bg-[#161c28] hover:bg-slate-100 dark:hover:bg-[#1f2738] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 transition"
+                  title="Tirar foto ou anexar cupom fiscal"
+                  aria-label="Tirar foto ou anexar cupom fiscal"
+                  className="min-w-[44px] min-h-[44px] rounded-xl bg-white dark:bg-[#161c28] hover:bg-slate-100 dark:hover:bg-[#1f2738] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 flex items-center justify-center transition active:scale-95 shadow-xs"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-5 h-5 text-indigo-500" />
                 </button>
 
                 <input
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Mensagem (ex: usei o inter cnpj, almoço R$ 45)..."
-                  className="flex-1 bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
+                  placeholder="Mensagem (ex: almoço R$ 45 no Inter)..."
+                  aria-label="Mensagem para o assistente"
+                  className="flex-1 min-h-[44px] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
                 />
 
                 <button
                   type="submit"
                   disabled={loadingChat || (!chatInput.trim() && !attachedFile)}
-                  className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white transition shadow-sm"
+                  title="Enviar mensagem"
+                  aria-label="Enviar mensagem"
+                  className="min-w-[44px] min-h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white flex items-center justify-center transition active:scale-95 shadow-sm"
                 >
                   <Send className="w-4 h-4" />
                 </button>
