@@ -88,4 +88,18 @@ ofodeploy*
 *.key
 *.pem
 
+# Frontend & Node
+node_modules/
+.next/
+web/.next/
+web/node_modules/
+
+# Impeccable
+.impeccable/captures/
+.impeccable/cache/
+.impeccable/questions/
+.impeccable/config.local.json
+.impeccable/*.cache
+
+
 
