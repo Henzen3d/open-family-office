@@ -260,7 +260,7 @@ export default function ReceiptScannerModal({ isOpen, onClose, onSuccess }: Rece
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Total</span>
+                    <span className="text-[11px] text-slate-400 uppercase tracking-wider block">Total</span>
                     <span className="text-lg font-mono font-extrabold text-indigo-600 dark:text-indigo-400">
                       R$ {extractedReceipt.total_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>

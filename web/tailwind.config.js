@@ -39,7 +39,7 @@ module.exports = {
       boxShadow: {
         card: '0 10px 30px -5px rgba(24, 39, 75, 0.05), 0 4px 12px -2px rgba(24, 39, 75, 0.02)',
         'card-dark': '0 12px 36px -4px rgba(0, 0, 0, 0.45), 0 4px 14px -2px rgba(0, 0, 0, 0.3)',
-        pill: '0 8px 24px -4px rgba(91, 103, 246, 0.45)',
+        pill: '0 4px 14px -2px rgba(0, 0, 0, 0.25)',
       },
     },
   },

@@ -279,7 +279,7 @@ export default function StatementModal({ isOpen, onClose, onSuccess }: Statement
                   <span className="text-xs font-extrabold text-slate-900 dark:text-white block mt-0.5">
                     {preview.new_count} novos{' '}
                     {preview.duplicates_detected > 0 && (
-                      <span className="text-amber-500 text-[10px]">({preview.duplicates_detected} dups)</span>
+                      <span className="text-amber-500 text-[11px]">({preview.duplicates_detected} dups)</span>
                     )}
                   </span>
                 </div>
@@ -316,7 +316,7 @@ export default function StatementModal({ isOpen, onClose, onSuccess }: Statement
                         <td className="py-2 px-3 font-mono text-[11px] text-slate-500">{tx.date}</td>
                         <td className="py-2 px-3">
                           <span className="font-semibold block truncate max-w-xs">{tx.clean_description}</span>
-                          <span className="text-[10px] text-slate-400 font-mono">FITID: {tx.fitid}</span>
+                          <span className="text-[11px] text-slate-400 font-mono">FITID: {tx.fitid}</span>
                         </td>
                         <td className="py-2 px-3 text-right font-mono font-bold">
                           <span className={tx.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}>
@@ -326,11 +326,11 @@ export default function StatementModal({ isOpen, onClose, onSuccess }: Statement
                         </td>
                         <td className="py-2 px-3 text-center">
                           {tx.is_duplicate ? (
-                            <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-semibold border border-amber-500/20">
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-semibold border border-amber-500/20">
                               Já no Razão
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold border border-emerald-500/20">
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold border border-emerald-500/20">
                               Novo
                             </span>
                           )}

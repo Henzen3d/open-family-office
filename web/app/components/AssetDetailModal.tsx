@@ -351,10 +351,10 @@ export default function AssetDetailModal({
                 </svg>
 
                 {/* Min and Max Reference Labels */}
-                <div className="absolute right-2 top-2 text-[10px] font-mono font-semibold text-slate-400">
+                <div className="absolute right-2 top-2 text-[11px] font-mono font-semibold text-slate-400">
                   Máx: {chartCoordinates.maxPrice.toLocaleString('pt-BR')}
                 </div>
-                <div className="absolute right-2 bottom-2 text-[10px] font-mono font-semibold text-slate-400">
+                <div className="absolute right-2 bottom-2 text-[11px] font-mono font-semibold text-slate-400">
                   Mín: {chartCoordinates.minPrice.toLocaleString('pt-BR')}
                 </div>
               </div>
@@ -372,28 +372,28 @@ export default function AssetDetailModal({
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#121722] border border-slate-200/80 dark:border-white/5">
-                <span className="text-[10px] uppercase font-semibold text-slate-400">Abertura</span>
+                <span className="text-[11px] uppercase font-semibold text-slate-400">Abertura</span>
                 <p className="text-xs font-bold font-mono text-slate-900 dark:text-white mt-1">
                   {data?.stats?.open?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '---'}
                 </p>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#121722] border border-slate-200/80 dark:border-white/5">
-                <span className="text-[10px] uppercase font-semibold text-slate-400">Fech. Anterior</span>
+                <span className="text-[11px] uppercase font-semibold text-slate-400">Fech. Anterior</span>
                 <p className="text-xs font-bold font-mono text-slate-900 dark:text-white mt-1">
                   {data?.stats?.prev_close?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '---'}
                 </p>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#121722] border border-slate-200/80 dark:border-white/5">
-                <span className="text-[10px] uppercase font-semibold text-slate-400">Mín - Máx (Período)</span>
+                <span className="text-[11px] uppercase font-semibold text-slate-400">Mín - Máx (Período)</span>
                 <p className="text-xs font-bold font-mono text-slate-900 dark:text-white mt-1">
                   {data?.stats?.day_low ? `${data.stats.day_low.toFixed(0)} - ${data.stats.day_high.toFixed(0)}` : '---'}
                 </p>
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#121722] border border-slate-200/80 dark:border-white/5">
-                <span className="text-[10px] uppercase font-semibold text-slate-400">Variação 1D</span>
+                <span className="text-[11px] uppercase font-semibold text-slate-400">Variação 1D</span>
                 <p
                   className={`text-xs font-bold font-mono mt-1 ${
                     (data?.stats?.var_1d ?? 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'
@@ -404,7 +404,7 @@ export default function AssetDetailModal({
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#121722] border border-slate-200/80 dark:border-white/5">
-                <span className="text-[10px] uppercase font-semibold text-slate-400">Variação YTD</span>
+                <span className="text-[11px] uppercase font-semibold text-slate-400">Variação YTD</span>
                 <p
                   className={`text-xs font-bold font-mono mt-1 ${
                     (data?.stats?.var_ytd ?? 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'
@@ -415,7 +415,7 @@ export default function AssetDetailModal({
               </div>
 
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#121722] border border-slate-200/80 dark:border-white/5">
-                <span className="text-[10px] uppercase font-semibold text-slate-400">Variação 1 Ano</span>
+                <span className="text-[11px] uppercase font-semibold text-slate-400">Variação 1 Ano</span>
                 <p
                   className={`text-xs font-bold font-mono mt-1 ${
                     (data?.stats?.var_1y ?? 0) >= 0 ? 'text-emerald-500' : 'text-rose-500'
