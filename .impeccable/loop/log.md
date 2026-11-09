@@ -160,3 +160,38 @@
 4. [x] **Chat com envio de cupom utilizável com uma mão em tela de 390px**: Botões e inputs posicionados na base com alvos de toque de 44px e acionamento direto de câmera nativa.
 5. [x] **Relatório final gerado**: Documentado em `.impeccable/loop/RELATORIO.md`.
 
+---
+
+## Atualização Pós-Loop — Redesign do Chat (Estilo ChatGPT / Meta AI) & Correção da Viewport Mobile
+
+### 1. Diagnóstico do Feedback do Usuário
+- **Problema 1 (Tamanho da Tipografia)**: O chat utilizava fontes de 14px a 15px com entrelinha compacta herdadas de tabelas de desktop, resultando em letras muito pequenas em telas de smartphone.
+- **Problema 2 (Aparência Rígida & Vazia)**: O chat apresentava layout clássico de formulário web (select box cinza ocupando linha inteira, botões quadrados, enorme vazio branco no centro da tela).
+- **Problema 3 (Imperfeições no Mobile)**: Barra de rolagem nativa de 6px aparecendo horizontalmente sob chips de contexto, cabeçalho sofrendo quebra em telas de 390px, e risco de sobreposição da barra de navegação móvel inferior.
+
+### 2. Ações Executadas
+
+1. **Tipografia de Alto Conforto (Padrão 16px)**:
+   - Todo o corpo de mensagens do usuário e do assistente passou para `text-[16px]` com entrelinha relaxada `leading-[1.6]` (25.6px).
+   - O campo de entrada do composer foi definido estritamente com `text-[16px]` para eliminar o zoom automático indesejado no iOS Safari.
+
+2. **Redesign Conversacional Inspirado em ChatGPT & Meta AI**:
+   - **Topo / Header**: Barra limpa e minimalista com orbe de gradiente de IA (`w-10 h-10`), badge de status `● Online`, subtítulo institucional e botão circular de fechar.
+   - **Adaptação Responsiva**: Modo tela cheia nativa em celulares (`inset-0 w-full h-[100dvh]`) com suporte a safe-area no rodapé (`pb-[max(1rem,env(safe-area-inset-bottom))]`); gaveta deslizante elegante em desktop.
+   - **Hero Acolhedor no Estado Inicial**: Saudação acolhedora ("Como posso ajudar hoje?") acompanhada por 4 cartões de sugestão interativos (Saldo Consolidado, Teto MEI 2026, Contas a Vencer em 7 Dias, Retiradas Isentas).
+   - **Balões Conversacionais Amigáveis**: Balões orgânicos `rounded-3xl` com cantos de ancoragem sutis (`rounded-br-md` para usuário, `rounded-tl-md` para assistente).
+   - **Avatar & Metadados do Assistente**: Cada resposta do assistente conta com avatar próprio, indicação de modelo/provedor, latência e botão de copiar mensagem com feedback visual animado.
+   - **Widget Interativo de Cupom Fiscal**: Cartão de conferência refinado com destaque para o valor principal (`text-2xl font-mono`), metadados tabulares e botões de ação confortáveis com altura mínima de 48px.
+   - **Seletor de Destino em Pílulas de 1 Toque**: Substituição do select nativo por 3 pílulas elegantes (`Inter PJ`, `Caixa PJ`, `Nubank PF`), permitindo alternância instantânea com um toque.
+   - **Composer em Cápsula Pílula (Meta AI Style)**: Cápsula arredondada `rounded-[28px]` abrigando o botão de câmera/anexo à esquerda, input sem bordas no centro e botão circular de envio com ícone `ArrowUp` à direita.
+
+3. **Correção da Viewport Mobile Geral**:
+   - Adicionada regra `.no-scrollbar` em `globals.css` (Webkit, Firefox e IE/Edge) eliminando a trilha cinza de rolagem sob chips horizontais.
+   - Padding inferior da viewport estendido para `pb-32 md:pb-8` para garantir margem de segurança acima da barra fixa de navegação móvel.
+   - Barra de filtros do livro razão com rolagem horizontal independente (`no-scrollbar`), impedindo quebras de linha em telas compactas.
+
+### 3. Validação Técnica
+- **Build de Produção**: `npm --prefix web run build` concluído com sucesso (código 0, páginas estáticas geradas).
+- **Suíte de Testes**: `python -m pytest` com 98/98 testes passando (100% verde).
+- **Commit Local**: `583ebf2` (`feat(ui): redesign mobile chat to ChatGPT/Meta AI style and fix mobile viewport`).
+
