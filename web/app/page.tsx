@@ -660,8 +660,8 @@ export default function StitchExecutiveDashboard() {
                 v1.0 • Privado
               </span>
             </div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">
-              Gestão Patrimonial Consolidada • 2 CNPJs MEI (Titularidades Separadas) + 1 Household PF • Air-Gapped Local
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium text-pretty">
+              Gestão Patrimonial Consolidada • 2 CNPJs MEI (Titularidades Separadas) + Finanças Familiares (PF) • Processamento Local e Privado
             </p>
           </div>
 
@@ -760,7 +760,7 @@ export default function StitchExecutiveDashboard() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-200">3 contas</span>
                     <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 font-medium border border-slate-200/60 dark:border-white/5">
-                      Segregação 100%
+                      Segregação Fiscal
                     </span>
                   </div>
                   <button
@@ -805,7 +805,7 @@ export default function StitchExecutiveDashboard() {
           <div className="lg:col-span-8 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card dark:shadow-card flex flex-col justify-between">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Visão Geral de Liquidez & Reservas</h3>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Visão Geral de Liquidez & Reservas</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {liquidityView === 'compare' && 'Evolução do Fluxo de Caixa Consolidado: 2026 vs. Histórico de 2025'}
                   {liquidityView === 'history' && 'Série Histórica Consolidada (2020 - 2026): R$ 907.352,00 Faturamento Real'}
@@ -1151,7 +1151,7 @@ export default function StitchExecutiveDashboard() {
           <div className="lg:col-span-4 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card dark:shadow-card flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Monitor de Teto MEI • LC 123/2006</h3>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Monitor de Teto MEI • LC 123/2006</h2>
                 <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-[#121722] border border-slate-200/60 dark:border-white/5 flex items-center justify-center text-slate-400">
                   <CreditCard className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                 </div>
@@ -1204,7 +1204,7 @@ export default function StitchExecutiveDashboard() {
             <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-xs">
               <span className="text-slate-500 dark:text-slate-400">Status LC 123/2006:</span>
               <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px]">
-                Segregação Conjugal Ativa • 100% Protegido
+                Segregação Conjugal Ativa • LC 123/2006
               </span>
             </div>
           </div>
@@ -1215,7 +1215,7 @@ export default function StitchExecutiveDashboard() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Fingerprint className="w-5 h-5 text-amber-500 dark:text-amber-400" />
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Governança Familiar</h3>
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white">Governança Familiar</h2>
                 </div>
                 {conjugalApproved ? (
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] border border-emerald-200 dark:border-emerald-500/30">
@@ -1227,8 +1227,8 @@ export default function StitchExecutiveDashboard() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                Distribuições acima de R$ 3.000 exigem validação mútua para blindar os CNPJs contra confusão patrimonial.
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 text-pretty">
+                Distribuições acima de R$ 3.000 exigem validação mútua para assegurar a separação entre contas PJ e finanças familiares.
               </p>
 
               {/* Pending Item Box */}
@@ -1289,7 +1289,7 @@ export default function StitchExecutiveDashboard() {
           <div id="quick-transfer-card" className="lg:col-span-4 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card dark:shadow-card flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Transferência Rápida</h3>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Transferência Rápida</h2>
                 <button onClick={() => setIsAssistantOpen(true)} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
                   Ver Todos
                 </button>
@@ -1418,8 +1418,8 @@ export default function StitchExecutiveDashboard() {
             <div>
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Livro Razão & Conciliação Fiscal Recente</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Conciliação bancária automática com chaves XML e recibos fiscais</p>
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white">Livro Razão & Conciliação Fiscal Recente</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Conciliação bancária com comprovantes e recibos fiscais</p>
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1657,7 +1657,7 @@ export default function StitchExecutiveDashboard() {
           <div className="lg:col-span-4 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card dark:shadow-card flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Movimentação Financeira</h3>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Movimentação Financeira</h2>
                 <button className="flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 bg-slate-100 dark:bg-[#1a2232] border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-200 dark:hover:bg-[#212a3d] text-slate-700 dark:text-slate-300 transition">
                   <span>Últimos 30 dias</span>
                   <ChevronRight className="w-3 h-3 text-slate-400 rotate-90" />
@@ -1706,7 +1706,7 @@ export default function StitchExecutiveDashboard() {
                 {/* Ago 2026: 14.551 (Peak) */}
                 <div title="Ago 2026: R$ 14.551,55" className="w-full bg-slate-200 dark:bg-[#1e2638] rounded-t-xl h-[100%] hover:bg-slate-300 dark:hover:bg-[#263148] transition cursor-pointer" />
                 {/* Set 2026: 9.987 (Active Highlighted) */}
-                <div title="Set 2026: R$ 9.987,00 (Último mês)" className="w-full bg-gradient-to-t from-indigo-600 via-indigo-500 to-indigo-400 rounded-t-xl h-[68%] shadow-[0_0_20px_rgba(99,102,241,0.55)] relative cursor-pointer">
+                <div title="Set 2026: R$ 9.987,00 (Último mês)" className="w-full bg-indigo-600 dark:bg-indigo-500 rounded-t-xl h-[68%] relative cursor-pointer">
                   <div className="w-2 h-2 rounded-full bg-white mx-auto mt-1 opacity-90 shadow-sm" />
                 </div>
                 {/* Out, Nov, Dez (Previsto) */}
@@ -1724,7 +1724,7 @@ export default function StitchExecutiveDashboard() {
                   <span className="font-bold text-slate-900 dark:text-white">OF-Copilot Fiscal</span>
                 </div>
                 <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 px-2 py-0.5 rounded-full">
-                  Teto MEI 100% OK
+                  Teto MEI Regular
                 </span>
               </div>
             </div>
