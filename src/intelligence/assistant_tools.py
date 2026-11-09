@@ -394,3 +394,97 @@ def extract_expense_proposal(text: str, default_entity: Optional[str] = None) ->
         "raw_text": clean_text,
     }
 
+
+def extract_correction_proposal(text: str, default_entity: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Detects a manual correction of a stored receipt's value and builds a
+    CORRECTION_CONFIRMATION card (Phase 8b).
+
+    Trigger examples:
+    - 'corrigi o valor do cupom: o certo é R$ 50,00'
+    - 'ta errado o valor, o correto e R$ 42,90'
+    - 'corrigir recibo para R$ 138,50'
+
+    Target: the receipt explicitly named by image filename stem or receipt id
+    when present in the text; otherwise the most recently stored receipt.
+    Confirmation of this card updates the receipt permanently and appends an
+    audit entry to data/governance/receipt_corrections.jsonl.
+    """
+    clean_text = text.strip()
+    clean_lower = clean_text.lower()
+
+    cues = [
+        "corrigi", "corrigir", "correção", "correcao", "correto", "corrigido",
+        "tá errado", "ta errado", "valor errado", "errado o valor", "errado no valor",
+        "o certo é", "o certo e", "ajustar o valor", "valor correto", "o valor certo",
+    ]
+    if not any(c in clean_lower for c in cues):
+        return None
+
+    amt_match = re.search(r"r\$\s*([\d\.]+,\d{2}|\d+,\d{2}|\d+\.\d{2}|\d+)", clean_lower)
+    if not amt_match:
+        amt_match = re.search(r"\b([\d\.]+,\d{2}|\d+,\d{2})\b", clean_lower)
+    if not amt_match:
+        return None
+    raw_amt = amt_match.group(1).replace(".", "").replace(",", ".")
+    try:
+        amount = float(raw_amt)
+    except ValueError:
+        return None
+    if amount <= 0:
+        return None
+
+    from src.controller.receipt_store import ReceiptStore
+
+    store = ReceiptStore()
+    receipts = store.load_receipts()
+    if not receipts:
+        return None
+
+    # Explicit target (image stem or receipt id), otherwise the newest receipt
+    ref_match = re.search(r"\b(\d{10}_{[A-Za-z0-9._]+}|rcp-[a-f0-9\-]+)\b", clean_text)
+    target = None
+    if ref_match:
+        token = ref_match.group(1)
+        target = next(
+            (r for r in receipts if r.id == token or Path(r.image_storage_path).stem == token),
+            None,
+        )
+    if target is None:
+        def _upload_ts(r) -> int:
+            m = re.match(r"(\d{10})", Path(r.image_storage_path).name)
+            return int(m.group(1)) if m else 0
+        target = max(receipts, key=_upload_ts)
+
+    old_total = float(target.total_amount)
+    stem = Path(target.image_storage_path).name.split(".")[0] or target.id
+
+    def _fmt(v: float) -> str:
+        return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    ent_map = {
+        "FIX_SERVICOS": "Fix Serviços MEI (Inter PJ)",
+        "FACILITA_VISTORIAS": "Facilita Vistorias MEI (Caixa PJ)",
+        "HOUSEHOLD_OSMAR": "Família (Nubank PF)",
+    }
+    merchant = target.merchant_name or "Recibo armazenado"
+
+    return {
+        "card_id": f"CARD-CORR-{int(time.time() * 1000)}",
+        "type": "CORRECTION_CONFIRMATION",
+        "amount": amount,
+        "formatted_amount": _fmt(amount),
+        "old_amount": old_total,
+        "formatted_old_amount": _fmt(old_total),
+        "receipt_ref": target.id,
+        "source_receipt": stem,
+        "date": target.issue_date.isoformat(),
+        "counterparty": merchant,
+        "category": "Correção Manual",
+        "entity_code": target.entity_code,
+        "entity_name": ent_map.get(target.entity_code, target.entity_code),
+        "account_name": "Auditoria de Correção",
+        "status": "AWAITING_CONFIRMATION",
+        "clean_description": f"Correção de valor: {merchant}",
+        "raw_text": clean_text,
+    }
+

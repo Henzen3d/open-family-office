@@ -231,6 +231,7 @@ class ConfirmCardRequest(BaseModel):
     account_name: str
     notes: Optional[str] = None
     corrects_receipt: Optional[str] = Field(default=None, description="Receipt id or image filename stem being corrected by this confirmation")
+    card_type: Optional[str] = Field(default=None, description="Card type: EXPENSE_CONFIRMATION or CORRECTION_CONFIRMATION")
 
 
 class ReceiptCorrectionRequest(BaseModel):
@@ -242,7 +243,35 @@ class ReceiptCorrectionRequest(BaseModel):
 @app.post("/api/ledger/confirm-card")
 @app.post("/ledger/confirm-card")
 async def confirm_ledger_card(request: ConfirmCardRequest):
-    """Commits an interactive confirmation card into the permanent ledger (Phase 8)."""
+    """Commits an interactive confirmation card into the permanent ledger (Phase 8).
+
+    Correction cards (CORRECTION_CONFIRMATION) do not mint a new ledger entry:
+    they apply the corrected amount to the stored receipt with a governance
+    audit trail, keeping books and receipts consistent.
+    """
+    if (
+        request.card_type == "CORRECTION_CONFIRMATION"
+        and request.corrects_receipt
+        and request.amount > 0
+    ):
+        result = await _apply_receipt_correction(
+            receipt_ref=request.corrects_receipt,
+            total_amount=abs(request.amount),
+            note=f"correção via chat card {request.card_id}",
+            source="manual_chat",
+        )
+        if result is not None:
+            result["status"] = "CORRECTED"
+            result["card_id"] = request.card_id
+            result["audit_file"] = str(DATA_DIR / "governance" / "receipt_corrections.jsonl")
+            return result
+        return {
+            "status": "RECEIPT_NOT_FOUND",
+            "card_id": request.card_id,
+            "corrects_receipt": request.corrects_receipt,
+            "message": "Recibo não encontrado; nada foi registrado.",
+        }
+
     ledger_mgr = get_ledger_manager()
     tx_id = f"TX-CARD-{int(time.time() * 1000)}"
     try:

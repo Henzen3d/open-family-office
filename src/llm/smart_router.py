@@ -33,6 +33,7 @@ from src.intelligence.assistant_tools import (
     get_withdrawals_summary,
     query_transactions,
     extract_expense_proposal,
+    extract_correction_proposal,
 )
 
 
@@ -242,6 +243,25 @@ class SmartRouter:
                 "intent": intent_decision.intent.value,
                 "provider": p_name,
                 "model": p_model,
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+            }
+
+        # Phase 8b: Manual receipt value correction (checked before expense
+        # intake — a correction message would otherwise mint a duplicate card)
+        correction_card = extract_correction_proposal(user_message, entity_context)
+        if correction_card:
+            reply = (
+                f"Detectei a correção: {correction_card['formatted_old_amount']} → "
+                f"{correction_card['formatted_amount']} ({correction_card['counterparty']}).\n"
+                "Confirme no cartão abaixo para atualizar o recibo e a trilha de auditoria."
+            )
+            return {
+                "reply": reply,
+                "intent": "correction_intake",
+                "confirmation_card": correction_card,
+                "provider": "Engine Local de Correções",
+                "model": "CorrectionParser-ASD",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
             }
