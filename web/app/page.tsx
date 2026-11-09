@@ -33,6 +33,10 @@ import {
   Wallet,
   Sliders,
   Building2,
+  ArrowUp,
+  Check,
+  Copy,
+  Bot,
 } from 'lucide-react';
 import SettingsModal from './components/SettingsModal';
 import MarketTicker from './components/MarketTicker';
@@ -199,6 +203,15 @@ export default function StitchExecutiveDashboard() {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyText = (id: string, text: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    }
+  };
 
   // Quick transfer state
   const [transferAmount, setTransferAmount] = useState('3.500,00');
@@ -545,7 +558,7 @@ export default function StitchExecutiveDashboard() {
       </aside>
 
       {/* 2. MAIN VIEWPORT (Offset by md:ml-20 so it never overlaps fixed sidebar) */}
-      <div className="flex-1 flex flex-col min-w-0 md:ml-20 pr-4 sm:pr-8 pl-4 sm:pl-6 py-5 pb-24 md:pb-8">
+      <div className="flex-1 flex flex-col min-w-0 md:ml-20 pr-4 sm:pr-8 pl-4 sm:pl-6 py-5 pb-32 md:pb-8 max-w-full overflow-x-hidden">
         {/* Top Header Bar */}
         <header className="w-full flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
           {/* Search Input with ⌘K */}
@@ -610,7 +623,7 @@ export default function StitchExecutiveDashboard() {
           </div>
 
           {/* Right Action Bar */}
-          <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
+          <div className="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-end">
             <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 rounded-xl text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400" />
               <span>Ambiente Privado</span>
@@ -666,7 +679,7 @@ export default function StitchExecutiveDashboard() {
           </div>
 
           {/* Quick Action Pill Group */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full text-xs">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full text-xs no-scrollbar">
             <button
               onClick={() => setIsStatementOpen(true)}
               className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] bg-indigo-600 text-white rounded-2xl font-bold shadow-pill hover:bg-indigo-500 transition whitespace-nowrap active:scale-95"
@@ -1432,7 +1445,7 @@ export default function StitchExecutiveDashboard() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  <div className="flex items-center gap-1 bg-slate-50 dark:bg-[#121722] p-1 rounded-xl border border-slate-200/60 dark:border-white/5 text-xs">
+                  <div className="flex items-center gap-1 bg-slate-50 dark:bg-[#121722] p-1 rounded-xl border border-slate-200/60 dark:border-white/5 text-xs overflow-x-auto no-scrollbar max-w-full">
                     <button
                       onClick={() => setLedgerFilter('all')}
                       className={`px-3 py-1 rounded-lg font-bold transition ${
@@ -1755,7 +1768,7 @@ export default function StitchExecutiveDashboard() {
         </button>
       </div>
 
-      {/* 7. SLIDE-OVER ASSISTANT & OCR CAPTURE DRAWER (Impeccable Decoupled Architecture) */}
+      {/* 7. CHATGPT & META AI-INSPIRED CONVERSATIONAL ASSISTANT */}
       <div
         className={`fixed inset-0 z-50 overflow-hidden transition-all duration-300 ${
           isAssistantOpen ? 'pointer-events-auto visible' : 'pointer-events-none invisible'
@@ -1764,281 +1777,440 @@ export default function StitchExecutiveDashboard() {
       >
         {/* Backdrop (Transitions opacity only; zero blur-lag) */}
         <div
-          className={`fixed inset-0 bg-slate-950/50 backdrop-blur-[2px] transition-opacity duration-300 ease-out ${
+          className={`fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300 ease-out ${
             isAssistantOpen ? 'opacity-100' : 'opacity-0'
           }`}
           onClick={() => setIsAssistantOpen(false)}
         />
 
-        {/* Drawer Panel (100% solid opacity at all times; glides on GPU with cubic-bezier(0.16,1,0.3,1)) */}
+        {/* Chat Panel: Fullscreen on mobile, slide-over drawer on desktop */}
         <div
-          className={`fixed inset-y-0 right-0 w-full sm:w-[560px] md:w-[620px] max-w-full h-full bg-white dark:bg-[#161c28] border-l border-slate-200 dark:border-white/10 shadow-[-12px_0_36px_rgba(0,0,0,0.18)] dark:shadow-[-12px_0_36px_rgba(0,0,0,0.55)] flex flex-col text-slate-900 dark:text-white transition-transform duration-320 will-change-transform z-10 ${
+          className={`fixed inset-0 sm:inset-y-0 sm:left-auto sm:right-0 w-full sm:w-[560px] md:w-[620px] max-w-full h-[100dvh] sm:h-full bg-white dark:bg-[#111724] border-l border-slate-200 dark:border-white/10 shadow-[-12px_0_40px_rgba(0,0,0,0.25)] flex flex-col text-slate-900 dark:text-white transition-transform duration-320 will-change-transform z-10 ${
             isAssistantOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
           style={{ transitionTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)' }}
           onClick={(e) => e.stopPropagation()}
         >
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50 dark:bg-[#121722]">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-500/20 flex items-center justify-center shrink-0">
-                  <Sliders className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Assistente Financeiro</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Conciliação fiscal e controle patrimonial</p>
-                </div>
+          {/* Header (ChatGPT / Meta AI clean top app bar) */}
+          <div className="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-white/95 dark:bg-[#111724]/95 backdrop-blur-md sticky top-0 z-20 shrink-0">
+            <div className="flex items-center gap-3">
+              {/* AI Avatar Orb */}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white leading-tight">
+                    Assistente OFO
+                  </h3>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Online
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  CFO Pessoal • Família e 2 MEIs
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setIsAssistantOpen(false)}
                 aria-label="Fechar assistente"
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition"
+                className="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition active:scale-95"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+          </div>
 
-            {/* Quick Context Chips inside Drawer (Crisp institutional icons, zero emoji slop) */}
-            <div className="px-4 py-2.5 border-b border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-[#161c28] flex gap-2 overflow-x-auto text-xs no-scrollbar">
+          {/* Messages Scroll View */}
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-6 overscroll-contain">
+            {/* If only welcome message, show friendly Meta AI / ChatGPT greeting & quick prompts */}
+            {messages.length <= 1 && (
+              <div className="py-6 sm:py-8 flex flex-col items-center text-center animate-message-in">
+                <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 mb-4">
+                  <Sparkles className="w-8 h-8" />
+                </div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Como posso ajudar hoje?
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mt-1.5 font-medium leading-relaxed">
+                  Consulte saldos consolidados, tetos fiscais MEI, fluxo de caixa ou envie uma foto de comprovante.
+                </p>
+
+                {/* Meta AI Quick Prompt Cards */}
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-6 text-left">
+                  <button
+                    onClick={() => handleSendMessage('Quanto temos disponível somando nossas três contas?')}
+                    className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 transition active:scale-[0.98] group"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Wallet className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">Saldo Consolidado</span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Total somado de Inter, Caixa e Nubank</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleSendMessage('Teto MEI')}
+                    className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 transition active:scale-[0.98] group"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <ShieldCheck className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">Teto MEI 2026</span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Faturamento Fix e Facilita vs R$ 81k</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleSendMessage('Quais contas vencem nos próximos sete dias?')}
+                    className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 transition active:scale-[0.98] group"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Calendar className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">Contas a Vencer</span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Próximos 7 dias de vencimento</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleSendMessage('Quanto já retiramos das empresas para a família este ano?')}
+                    className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 transition active:scale-[0.98] group"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <ArrowUpRight className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
+                      <span className="text-sm font-bold text-slate-900 dark:text-white">Retiradas Isentas</span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Distribuição de lucros PJ → PF</p>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Conversation Messages */}
+            {messages.map((msg) => {
+              if (messages.length <= 1 && msg.id === 'welcome') return null;
+
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex gap-3 animate-message-in ${
+                    msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {/* Assistant Avatar */}
+                  {msg.sender === 'assistant' && (
+                    <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/50 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-1 shadow-xs">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                  )}
+
+                  <div className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'} max-w-[90%] sm:max-w-[85%]`}>
+                    <div
+                      className={`rounded-3xl px-5 py-3.5 leading-relaxed text-[16px] ${
+                        msg.sender === 'user'
+                          ? 'bg-indigo-600 text-white rounded-br-md shadow-sm'
+                          : 'bg-slate-100 dark:bg-[#192132] border border-slate-200/70 dark:border-white/10 text-slate-900 dark:text-slate-100 rounded-tl-md shadow-xs'
+                      }`}
+                    >
+                      {msg.attachmentName && (
+                        <div className="mb-2.5 px-3 py-1.5 bg-black/15 rounded-xl text-xs flex items-center gap-2 font-mono text-white/90">
+                          <Camera className="w-4 h-4" />
+                          <span className="truncate">{msg.attachmentName}</span>
+                        </div>
+                      )}
+
+                      <p className="whitespace-pre-wrap leading-[1.6] text-[16px]">
+                        {msg.text}
+                      </p>
+
+                      {/* Phase 8: Interactive Expense Confirmation Card */}
+                      {msg.confirmationCard && (
+                        <div className="mt-3.5 p-4 bg-white dark:bg-[#121724] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm text-slate-900 dark:text-white animate-card-reveal">
+                          <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-white/10 mb-3">
+                            <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+                              <FileText className="w-4 h-4 text-indigo-500" />
+                              <span>Cupom Identificado</span>
+                            </div>
+                            {msg.confirmationCard.status === 'CONFIRMED' ? (
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Confirmado</span>
+                              </span>
+                            ) : msg.confirmationCard.status === 'DISCARDED' ? (
+                              <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 text-xs font-semibold">
+                                Descartado
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold text-xs border border-amber-200 dark:border-amber-500/30">
+                                Aguardando confirmação
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Hero Amount */}
+                          <div className="mb-3">
+                            <div className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
+                              {msg.confirmationCard.formatted_amount}
+                            </div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                              {msg.confirmationCard.date} • {msg.confirmationCard.counterparty}
+                            </div>
+                          </div>
+
+                          {/* 2x2 Metadata Grid */}
+                          <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 dark:bg-[#182030] rounded-xl border border-slate-100 dark:border-white/5 mb-3.5">
+                            <div>
+                              <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Categoria</span>
+                              <strong className="text-xs text-slate-900 dark:text-slate-100 font-semibold">{msg.confirmationCard.category}</strong>
+                            </div>
+                            <div>
+                              <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Origem</span>
+                              <strong className="text-xs text-slate-900 dark:text-slate-100 font-semibold">{msg.confirmationCard.entity_name}</strong>
+                            </div>
+                            <div className="col-span-2 pt-1.5 border-t border-slate-200/60 dark:border-white/5">
+                              <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Forma de Pagamento</span>
+                              <strong className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{msg.confirmationCard.account_name}</strong>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          {msg.confirmationCard.status === 'AWAITING_CONFIRMATION' && (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleConfirmCard(msg.confirmationCard!, msg.id)}
+                                className="flex-1 py-3 px-4 min-h-[48px] bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition active:scale-95"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Confirmar Lançamento</span>
+                              </button>
+                              <button
+                                onClick={() => handleDiscardCard(msg.id)}
+                                className="py-3 px-4 min-h-[48px] bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-semibold text-sm rounded-xl transition active:scale-95"
+                              >
+                                Descartar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Metadata & Copy Action Footer */}
+                    <div className="flex items-center gap-2.5 mt-1.5 px-2 text-xs text-slate-400 dark:text-slate-500">
+                      <span>{msg.timestamp}</span>
+                      {msg.sender === 'assistant' && (msg.model || msg.provider) && (
+                        <>
+                          <span>•</span>
+                          <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                            {msg.model || msg.provider}
+                          </span>
+                          {msg.latencyMs !== undefined && (
+                            <>
+                              <span>•</span>
+                              <span className="font-mono text-[11px]">{msg.latencyMs}ms</span>
+                            </>
+                          )}
+                        </>
+                      )}
+                      {msg.sender === 'assistant' && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(msg.id, msg.text)}
+                          title="Copiar resposta"
+                          className="hover:text-slate-700 dark:hover:text-white transition p-0.5 rounded ml-1"
+                        >
+                          {copiedId === msg.id ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Thinking / Loading Animation (ChatGPT / Meta AI style) */}
+            {loadingChat && (
+              <div className="flex items-start gap-3 animate-message-in">
+                <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/50 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-1">
+                  <Sparkles className="w-4 h-4 animate-spin" />
+                </div>
+                <div className="bg-slate-100 dark:bg-[#192132] border border-slate-200/70 dark:border-white/10 rounded-3xl rounded-tl-md px-4 py-3 flex items-center gap-2 text-slate-600 dark:text-slate-300 text-sm">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="ml-1 text-xs font-medium">Consultando Livro Razão...</span>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Quick Context Chips (when conversation has ongoing messages) */}
+          {messages.length > 1 && (
+            <div className="px-4 py-2 border-t border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-[#131926] flex gap-1.5 overflow-x-auto no-scrollbar shrink-0">
               <button
                 onClick={() => handleSendMessage('Quanto temos disponível somando nossas três contas?')}
-                className="px-3 py-1.5 min-h-[38px] rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium text-xs active:scale-95"
+                className="px-3 py-1.5 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-medium shrink-0 flex items-center gap-1.5 transition active:scale-95"
               >
-                <Wallet className="w-3.5 h-3.5 text-slate-400" />
-                <span>Saldos das Contas</span>
+                <Wallet className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Saldos</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Teto MEI')}
-                className="px-3 py-1.5 min-h-[38px] rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium text-xs active:scale-95"
+                className="px-3 py-1.5 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-medium shrink-0 flex items-center gap-1.5 transition active:scale-95"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                 <span>Teto MEI</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Quais contas vencem nos próximos sete dias?')}
-                className="px-3 py-1.5 min-h-[38px] rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium text-xs active:scale-95"
+                className="px-3 py-1.5 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-medium shrink-0 flex items-center gap-1.5 transition active:scale-95"
               >
-                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <Calendar className="w-3.5 h-3.5 text-amber-500" />
                 <span>Contas 7 Dias</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Runway Familiar')}
-                className="px-3 py-1.5 min-h-[38px] rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium text-xs active:scale-95"
+                className="px-3 py-1.5 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-medium shrink-0 flex items-center gap-1.5 transition active:scale-95"
               >
-                <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
-                <span>Runway Familiar</span>
+                <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Runway</span>
               </button>
               <button
                 onClick={() => handleSendMessage('Quanto já retiramos das empresas para a família este ano?')}
-                className="px-3 py-1.5 min-h-[38px] rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 transition shrink-0 flex items-center gap-1.5 font-medium text-xs active:scale-95"
+                className="px-3 py-1.5 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-medium shrink-0 flex items-center gap-1.5 transition active:scale-95"
               >
                 <ArrowUpRight className="w-3.5 h-3.5 text-slate-400" />
-                <span>Retiradas Isentas</span>
+                <span>Retiradas</span>
+              </button>
+            </div>
+          )}
+
+          {/* Bottom Composer Capsule Area (ChatGPT / Meta AI style) */}
+          <div className="p-3 sm:p-4 border-t border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#111724] shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {/* Destination Entity Quick Chips */}
+            <div className="flex items-center gap-1.5 px-1 mb-2.5 overflow-x-auto no-scrollbar">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider shrink-0 mr-1">
+                Lançar em:
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedEntityChat('inter_cnpj')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition active:scale-95 flex items-center gap-1.5 ${
+                  selectedEntityChat === 'inter_cnpj'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${selectedEntityChat === 'inter_cnpj' ? 'bg-white' : 'bg-amber-400'}`} />
+                <span>Inter PJ (Osmar)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedEntityChat('caixa_pj')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition active:scale-95 flex items-center gap-1.5 ${
+                  selectedEntityChat === 'caixa_pj'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${selectedEntityChat === 'caixa_pj' ? 'bg-white' : 'bg-purple-400'}`} />
+                <span>Caixa PJ (Vera)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedEntityChat('nubank_pf')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold shrink-0 transition active:scale-95 flex items-center gap-1.5 ${
+                  selectedEntityChat === 'nubank_pf'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${selectedEntityChat === 'nubank_pf' ? 'bg-white' : 'bg-blue-400'}`} />
+                <span>Nubank PF (Família)</span>
               </button>
             </div>
 
-            {/* Drawer Messages Scroll */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col animate-message-in ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
-                >
-                  <div
-                    className={`max-w-[92%] sm:max-w-[85%] rounded-2xl px-4 py-3 leading-relaxed ${
-                      msg.sender === 'user'
-                        ? 'bg-indigo-600 text-white rounded-br-none shadow-sm'
-                        : 'bg-white dark:bg-[#121722] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 rounded-bl-none shadow-sm'
-                    }`}
-                  >
-                    {msg.attachmentName && (
-                      <div className="mb-2 px-2.5 py-1.5 bg-black/10 dark:bg-black/30 rounded-lg text-xs flex items-center gap-1.5 font-mono">
-                        <Camera className="w-3.5 h-3.5" />
-                        <span>{msg.attachmentName}</span>
-                      </div>
-                    )}
-                    <p className="whitespace-pre-wrap text-[15px] sm:text-sm leading-relaxed">{msg.text}</p>
-
-                    {/* Phase 8: Interactive Expense Confirmation Card */}
-                    {msg.confirmationCard && (
-                      <div className="mt-3.5 p-4 bg-slate-50 dark:bg-[#182030] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm text-slate-900 dark:text-white animate-card-reveal">
-                        <div className="flex items-center justify-between pb-2.5 border-b border-slate-200 dark:border-white/10 mb-3">
-                          <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-                            <FileText className="w-4 h-4 text-indigo-500" />
-                            <span>Compra Identificada</span>
-                          </div>
-                          {msg.confirmationCard.status === 'CONFIRMED' ? (
-                            <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>Confirmado</span>
-                            </span>
-                          ) : msg.confirmationCard.status === 'DISCARDED' ? (
-                            <span className="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 text-xs font-semibold">
-                              Descartado
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 font-bold text-xs border border-amber-200 dark:border-amber-500/30">
-                              Aguardando confirmação
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Amount & Counterparty Hero */}
-                        <div className="mb-3">
-                          <div className="text-2xl sm:text-xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
-                            {msg.confirmationCard.formatted_amount}
-                          </div>
-                          <div className="text-sm sm:text-xs text-slate-600 dark:text-slate-400 font-medium mt-0.5">
-                            {msg.confirmationCard.date} • {msg.confirmationCard.counterparty}
-                          </div>
-                        </div>
-
-                        {/* 2x2 Metadata Grid */}
-                        <div className="grid grid-cols-2 gap-2.5 p-2.5 bg-white dark:bg-[#121722] rounded-xl border border-slate-200/60 dark:border-white/5 mb-3.5">
-                          <div>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Categoria</span>
-                            <strong className="text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-semibold">{msg.confirmationCard.category}</strong>
-                          </div>
-                          <div>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Origem</span>
-                            <strong className="text-sm sm:text-xs text-slate-900 dark:text-slate-100 font-semibold">{msg.confirmationCard.entity_name}</strong>
-                          </div>
-                          <div className="col-span-2 pt-2 border-t border-slate-100 dark:border-white/5">
-                            <span className="text-xs text-slate-500 dark:text-slate-400 block font-medium">Forma de Pagamento</span>
-                            <strong className="text-sm sm:text-xs text-indigo-600 dark:text-indigo-400 font-semibold">{msg.confirmationCard.account_name}</strong>
-                          </div>
-                        </div>
-
-                        {/* Action Buttons */}
-                        {msg.confirmationCard.status === 'AWAITING_CONFIRMATION' && (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleConfirmCard(msg.confirmationCard!, msg.id)}
-                              className="flex-1 py-3 px-4 min-h-[44px] bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm sm:text-xs rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition active:scale-95"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                              <span>Confirmar Lançamento</span>
-                            </button>
-                            <button
-                              onClick={() => handleDiscardCard(msg.id)}
-                              className="py-3 px-4 min-h-[44px] bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-semibold text-sm sm:text-xs rounded-xl transition active:scale-95"
-                            >
-                              Descartar
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {msg.sender === 'assistant' && (msg.model || msg.provider) && (
-                      <div className="mt-2.5 pt-2 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">{msg.model || msg.provider}</span>
-                          {msg.provider && msg.model && <span className="opacity-75">({msg.provider})</span>}
-                        </span>
-                        {msg.latencyMs !== undefined && (
-                          <span className="font-semibold opacity-80">{msg.latencyMs}ms</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-xs text-slate-400 dark:text-slate-500 mt-1 px-1 font-mono">{msg.timestamp}</span>
+            {/* Attached file chip */}
+            {attachedFile && (
+              <div className="mb-2 px-3.5 py-2 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl text-xs text-indigo-700 dark:text-indigo-300 flex items-center justify-between animate-card-reveal">
+                <div className="flex items-center gap-2 truncate">
+                  <Camera className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span className="truncate font-semibold">{attachedFile.name}</span>
                 </div>
-              ))}
-
-              {loadingChat && (
-                <div className="flex items-center gap-2 text-sm sm:text-xs text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-[#121722] p-3 rounded-xl border border-slate-200 dark:border-white/10 w-fit">
-                  <RefreshCw className="w-4 h-4 animate-spin text-indigo-500 dark:text-indigo-400" />
-                  <span>Consultando base contábil e processando...</span>
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* Drawer Input / OCR Dropzone Area */}
-            <div className="p-3 sm:p-4 border-t border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121722]">
-              {attachedFile && (
-                <div className="mb-2.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-xl text-xs text-indigo-700 dark:text-indigo-300 flex items-center justify-between">
-                  <div className="flex items-center gap-2 truncate">
-                    <Camera className="w-4 h-4 shrink-0" />
-                    <span className="truncate font-medium text-xs sm:text-xs">{attachedFile.name}</span>
-                  </div>
-                  <button
-                    onClick={() => setAttachedFile(null)}
-                    className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white ml-2 text-xs font-semibold py-1 px-2"
-                  >
-                    Remover
-                  </button>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 mb-2.5">
-                <label htmlFor="chat-entity-select" className="text-xs sm:text-xs text-slate-600 dark:text-slate-400 font-semibold whitespace-nowrap">
-                  Destino:
-                </label>
-                <select
-                  id="chat-entity-select"
-                  value={selectedEntityChat}
-                  onChange={(e) => setSelectedEntityChat(e.target.value)}
-                  className="w-full text-sm sm:text-xs min-h-[44px] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-slate-100 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/30"
-                >
-                  <option value="inter_cnpj">Inter CNPJ (Fix Serviços • Osmar)</option>
-                  <option value="caixa_pj">Caixa PJ (Facilita Vistorias • Vera)</option>
-                  <option value="nubank_pf">Nubank PF (Família • Casal)</option>
-                </select>
-              </div>
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendMessage();
-                }}
-                className="flex items-center gap-2"
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      setAttachedFile(e.target.files[0]);
-                    }
-                  }}
-                />
-
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Tirar foto ou anexar cupom fiscal"
-                  aria-label="Tirar foto ou anexar cupom fiscal"
-                  className="min-w-[48px] min-h-[48px] rounded-xl bg-white dark:bg-[#161c28] hover:bg-slate-100 dark:hover:bg-[#1f2738] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 flex items-center justify-center transition active:scale-95 shadow-xs shrink-0"
+                  onClick={() => setAttachedFile(null)}
+                  className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white ml-2 text-xs font-bold py-1 px-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition"
                 >
-                  <Camera className="w-5 h-5 text-indigo-500" />
+                  Remover
                 </button>
+              </div>
+            )}
 
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Mensagem (ex: almoço R$ 45 no Inter)..."
-                  aria-label="Mensagem para o assistente"
-                  className="flex-1 min-h-[48px] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-base sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
-                />
+            {/* Meta AI / ChatGPT Pill Bar */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="relative bg-slate-100 dark:bg-[#192132] border border-slate-200/80 dark:border-white/10 rounded-[28px] p-1.5 flex items-center gap-1.5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500/30 focus-within:border-indigo-500/50 transition"
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setAttachedFile(e.target.files[0]);
+                  }
+                }}
+              />
 
-                <button
-                  type="submit"
-                  disabled={loadingChat || (!chatInput.trim() && !attachedFile)}
-                  title="Enviar mensagem"
-                  aria-label="Enviar mensagem"
-                  className="min-w-[48px] min-h-[48px] rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white flex items-center justify-center transition active:scale-95 shadow-sm shrink-0"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </form>
-            </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="Tirar foto ou anexar cupom fiscal"
+                aria-label="Tirar foto ou anexar cupom fiscal"
+                className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200/70 dark:hover:bg-white/10 transition active:scale-95 shrink-0"
+              >
+                <Camera className="w-5 h-5" />
+              </button>
+
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Pergunte ou envie um cupom..."
+                aria-label="Mensagem para o assistente"
+                className="flex-1 bg-transparent border-0 outline-none px-2 py-2 text-[16px] text-slate-900 dark:text-white placeholder-slate-400 font-normal min-w-0"
+              />
+
+              <button
+                type="submit"
+                disabled={loadingChat || (!chatInput.trim() && !attachedFile)}
+                title="Enviar mensagem"
+                aria-label="Enviar mensagem"
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition active:scale-95 shrink-0 ${
+                  chatInput.trim() || attachedFile
+                    ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
+                    : 'bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                }`}
+              >
+                <ArrowUp className="w-5 h-5 stroke-[2.5]" />
+              </button>
+            </form>
           </div>
         </div>
+      </div>
 
       {/* 4. MOBILE BOTTOM NAVIGATION BAR (Fixed at bottom on mobile screens < md) */}
       <nav className="fixed bottom-0 inset-x-0 h-16 md:hidden z-40 bg-white/95 dark:bg-[#161c28]/95 backdrop-blur-md border-t border-slate-200 dark:border-white/10 flex items-center justify-around px-2 shadow-lg select-none">
