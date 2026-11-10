@@ -23,7 +23,26 @@ import {
   Sliders,
   Server,
   ArrowUpDown,
+  Wallet,
+  Building2,
+  Check,
+  Pencil,
+  DollarSign,
 } from 'lucide-react';
+
+export interface BankAccountItem {
+  id: string;
+  name: string;
+  bank_name: string;
+  entity_code: string;
+  holder: string;
+  purpose: string;
+  balance: number;
+  color: string;
+  active: boolean;
+  last_adjusted_at?: string;
+  notes?: string;
+}
 
 export interface ProviderItem {
   id: string;
@@ -51,6 +70,8 @@ interface SettingsModalProps {
   onThemeChange: (newTheme: 'dark' | 'light') => void;
   asdMode?: 'none' | 'asd_80' | 'asd_strict';
   onAsdModeChange?: (newMode: 'none' | 'asd_80' | 'asd_strict') => void;
+  initialTab?: 'providers' | 'accounts' | 'appearance' | 'limits' | 'governance';
+  onAccountsUpdated?: () => void;
 }
 
 export default function SettingsModal({
@@ -60,13 +81,178 @@ export default function SettingsModal({
   onThemeChange,
   asdMode,
   onAsdModeChange,
+  initialTab,
+  onAccountsUpdated,
 }: SettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<'providers' | 'appearance' | 'limits' | 'governance'>('providers');
+  const [activeTab, setActiveTab] = useState<'providers' | 'accounts' | 'appearance' | 'limits' | 'governance'>(
+    initialTab || 'providers'
+  );
   const [providers, setProviders] = useState<ProviderItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [importingNexus, setImportingNexus] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
   const [localAsdMode, setLocalAsdMode] = useState<'none' | 'asd_80' | 'asd_strict'>(asdMode || 'asd_80');
+
+  // Bank Accounts Management State
+  const [accounts, setAccounts] = useState<BankAccountItem[]>([]);
+  const [consolidatedTotal, setConsolidatedTotal] = useState<number>(0);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [adjustingAccountId, setAdjustingAccountId] = useState<string | null>(null);
+  const [newBalanceInput, setNewBalanceInput] = useState('');
+  const [balanceNoteInput, setBalanceNoteInput] = useState('');
+  const [isSavingAdjustment, setIsSavingAdjustment] = useState(false);
+  const [isAddingAccount, setIsAddingAccount] = useState(false);
+  const [savingAccount, setSavingAccount] = useState(false);
+  const [accountActionMsg, setAccountActionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [newAccountForm, setNewAccountForm] = useState({
+    name: '',
+    bank_name: 'Nubank',
+    entity_code: 'HOUSEHOLD_OSMAR',
+    holder: 'Casal (Osmar & Vera)',
+    purpose: '',
+    balance: '',
+    color: 'indigo',
+    notes: '',
+  });
+
+  const fetchAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      const res = await fetch('/api/py/accounts');
+      if (res.ok) {
+        const data = await res.json();
+        setAccounts(data.accounts || []);
+        setConsolidatedTotal(data.total_balance || 0);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar contas:', err);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
+      fetchAccounts();
+    }
+  }, [isOpen, initialTab]);
+
+  const handleStartAdjust = (acct: BankAccountItem) => {
+    setAdjustingAccountId(acct.id);
+    setNewBalanceInput(acct.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    setBalanceNoteInput('Conferido no app do banco');
+    setAccountActionMsg(null);
+  };
+
+  const handleSaveAdjustment = async (accountId: string) => {
+    try {
+      setIsSavingAdjustment(true);
+      setAccountActionMsg(null);
+      const cleanNum = parseFloat(newBalanceInput.replace(/\./g, '').replace(',', '.'));
+      if (isNaN(cleanNum)) {
+        setAccountActionMsg({ type: 'error', text: 'Informe um valor de saldo válido (ex: 357458,00)' });
+        return;
+      }
+
+      const res = await fetch('/api/py/accounts/adjust-balance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          account_id: accountId,
+          new_balance: cleanNum,
+          note: balanceNoteInput.trim() || 'Ajuste manual de saldo real',
+        }),
+      });
+
+      if (res.ok) {
+        setAdjustingAccountId(null);
+        setNewBalanceInput('');
+        setBalanceNoteInput('');
+        setAccountActionMsg({ type: 'success', text: 'Saldo atualizado com sucesso!' });
+        await fetchAccounts();
+        if (onAccountsUpdated) onAccountsUpdated();
+        setTimeout(() => setAccountActionMsg(null), 3500);
+      } else {
+        const err = await res.json();
+        setAccountActionMsg({ type: 'error', text: err.detail || 'Erro ao ajustar saldo.' });
+      }
+    } catch (err) {
+      setAccountActionMsg({ type: 'error', text: 'Falha de conexão com o servidor.' });
+    } finally {
+      setIsSavingAdjustment(false);
+    }
+  };
+
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAccountForm.name.trim()) {
+      setAccountActionMsg({ type: 'error', text: 'Preencha o nome da conta.' });
+      return;
+    }
+    try {
+      setSavingAccount(true);
+      setAccountActionMsg(null);
+      const cleanBalance = parseFloat(newAccountForm.balance.replace(/\./g, '').replace(',', '.')) || 0;
+      const res = await fetch('/api/py/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newAccountForm.name.trim(),
+          bank_name: newAccountForm.bank_name.trim(),
+          entity_code: newAccountForm.entity_code,
+          holder: newAccountForm.holder.trim(),
+          purpose: newAccountForm.purpose.trim(),
+          balance: cleanBalance,
+          color: newAccountForm.color,
+          notes: newAccountForm.notes.trim() || 'Cadastrada via configurações',
+        }),
+      });
+
+      if (res.ok) {
+        setIsAddingAccount(false);
+        setNewAccountForm({
+          name: '',
+          bank_name: 'Nubank',
+          entity_code: 'HOUSEHOLD_OSMAR',
+          holder: 'Casal (Osmar & Vera)',
+          purpose: '',
+          balance: '',
+          color: 'indigo',
+          notes: '',
+        });
+        setAccountActionMsg({ type: 'success', text: 'Nova conta bancária adicionada!' });
+        await fetchAccounts();
+        if (onAccountsUpdated) onAccountsUpdated();
+        setTimeout(() => setAccountActionMsg(null), 3500);
+      } else {
+        const err = await res.json();
+        setAccountActionMsg({ type: 'error', text: err.detail || 'Falha ao salvar conta.' });
+      }
+    } catch (err) {
+      setAccountActionMsg({ type: 'error', text: 'Falha de comunicação.' });
+    } finally {
+      setSavingAccount(false);
+    }
+  };
+
+  const handleDeleteAccount = async (acctId: string, acctName: string) => {
+    if (!confirm(`Deseja realmente remover a conta "${acctName}"?`)) return;
+    try {
+      const res = await fetch(`/api/py/accounts/${acctId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setAccountActionMsg({ type: 'success', text: `Conta "${acctName}" removida.` });
+        await fetchAccounts();
+        if (onAccountsUpdated) onAccountsUpdated();
+        setTimeout(() => setAccountActionMsg(null), 3500);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     if (asdMode) setLocalAsdMode(asdMode);
@@ -335,6 +521,18 @@ export default function SettingsModal({
         {/* Tab Navigation Pill Bar */}
         <div className="flex items-center gap-2 px-6 pt-3 pb-2 border-b border-slate-200 dark:border-white/10 overflow-x-auto no-scrollbar bg-white dark:bg-[#161c28]">
           <button
+            onClick={() => setActiveTab('accounts')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+              activeTab === 'accounts'
+                ? 'bg-indigo-600 text-white shadow-pill'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+            }`}
+          >
+            <Wallet className="w-4 h-4" />
+            Bancos & Saldos ({accounts.length})
+          </button>
+
+          <button
             onClick={() => setActiveTab('providers')}
             className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
               activeTab === 'providers'
@@ -344,6 +542,18 @@ export default function SettingsModal({
           >
             <Server className="w-4 h-4" />
             Provedores de IA ({providers.length})
+          </button>
+
+          <button
+            onClick={() => setActiveTab('governance')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
+              activeTab === 'governance'
+                ? 'bg-indigo-600 text-white shadow-pill'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            Governança & ASD
           </button>
 
           <button
@@ -369,22 +579,362 @@ export default function SettingsModal({
             <Layers className="w-4 h-4" />
             Limites & Fallback
           </button>
-
-          <button
-            onClick={() => setActiveTab('governance')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 ${
-              activeTab === 'governance'
-                ? 'bg-indigo-600 text-white shadow-pill'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            Governança MEI & Fiscal
-          </button>
         </div>
 
         {/* Modal Body / Tab Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+
+          {/* TAB: BANCOS & SALDOS REAIS */}
+          {activeTab === 'accounts' && (
+            <div className="space-y-5 animate-view-fade">
+              {/* Header Card with Consolidated Total and Action Button */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-slate-50 dark:from-[#131b2c] dark:via-[#161c28] dark:to-[#121622] border border-indigo-200/60 dark:border-indigo-500/20 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">
+                      Saldo Consolidado do Casal
+                    </span>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 dark:text-white mt-1">
+                    {consolidatedTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl leading-relaxed">
+                    Ajuste os valores reais diretamente pelo saldo em tela do app bancário. Não é necessário possuir comprovantes retroativos: o sistema utilizará esse saldo como novo marco zero para conciliação.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingAccount(!isAddingAccount);
+                      setAdjustingAccountId(null);
+                    }}
+                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-pill transition flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{isAddingAccount ? 'Cancelar' : 'Adicionar Banco / Conta'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={fetchAccounts}
+                    disabled={loadingAccounts}
+                    title="Recarregar saldos"
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingAccounts ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Status or Alert feedback message */}
+              {accountActionMsg && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 animate-card-reveal ${
+                    accountActionMsg.type === 'success'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                  }`}
+                >
+                  {accountActionMsg.type === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                  )}
+                  <span>{accountActionMsg.text}</span>
+                </div>
+              )}
+
+              {/* Form to Add New Bank Account */}
+              {isAddingAccount && (
+                <form
+                  onSubmit={handleCreateAccount}
+                  className="p-5 rounded-2xl bg-white dark:bg-[#192234] border-2 border-indigo-500/40 shadow-lg space-y-4 animate-card-reveal"
+                >
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-white/10">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">Cadastrar Nova Conta Bancária</h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingAccount(false)}
+                      className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xs"
+                    >
+                      ✕ Fechar
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        Instituição Financeira / Banco *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={newAccountForm.bank_name}
+                        onChange={(e) => setNewAccountForm({ ...newAccountForm, bank_name: e.target.value })}
+                        placeholder="Ex: Nubank, Banco Inter, Caixa, Itaú, Bradesco"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121724] text-xs font-medium focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        Nome da Conta / Identificação *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={newAccountForm.name}
+                        onChange={(e) => setNewAccountForm({ ...newAccountForm, name: e.target.value })}
+                        placeholder="Ex: Itaú Uniclass PF, Nubank PJ Facilita"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121724] text-xs font-medium focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        Titular da Conta *
+                      </label>
+                      <select
+                        value={newAccountForm.holder}
+                        onChange={(e) => setNewAccountForm({ ...newAccountForm, holder: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121724] text-xs font-medium focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="Osmar">Osmar</option>
+                        <option value="Vera">Vera</option>
+                        <option value="Casal (Osmar & Vera)">Casal (Osmar & Vera)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        Vínculo Fiscal / Entidade *
+                      </label>
+                      <select
+                        value={newAccountForm.entity_code}
+                        onChange={(e) => setNewAccountForm({ ...newAccountForm, entity_code: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121724] text-xs font-medium focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="HOUSEHOLD_OSMAR">Núcleo Familiar PF (Comunhão de Bens)</option>
+                        <option value="FIX_SERVICOS">Fix Serviços MEI (CNPJ Osmar)</option>
+                        <option value="FACILITA_VISTORIAS">Facilita Vistorias MEI (CNPJ Vera)</option>
+                        <option value="OTHER">Outra Entidade / Investimentos</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        Saldo Inicial Real (R$) *
+                      </label>
+                      <input
+                        type="text"
+                        value={newAccountForm.balance}
+                        onChange={(e) => setNewAccountForm({ ...newAccountForm, balance: e.target.value })}
+                        placeholder="Ex: 15.000,00"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121724] text-xs font-mono font-bold focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                        Finalidade / Propósito
+                      </label>
+                      <input
+                        type="text"
+                        value={newAccountForm.purpose}
+                        onChange={(e) => setNewAccountForm({ ...newAccountForm, purpose: e.target.value })}
+                        placeholder="Ex: Reserva de emergência, Giro MEI"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121724] text-xs font-medium focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingAccount(false)}
+                      className="px-3.5 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={savingAccount}
+                      className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-pill transition"
+                    >
+                      {savingAccount ? 'Salvando...' : 'Salvar Conta'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Accounts List */}
+              <div className="space-y-3">
+                {accounts.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 dark:bg-[#121722] rounded-2xl border border-slate-200 dark:border-white/10 text-slate-500 text-xs">
+                    Nenhuma conta cadastrada no momento.
+                  </div>
+                ) : (
+                  accounts.map((acct) => {
+                    const isAdjusting = adjustingAccountId === acct.id;
+                    return (
+                      <div
+                        key={acct.id}
+                        className="p-4 rounded-2xl bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 shadow-xs transition hover:border-indigo-500/40"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <span
+                              className={`w-3 h-3 rounded-full mt-1 shrink-0 ${
+                                acct.color === 'amber'
+                                  ? 'bg-amber-500'
+                                  : acct.color === 'rose'
+                                  ? 'bg-rose-500'
+                                  : acct.color === 'emerald'
+                                  ? 'bg-emerald-500'
+                                  : acct.color === 'purple'
+                                  ? 'bg-purple-500'
+                                  : 'bg-indigo-500'
+                              }`}
+                            />
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-bold text-slate-900 dark:text-white">{acct.name}</span>
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                                  {acct.bank_name}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/50 dark:border-indigo-800/40">
+                                  {acct.entity_code === 'HOUSEHOLD_OSMAR'
+                                    ? 'Família PF'
+                                    : acct.entity_code === 'FIX_SERVICOS'
+                                    ? 'Fix MEI'
+                                    : acct.entity_code === 'FACILITA_VISTORIAS'
+                                    ? 'Facilita MEI'
+                                    : 'Outra'}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                Titular: <strong className="text-slate-800 dark:text-slate-200">{acct.holder}</strong>
+                                {acct.purpose && <span> • {acct.purpose}</span>}
+                              </div>
+                              {acct.last_adjusted_at && (
+                                <div className="text-[11px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                                  Último ajuste: {new Date(acct.last_adjusted_at).toLocaleDateString('pt-BR')} às{' '}
+                                  {new Date(acct.last_adjusted_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  {acct.notes ? ` (${acct.notes})` : ''}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex sm:flex-col items-end justify-between sm:justify-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-white/5">
+                            <div className="text-right">
+                              <span className="text-[11px] uppercase tracking-wider text-slate-400 font-medium block">
+                                Saldo Atual
+                              </span>
+                              <span className="font-mono text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tabular-nums">
+                                {acct.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => (isAdjusting ? setAdjustingAccountId(null) : handleStartAdjust(acct))}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 border transition ${
+                                  isAdjusting
+                                    ? 'bg-slate-200 dark:bg-white/10 text-slate-800 dark:text-white border-transparent'
+                                    : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-500/30 hover:bg-indigo-100'
+                                }`}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span>{isAdjusting ? 'Fechar' : 'Ajustar Saldo'}</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAccount(acct.id, acct.name)}
+                                title="Remover conta"
+                                className="w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Inline Balance Adjustment Box */}
+                        {isAdjusting && (
+                          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-[#121724] p-3.5 rounded-xl space-y-3 animate-card-reveal">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                Corrigir Saldo de {acct.name}
+                              </span>
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                Digite o valor real conforme o aplicativo do banco
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                              <div className="sm:col-span-5">
+                                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                                  Novo Saldo Real (R$) *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={newBalanceInput}
+                                  onChange={(e) => setNewBalanceInput(e.target.value)}
+                                  placeholder="0,00"
+                                  autoFocus
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-white/20 bg-white dark:bg-[#182030] text-sm font-mono font-bold focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-white"
+                                />
+                              </div>
+
+                              <div className="sm:col-span-7">
+                                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+                                  Motivo / Observação
+                                </label>
+                                <input
+                                  type="text"
+                                  value={balanceNoteInput}
+                                  onChange={(e) => setBalanceNoteInput(e.target.value)}
+                                  placeholder="Ex: Conferido no app hoje"
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-white/20 bg-white dark:bg-[#182030] text-xs font-medium focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-white"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setAdjustingAccountId(null)}
+                                className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                              >
+                                Cancelar
+                              </button>
+                              <button
+                                type="button"
+                                disabled={isSavingAdjustment}
+                                onClick={() => handleSaveAdjustment(acct.id)}
+                                className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>{isSavingAdjustment ? 'Salvando...' : 'Confirmar Novo Saldo'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
 
           {/* TAB 1: PROVEDORES DE IA */}
           {activeTab === 'providers' && (

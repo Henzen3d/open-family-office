@@ -27,6 +27,7 @@ from src.llm.rate_limiter import ProviderLimits
 from src.llm.smart_router import SmartRouter
 from src.controller.ofx_parser import BankStatementParser, ParsedStatement, ParsedBankTransaction
 from src.controller.ledger_manager import LedgerManager
+from src.controller.account_manager import AccountManager, BankAccount
 from src.intelligence.market_feed import MarketFeedService
 from src.controller.receipt_store import ReceiptStore
 from src.models.receipts import Receipt, ReceiptItem
@@ -950,6 +951,95 @@ async def update_general_settings(payload: GeneralSettingsPayload):
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(current, f, indent=2, ensure_ascii=False)
     return {"status": "success", "settings": current}
+
+
+# ==============================================================================
+# BANK ACCOUNTS & FLEXIBLE BALANCE CORRECTION ENDPOINTS
+# ==============================================================================
+
+class BankAccountPayload(BaseModel):
+    id: Optional[str] = None
+    name: str
+    bank_name: Optional[str] = None
+    entity_code: str = "HOUSEHOLD_OSMAR"
+    holder: Optional[str] = "Osmar & Vera"
+    purpose: Optional[str] = "Conta Geral"
+    balance: float = 0.0
+    account_type: str = "CHECKING"
+    color: str = "indigo"
+    active: bool = True
+    notes: Optional[str] = None
+
+
+class BalanceAdjustmentPayload(BaseModel):
+    account_id: str
+    new_balance: float
+    note: Optional[str] = None
+    source: str = "manual_ui"
+
+
+def get_account_manager() -> AccountManager:
+    return AccountManager(str(DATA_DIR))
+
+
+@app.get("/api/accounts")
+@app.get("/accounts")
+async def list_accounts():
+    """Lists all configured bank accounts with real adjusted balances and consolidated total."""
+    mgr = get_account_manager()
+    return mgr.get_consolidated_balances()
+
+
+@app.post("/api/accounts")
+@app.post("/accounts")
+async def create_or_update_account(payload: BankAccountPayload):
+    """Creates a new bank account or updates existing account configuration."""
+    mgr = get_account_manager()
+    acct_id = payload.id.strip() if payload.id and payload.id.strip() else payload.name.lower().replace(" ", "_")
+    acct_id = "".join(c for c in acct_id if c.isalnum() or c in ("-", "_"))
+
+    acct = BankAccount(
+        id=acct_id,
+        name=payload.name,
+        bank_name=payload.bank_name or payload.name,
+        entity_code=payload.entity_code,
+        holder=payload.holder or "Osmar & Vera",
+        purpose=payload.purpose or "Conta Geral",
+        balance=float(payload.balance),
+        account_type=payload.account_type,
+        color=payload.color,
+        active=payload.active,
+        notes=payload.notes,
+    )
+    saved = mgr.add_or_update_account(acct)
+    return {"status": "success", "account": saved.to_dict(), "balances": mgr.get_consolidated_balances()}
+
+
+@app.post("/api/accounts/adjust-balance")
+@app.post("/accounts/adjust-balance")
+async def adjust_account_balance(payload: BalanceAdjustmentPayload):
+    """Directly sets and corrects the balance of an account without requiring past receipts."""
+    mgr = get_account_manager()
+    adjusted = mgr.adjust_balance(
+        account_id=payload.account_id,
+        new_balance=payload.new_balance,
+        note=payload.note,
+        source=payload.source,
+    )
+    if not adjusted:
+        raise HTTPException(status_code=404, detail=f"Conta bancária '{payload.account_id}' não encontrada.")
+    return {"status": "success", "account": adjusted.to_dict(), "balances": mgr.get_consolidated_balances()}
+
+
+@app.delete("/api/accounts/{account_id}")
+@app.delete("/accounts/{account_id}")
+async def delete_account_endpoint(account_id: str):
+    """Deletes an account."""
+    mgr = get_account_manager()
+    success = mgr.delete_account(account_id)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Conta '{account_id}' não encontrada.")
+    return {"status": "success", "deleted_id": account_id, "balances": mgr.get_consolidated_balances()}
 
 
 # ==============================================================================

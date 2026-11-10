@@ -28,48 +28,52 @@ HISTORY_JSON = DATA_DIR / "ledger" / "history_consolidation.json"
 
 
 def get_account_balances() -> Dict[str, Any]:
-    """Returns exact current balances across the three segregated entities."""
-    # Official baseline position reconciled with 1,149 transactions
-    nubank_pf = 357458.00
-    inter_pj = 100332.34
-    caixa_pj = 50331.02
-    total = nubank_pf + inter_pj + caixa_pj
+    """Returns exact current balances across configured bank accounts."""
+    try:
+        from src.controller.account_manager import AccountManager
+        mgr = AccountManager(str(DATA_DIR))
+        return mgr.get_consolidated_balances()
+    except Exception:
+        nubank_pf = 357458.00
+        inter_pj = 100332.34
+        caixa_pj = 50331.02
+        total = nubank_pf + inter_pj + caixa_pj
 
-    return {
-        "total_cash": total,
-        "formatted_total": f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-        "accounts": [
-            {
-                "id": "nubank_pf",
-                "name": "Nubank Ultravioleta PF",
-                "entity_code": "HOUSEHOLD_OSMAR",
-                "holder": "Casal (Osmar & Vera)",
-                "purpose": "Reserva Familiar & Gastos Domésticos",
-                "balance": nubank_pf,
-                "formatted_balance": f"R$ {nubank_pf:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-            },
-            {
-                "id": "inter_pj",
-                "name": "Banco Inter PJ",
-                "entity_code": "FIX_SERVICOS",
-                "holder": "Fix Serviços e Reparos MEI (Osmar)",
-                "purpose": "Operacional MEI Prestação de Serviços",
-                "balance": inter_pj,
-                "formatted_balance": f"R$ {inter_pj:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-            },
-            {
-                "id": "caixa_pj",
-                "name": "Caixa Econômica PJ",
-                "entity_code": "FACILITA_VISTORIAS",
-                "holder": "Facilita Vistorias MEI (Vera)",
-                "purpose": "Operacional MEI Vistorias Imobiliárias",
-                "balance": caixa_pj,
-                "formatted_balance": f"R$ {caixa_pj:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
-            },
-        ],
-        "segregation_status": "100% Segregado • Blindagem LC 123/2006 Ativa",
-        "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
-    }
+        return {
+            "total_cash": total,
+            "formatted_total": f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            "accounts": [
+                {
+                    "id": "nubank_pf",
+                    "name": "Nubank Ultravioleta PF",
+                    "entity_code": "HOUSEHOLD_OSMAR",
+                    "holder": "Casal (Osmar & Vera)",
+                    "purpose": "Reserva Familiar & Gastos Domésticos",
+                    "balance": nubank_pf,
+                    "formatted_balance": f"R$ {nubank_pf:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                },
+                {
+                    "id": "inter_pj",
+                    "name": "Banco Inter PJ",
+                    "entity_code": "FIX_SERVICOS",
+                    "holder": "Fix Serviços e Reparos MEI (Osmar)",
+                    "purpose": "Operacional MEI Prestação de Serviços",
+                    "balance": inter_pj,
+                    "formatted_balance": f"R$ {inter_pj:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                },
+                {
+                    "id": "caixa_pj",
+                    "name": "Caixa Econômica PJ",
+                    "entity_code": "FACILITA_VISTORIAS",
+                    "holder": "Facilita Vistorias MEI (Vera)",
+                    "purpose": "Operacional MEI Vistorias Imobiliárias",
+                    "balance": caixa_pj,
+                    "formatted_balance": f"R$ {caixa_pj:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                },
+            ],
+            "segregation_status": "100% Segregado • Blindagem LC 123/2006 Ativa",
+            "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
 
 
 def get_tax_limit_status() -> Dict[str, Any]:

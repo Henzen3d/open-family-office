@@ -171,14 +171,22 @@ class SmartRouter:
             ibov_val, ibov_pct, sp500_val, nasdaq_val = 168498.0, 1.39, 7376.0, 24579.0
 
         # 2. Financial ledger & real consolidated history
-        fix_cash = 100332.34
-        fix_revenue = 100332.34
-        facilita_cash = 50331.02
-        facilita_revenue = 42132.34
-        pf_cash = 357458.00
-        total_cash = 508121.36
+        try:
+            from src.intelligence.assistant_tools import get_account_balances
+            acct_data = get_account_balances()
+            total_cash = acct_data.get("total_cash", 508121.36)
+            acct_map = {a["id"]: a["balance"] for a in acct_data.get("accounts", [])}
+            pf_cash = acct_map.get("nubank_pf", 357458.00)
+            fix_cash = acct_map.get("inter_pj", 100332.34)
+            facilita_cash = acct_map.get("caixa_pj", 50331.02)
+        except Exception:
+            fix_cash = 100332.34
+            facilita_cash = 50331.02
+            pf_cash = 357458.00
+            total_cash = 508121.36
         historical_total_rev = 915510.50
         historical_tx_count = 1149
+        fix_revenue = 100332.34
 
         try:
             summary_path = Path("data/ledger/history_consolidation.json")
@@ -462,13 +470,11 @@ class SmartRouter:
         ]):
             balances = get_account_balances()
             tot = balances["formatted_total"]
-            reply = (
-                f"Saldo total consolidado: {tot}.\n"
-                f"- Nubank PF (Família): {balances['accounts'][0]['formatted_balance']}\n"
-                f"- Banco Inter PJ (Fix Serviços): {balances['accounts'][1]['formatted_balance']}\n"
-                f"- Caixa PJ (Facilita Vistorias): {balances['accounts'][2]['formatted_balance']}\n"
-                "Segregação 100% blindada sob a LC 123/2006. Sem risco de confusão patrimonial."
-            )
+            lines = [f"Saldo total consolidado: {tot}."]
+            for a in balances.get("accounts", []):
+                lines.append(f"- {a['name']}: {a['formatted_balance']}")
+            lines.append("Segregação 100% blindada sob a LC 123/2006. Sem risco de confusão patrimonial.")
+            reply = "\n".join(lines)
             return {
                 "reply": reply,
                 "intent": "financial_ops",

@@ -84,3 +84,47 @@ def test_chat_asd_mode_dynamic_and_override(client):
     assert res_strict.json().get("asd_mode") == "asd_strict"
 
 
+def test_accounts_crud_and_balance_adjustment(client):
+    # 1. List accounts
+    res = client.get("/api/accounts")
+    assert res.status_code == 200
+    data = res.json()
+    assert "accounts" in data
+    assert "total_cash" in data
+    assert len(data["accounts"]) >= 3
+
+    # 2. Adjust balance directly
+    adj_res = client.post(
+        "/api/accounts/adjust-balance",
+        json={"account_id": "inter_pj", "new_balance": 12500.50, "note": "Ajuste manual real do banco Inter"},
+    )
+    assert adj_res.status_code == 200
+    adj_data = adj_res.json()
+    assert adj_data["account"]["balance"] == 12500.50
+    assert "R$ 12.500,50" in adj_data["account"]["formatted_balance"]
+
+    # 3. Add a new bank account
+    add_res = client.post(
+        "/api/accounts",
+        json={
+            "id": "itau_pf",
+            "name": "Itaú Personnalité",
+            "bank_name": "Itaú",
+            "entity_code": "HOUSEHOLD_OSMAR",
+            "holder": "Osmar",
+            "purpose": "Investimentos",
+            "balance": 25000.00,
+            "color": "amber",
+        },
+    )
+    assert add_res.status_code == 200
+    add_data = add_res.json()
+    assert add_data["account"]["id"] == "itau_pf"
+    assert add_data["account"]["balance"] == 25000.00
+
+    # 4. Clean up added account and restore inter_pj balance
+    del_res = client.delete("/api/accounts/itau_pf")
+    assert del_res.status_code == 200
+    client.post("/api/accounts/adjust-balance", json={"account_id": "inter_pj", "new_balance": 100332.34})
+
+

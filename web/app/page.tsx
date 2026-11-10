@@ -38,8 +38,9 @@ import {
   Check,
   Copy,
   Bot,
+  Paperclip,
 } from 'lucide-react';
-import SettingsModal from './components/SettingsModal';
+import SettingsModal, { BankAccountItem } from './components/SettingsModal';
 import MarketTicker from './components/MarketTicker';
 import StatementModal from './components/StatementModal';
 import ReceiptScannerModal from './components/ReceiptScannerModal';
@@ -120,15 +121,75 @@ function buildSmoothSpline(pts: [number, number][]): string {
   return d;
 }
 
+const DEFAULT_ACCOUNTS: BankAccountItem[] = [
+  {
+    id: 'nubank_pf',
+    name: 'Nubank UV (PF)',
+    bank_name: 'Nubank',
+    entity_code: 'HOUSEHOLD_OSMAR',
+    holder: 'Família • Casal',
+    purpose: 'Reserva Familiar & Gastos Pessoais',
+    balance: 357458.0,
+    color: 'indigo',
+    active: true,
+  },
+  {
+    id: 'inter_cnpj',
+    name: 'Inter PJ (Fix Serviços)',
+    bank_name: 'Banco Inter',
+    entity_code: 'FIX_SERVICOS',
+    holder: 'Titular: Osmar',
+    purpose: 'Operação Fix Serviços MEI',
+    balance: 100332.34,
+    color: 'amber',
+    active: true,
+  },
+  {
+    id: 'caixa_pj',
+    name: 'Caixa PJ (Facilita Vist.)',
+    bank_name: 'Caixa Econômica',
+    entity_code: 'FACILITA_VISTORIAS',
+    holder: 'Titular: Vera',
+    purpose: 'Operação Facilita Vistorias MEI',
+    balance: 50331.02,
+    color: 'rose',
+    active: true,
+  },
+];
+
 export default function StitchExecutiveDashboard() {
   const [activeTab, setActiveTab] = useState<'all' | 'fix' | 'facilita' | 'pf'>('all');
   const [ledgerFilter, setLedgerFilter] = useState<'all' | 'inter' | 'caixa' | 'nubank'>('all');
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'providers' | 'accounts' | 'appearance' | 'limits' | 'governance'>('accounts');
+  const [accounts, setAccounts] = useState<BankAccountItem[]>(DEFAULT_ACCOUNTS);
+  const [totalAccountsBalance, setTotalAccountsBalance] = useState<number>(508121.36);
   const [isStatementOpen, setIsStatementOpen] = useState(false);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [ledgerTransactions, setLedgerTransactions] = useState<any[]>([]);
   const [historySummary, setHistorySummary] = useState<any>(null);
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetch('/api/py/accounts');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.accounts && Array.isArray(data.accounts)) {
+          setAccounts(data.accounts);
+          if (typeof data.total_balance === 'number') {
+            setTotalAccountsBalance(data.total_balance);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Falha ao sincronizar contas bancárias:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
 
   // Real consolidated history data (2020-2026) extracted from Gestão e Controle Financeiro 2024.xls
   const totalCumulativeProfit = historySummary?.net_profit ?? 508121.36;
@@ -208,6 +269,7 @@ export default function StitchExecutiveDashboard() {
   const [chatAsdMode, setChatAsdMode] = useState<'none' | 'asd_80' | 'asd_strict'>('asd_80');
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -761,6 +823,16 @@ export default function StitchExecutiveDashboard() {
           {/* Quick Action Pill Group */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full text-xs no-scrollbar">
             <button
+              onClick={() => {
+                setSettingsTab('accounts');
+                setIsSettingsOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap active:scale-95"
+            >
+              <Wallet className="w-4 h-4 text-emerald-500" />
+              <span>Bancos & Saldos</span>
+            </button>
+            <button
               onClick={() => setIsStatementOpen(true)}
               className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] bg-indigo-600 text-white rounded-2xl font-bold shadow-pill hover:bg-indigo-500 transition whitespace-nowrap active:scale-95"
             >
@@ -805,85 +877,95 @@ export default function StitchExecutiveDashboard() {
           {/* LEFT CARD: Stacked Entity Wallets (Orbix Studio Pocket Wallet) */}
           <div className="lg:col-span-4 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card dark:shadow-card flex flex-col justify-between relative overflow-hidden">
             <div>
-              {/* Entity Accounts List - Dignified, Accessible, High Contrast */}
+              {/* Header with Title and "Ajustar Saldos / Bancos" button */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white">Bancos & Contas Ativas</h2>
+                </div>
+                <button
+                  onClick={() => {
+                    setSettingsTab('accounts');
+                    setIsSettingsOpen(true);
+                  }}
+                  className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                  title="Configurar bancos e ajustar saldos reais"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Ajustar / Bancos</span>
+                </button>
+              </div>
+
+              {/* Entity Accounts List - Dynamically rendered from accounts state */}
               <div className="divide-y divide-slate-100 dark:divide-white/5">
-                {/* Account 1: Nubank PF */}
-                <div
-                  onClick={() => {
-                    setLedgerFilter('nubank');
-                    document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  title="Filtrar lançamentos da Conta Familiar Nubank PF"
-                  className="w-full px-3 py-2.5 rounded-xl flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/[0.04] transition cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white block">Nubank UV (PF)</span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">Família • Casal</span>
+                {accounts.map((acct) => (
+                  <div
+                    key={acct.id}
+                    onClick={() => {
+                      if (acct.id.includes('inter')) setLedgerFilter('inter');
+                      else if (acct.id.includes('caixa')) setLedgerFilter('caixa');
+                      else if (acct.id.includes('nubank')) setLedgerFilter('nubank');
+                      else setLedgerFilter('all');
+                      document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    title={`Filtrar lançamentos de ${acct.name}`}
+                    className="w-full px-3 py-2.5 rounded-xl flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/[0.04] transition cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          acct.color === 'indigo'
+                            ? 'bg-indigo-500'
+                            : acct.color === 'amber'
+                            ? 'bg-amber-500'
+                            : acct.color === 'purple'
+                            ? 'bg-purple-500'
+                            : acct.color === 'rose'
+                            ? 'bg-rose-500'
+                            : acct.color === 'emerald'
+                            ? 'bg-emerald-500'
+                            : 'bg-blue-500'
+                        }`}
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white block">{acct.name}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                          {acct.holder} • {acct.bank_name}
+                        </span>
+                      </div>
                     </div>
+                    <span className="font-mono text-sm font-bold text-slate-900 dark:text-white tabular-nums">
+                      {formatBRL(acct.balance)}
+                    </span>
                   </div>
-                  <span className="font-mono text-sm font-bold text-slate-900 dark:text-white tabular-nums">R$ 357.458,00</span>
-                </div>
-
-                {/* Account 2: Inter PJ */}
-                <div
-                  onClick={() => {
-                    setLedgerFilter('inter');
-                    document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  title="Filtrar lançamentos da Fix Serviços (Inter PJ)"
-                  className="w-full px-3 py-2.5 rounded-xl flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/[0.04] transition cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white block">Inter PJ (Fix Serviços)</span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">Titular: Osmar</span>
-                    </div>
-                  </div>
-                  <span className="font-mono text-sm font-bold text-slate-900 dark:text-white tabular-nums">R$ 100.332,34</span>
-                </div>
-
-                {/* Account 3: Caixa PJ */}
-                <div
-                  onClick={() => {
-                    setLedgerFilter('caixa');
-                    document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  title="Filtrar lançamentos da Facilita Vistorias (Caixa PJ)"
-                  className="w-full px-3 py-2.5 rounded-xl flex items-center justify-between hover:bg-slate-50 dark:hover:bg-white/[0.04] transition cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                    <div>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white block">Caixa PJ (Facilita Vist.)</span>
-                      <span className="text-xs text-slate-500 dark:text-slate-400">Titular: Vera</span>
-                    </div>
-                  </div>
-                  <span className="font-mono text-sm font-bold text-slate-900 dark:text-white tabular-nums">R$ 50.331,02</span>
-                </div>
+                ))}
               </div>
 
-                {/* Sub-header status bar */}
-                <div className="pt-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                  <span className="font-medium text-slate-600 dark:text-slate-300">3 contas ativas</span>
-                  <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-white/5 font-medium border border-slate-200 dark:border-white/10 text-xs text-slate-600 dark:text-slate-300">
-                    Segregação Fiscal
-                  </span>
-                </div>
+              {/* Sub-header status bar */}
+              <div className="pt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-white/5 mt-2">
+                <span className="font-medium text-slate-600 dark:text-slate-300">{accounts.length} contas configuradas</span>
+                <button
+                  onClick={() => {
+                    setSettingsTab('accounts');
+                    setIsSettingsOpen(true);
+                  }}
+                  className="px-2 py-1 rounded-full bg-slate-100 dark:bg-white/5 font-semibold border border-slate-200 dark:border-white/10 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-white/10 transition"
+                >
+                  + Adicionar / Corrigir
+                </button>
               </div>
+            </div>
 
             {/* Balance Metric Display below cards */}
             <div className="mt-4 pt-3 border-t border-slate-200/80 dark:border-white/10">
-              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-                <span>Lucro Líquido Acumulado (2020-2026)</span>
-                <span className="text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/25 px-2 py-1 rounded-full text-xs">
-                  55,5% Margem
+              <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                <span>Saldo Consolidado das Contas</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/25 px-2 py-0.5 rounded-full text-[11px]">
+                  {accounts.length} contas
                 </span>
               </div>
               <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-mono">
-                {formatBRL(totalCumulativeProfit)}
+                {formatBRL(totalAccountsBalance)}
               </div>
               <div
                 onClick={() => setIsRunwayModalOpen(true)}
@@ -1947,72 +2029,8 @@ export default function StitchExecutiveDashboard() {
 
           {/* Messages Scroll View */}
           <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-6 overscroll-contain">
-            {/* If only welcome message, show friendly Meta AI / ChatGPT greeting & quick prompts */}
-            {messages.length <= 1 && (
-              <div className="py-6 sm:py-8 flex flex-col items-center text-center animate-message-in">
-                <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/25 mb-4">
-                  <Sparkles className="w-8 h-8" />
-                </div>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  Como posso ajudar hoje?
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mt-1.5 font-medium leading-relaxed">
-                  Consulte saldos consolidados, tetos fiscais MEI, fluxo de caixa ou envie uma foto de comprovante.
-                </p>
-
-                {/* Meta AI Quick Prompt Cards */}
-                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-6 text-left">
-                  <button
-                    onClick={() => handleSendMessage('Quanto temos disponível somando nossas três contas?')}
-                    className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 transition active:scale-[0.98] group"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Wallet className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">Saldo Consolidado</span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Total somado de Inter, Caixa e Nubank</p>
-                  </button>
-
-                  <button
-                    onClick={() => handleSendMessage('Teto MEI')}
-                    className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 transition active:scale-[0.98] group"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <ShieldCheck className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition-transform" />
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">Teto MEI 2026</span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Faturamento Fix e Facilita vs R$ 81k</p>
-                  </button>
-
-                  <button
-                    onClick={() => handleSendMessage('Quais contas vencem nos próximos sete dias?')}
-                    className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 transition active:scale-[0.98] group"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">Contas a Vencer</span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Próximos 7 dias de vencimento</p>
-                  </button>
-
-                  <button
-                    onClick={() => handleSendMessage('Quanto já retiramos das empresas para a família este ano?')}
-                    className="p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 transition active:scale-[0.98] group"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <ArrowUpRight className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
-                      <span className="text-sm font-bold text-slate-900 dark:text-white">Retiradas Isentas</span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Distribuição de lucros PJ → PF</p>
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Conversation Messages */}
             {messages.map((msg) => {
-              if (messages.length <= 1 && msg.id === 'welcome') return null;
-
               return (
                 <div
                   key={msg.id}
@@ -2325,12 +2343,14 @@ export default function StitchExecutiveDashboard() {
                 e.preventDefault();
                 handleSendMessage();
               }}
-              className="relative bg-slate-100 dark:bg-[#192132] border border-slate-200/80 dark:border-white/10 rounded-[28px] p-1.5 flex items-center gap-1.5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500/30 focus-within:border-indigo-500/50 transition"
+              className="relative bg-slate-100 dark:bg-[#192132] border border-slate-200 dark:border-white/10 rounded-[28px] p-1.5 flex items-center gap-1 shadow-sm focus-within:border-indigo-500 dark:focus-within:border-indigo-500 transition-colors"
             >
+              {/* Direct Camera Capture (opens camera lens on mobile) */}
               <input
                 type="file"
-                ref={fileInputRef}
+                ref={cameraInputRef}
                 accept="image/*"
+                capture="environment"
                 className="hidden"
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
@@ -2339,14 +2359,39 @@ export default function StitchExecutiveDashboard() {
                 }}
               />
 
+              {/* Gallery / File Picker */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setAttachedFile(e.target.files[0]);
+                  }
+                }}
+              />
+
+              {/* Instant Camera Snap Button */}
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                title="Tirar foto com a câmera"
+                aria-label="Tirar foto com a câmera"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200/70 dark:hover:bg-white/10 transition active:scale-95 shrink-0"
+              >
+                <Camera className="w-5 h-5" />
+              </button>
+
+              {/* Gallery / Attachment Button */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                title="Tirar foto ou anexar cupom fiscal"
-                aria-label="Tirar foto ou anexar cupom fiscal"
-                className="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200/70 dark:hover:bg-white/10 transition active:scale-95 shrink-0"
+                title="Anexar da galeria ou arquivo"
+                aria-label="Anexar da galeria ou arquivo"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200/70 dark:hover:bg-white/10 transition active:scale-95 shrink-0"
               >
-                <Camera className="w-5 h-5" />
+                <Paperclip className="w-4 h-4" />
               </button>
 
               <input
@@ -2355,7 +2400,7 @@ export default function StitchExecutiveDashboard() {
                 onChange={(e) => setChatInput(e.target.value)}
                 placeholder="Pergunte ou envie um cupom..."
                 aria-label="Mensagem para o assistente"
-                className="flex-1 bg-transparent border-0 outline-none px-2 py-2 text-[16px] text-slate-900 dark:text-white placeholder-slate-400 font-normal min-w-0"
+                className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 ring-0 px-2 py-2 text-[16px] text-slate-900 dark:text-white placeholder-slate-400 font-normal min-w-0"
               />
 
               <button
@@ -2363,7 +2408,7 @@ export default function StitchExecutiveDashboard() {
                 disabled={loadingChat || (!chatInput.trim() && !attachedFile)}
                 title="Enviar mensagem"
                 aria-label="Enviar mensagem"
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition active:scale-95 shrink-0 ${
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition active:scale-95 shrink-0 ${
                   chatInput.trim() || attachedFile
                     ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md'
                     : 'bg-slate-200 dark:bg-white/5 text-slate-400 dark:text-slate-600 cursor-not-allowed'
@@ -2434,6 +2479,8 @@ export default function StitchExecutiveDashboard() {
         onThemeChange={handleThemeChange}
         asdMode={chatAsdMode}
         onAsdModeChange={handleAsdModeChange}
+        initialTab={settingsTab}
+        onAccountsUpdated={fetchAccounts}
       />
 
       {/* 6. BANK STATEMENTS IMPORT & DEDUPLICATION MODAL */}
