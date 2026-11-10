@@ -125,6 +125,51 @@ class TestSmartRouterExecution(unittest.TestCase):
         self.assertIn("Facilita Vistorias", result["reply"])
         self.assertIn("47.730,00", result["reply"])
 
+    def test_system_prompt_includes_asd_ste100_80_directives(self):
+        prompt = self.router.build_system_prompt(IntentKey.FINANCIAL_OPS)
+        self.assertIn("Adaptação ASD-STE100 a 80%", prompt)
+        self.assertIn("20 palavras", prompt)
+        self.assertIn("voz ativa", prompt)
+        self.assertIn("Uma ideia por frase", prompt)
+        self.assertIn("analogia quando ela ajudar, mas use apenas uma", prompt)
+        self.assertIn("comprovante", prompt)
+        self.assertIn("livro-razão", prompt)
+
+    @patch("src.llm.client.UniversalLLMClient.generate")
+    def test_fallback_sentences_obey_word_limit(self, mock_generate):
+        mock_generate.side_effect = Exception("Rate limit exceeded 429")
+        result = self.router.execute_chat("qual a melhor opção de investimento hoje?")
+        sentences = [s.strip() for s in result["reply"].replace("\n", " ").split(".") if s.strip()]
+        for s in sentences:
+            word_count = len(s.split())
+            self.assertLessEqual(word_count, 20, f"Sentence exceeded 20 words: '{s}' ({word_count} words)")
+
+    def test_get_effective_asd_mode_detection(self):
+        self.assertEqual(self.router.get_effective_asd_mode("Explica em ASD-STE100 o teto MEI"), "asd_strict")
+        self.assertEqual(self.router.get_effective_asd_mode("Simplifica como manual de avião"), "asd_strict")
+        self.assertEqual(self.router.get_effective_asd_mode("Reescreve em ASD este relatório"), "asd_strict")
+        self.assertEqual(self.router.get_effective_asd_mode("Use 80% ASD para explicar"), "asd_80")
+        self.assertEqual(self.router.get_effective_asd_mode("Responda em ASD leve"), "asd_80")
+        self.assertEqual(self.router.get_effective_asd_mode("Responda sem ASD por favor"), "none")
+        self.assertEqual(self.router.get_effective_asd_mode("Como está o dólar hoje?", configured_mode="none"), "none")
+        self.assertEqual(self.router.get_effective_asd_mode("Como está o dólar hoje?"), "asd_80")
+
+    def test_build_system_prompt_asd_modes(self):
+        prompt_strict = self.router.build_system_prompt(IntentKey.FINANCIAL_OPS, asd_mode="asd_strict", user_message="reescreve em asd")
+        self.assertIn("100% ASD-STE100", prompt_strict)
+        self.assertIn("liste até 3 termos técnicos usados", prompt_strict)
+        self.assertIn("Checagem antes de responder", prompt_strict)
+        self.assertIn("marque com [?]", prompt_strict)
+
+        prompt_none = self.router.build_system_prompt(IntentKey.FINANCIAL_OPS, asd_mode="none")
+        self.assertIn("Modo Convencional Sem ASD", prompt_none)
+        self.assertNotIn("ASD-STE100", prompt_none)
+
+    def test_execute_chat_returns_asd_mode(self):
+        result = self.router.execute_chat("qual o seu modelo?", asd_mode="asd_strict")
+        self.assertIn("asd_mode", result)
+        self.assertEqual(result["asd_mode"], "asd_strict")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -49,6 +49,8 @@ interface SettingsModalProps {
   onClose: () => void;
   theme: 'dark' | 'light';
   onThemeChange: (newTheme: 'dark' | 'light') => void;
+  asdMode?: 'none' | 'asd_80' | 'asd_strict';
+  onAsdModeChange?: (newMode: 'none' | 'asd_80' | 'asd_strict') => void;
 }
 
 export default function SettingsModal({
@@ -56,12 +58,47 @@ export default function SettingsModal({
   onClose,
   theme,
   onThemeChange,
+  asdMode,
+  onAsdModeChange,
 }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<'providers' | 'appearance' | 'limits' | 'governance'>('providers');
   const [providers, setProviders] = useState<ProviderItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [importingNexus, setImportingNexus] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [localAsdMode, setLocalAsdMode] = useState<'none' | 'asd_80' | 'asd_strict'>(asdMode || 'asd_80');
+
+  useEffect(() => {
+    if (asdMode) setLocalAsdMode(asdMode);
+  }, [asdMode]);
+
+  useEffect(() => {
+    if (isOpen && !asdMode) {
+      fetch('/api/py/settings/general')
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.asd_mode) setLocalAsdMode(data.asd_mode);
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, asdMode]);
+
+  const handleSelectAsdMode = async (mode: 'none' | 'asd_80' | 'asd_strict') => {
+    setLocalAsdMode(mode);
+    if (onAsdModeChange) {
+      onAsdModeChange(mode);
+    } else {
+      try {
+        await fetch('/api/py/settings/general', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ asd_mode: mode }),
+        });
+      } catch (e) {
+        console.error('Falha ao salvar modo ASD:', e);
+      }
+    }
+  };
 
   // Form State for creating/editing provider
   const [isEditing, setIsEditing] = useState(false);
@@ -726,6 +763,98 @@ export default function SettingsModal({
                 </div>
               </div>
 
+              {/* ASD-STE100 Chat Style Settings */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-indigo-500" />
+                    Estilo de Linguagem do Assistente (ASD-STE100)
+                  </h3>
+                  <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
+                    {localAsdMode === 'asd_80' ? '80% ASD (Ativo)' : localAsdMode === 'asd_strict' ? 'ASD Rígido' : 'Sem ASD'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Regula o grau de síntese técnica aeroespacial (Simplified Technical English) aplicado às respostas do chat financeiro.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* 1. Sem ASD */}
+                  <div
+                    onClick={() => handleSelectAsdMode('none')}
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                      localAsdMode === 'none'
+                        ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/30 shadow-md ring-2 ring-indigo-500/20'
+                        : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 bg-slate-50 dark:bg-[#1a202c]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">Sem ASD</span>
+                        {localAsdMode === 'none' && <CheckCircle2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Estilo convencional livre, sem limite rígido de extensão de frases ou vocabulário fixo.
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-slate-200/60 dark:border-white/5 text-[10px] text-slate-400 font-medium">
+                      Tom conversacional livre
+                    </div>
+                  </div>
+
+                  {/* 2. 80% ASD (Leve) */}
+                  <div
+                    onClick={() => handleSelectAsdMode('asd_80')}
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                      localAsdMode === 'asd_80'
+                        ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/30 shadow-md ring-2 ring-indigo-500/20'
+                        : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 bg-slate-50 dark:bg-[#1a202c]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">80% ASD (Leve)</span>
+                          <span className="text-[9px] bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.2 rounded-full">
+                            Padrão
+                          </span>
+                        </div>
+                        {localAsdMode === 'asd_80' && <CheckCircle2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Frases de até 20 palavras, voz ativa, uma ideia por frase, consistência de termos, tom natural e 1 analogia.
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-slate-200/60 dark:border-white/5 text-[10px] text-indigo-500 font-medium">
+                      Padrão recomendado Karpathy
+                    </div>
+                  </div>
+
+                  {/* 3. ASD Rígido */}
+                  <div
+                    onClick={() => handleSelectAsdMode('asd_strict')}
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                      localAsdMode === 'asd_strict'
+                        ? 'border-indigo-600 bg-indigo-50/40 dark:bg-indigo-950/30 shadow-md ring-2 ring-indigo-500/20'
+                        : 'border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 bg-slate-50 dark:bg-[#1a202c]'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">ASD Rígido (100%)</span>
+                        {localAsdMode === 'asd_strict' && <CheckCircle2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Padrão integral: frases de 20 palavras, sem introdução/conclusão, sem analogias, com glossário de 3 termos no fim.
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-slate-200/60 dark:border-white/5 text-[10px] text-slate-400 font-medium">
+                      Manual de aviação estrito
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Safety & Style Standards Card */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#1a202c] border border-slate-200 dark:border-white/10 space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -736,7 +865,7 @@ export default function SettingsModal({
                   Todos os dados bancários, números de conta, chaves PIX e documentos de Osmar e Vera são mascarados antes do envio a qualquer LLM externa. Tokens são reconstituídos localmente no seu servidor sem vazamento.
                 </p>
                 <div className="flex items-center gap-3 pt-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-                  <span>ASD-STE100 ~80%: Ativo</span>
+                  <span>Modo ASD Ativo: {localAsdMode === 'asd_80' ? '80% (Leve)' : localAsdMode === 'asd_strict' ? '100% (Rígido)' : 'Desativado'}</span>
                   <span>•</span>
                   <span>Modo Determinístico: Ativo</span>
                 </div>

@@ -205,10 +205,33 @@ export default function StitchExecutiveDashboard() {
   const [chatInput, setChatInput] = useState('');
   const [selectedEntityChat, setSelectedEntityChat] = useState('inter_cnpj');
   const [loadingChat, setLoadingChat] = useState(false);
+  const [chatAsdMode, setChatAsdMode] = useState<'none' | 'asd_80' | 'asd_strict'>('asd_80');
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/py/settings/general')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.asd_mode) setChatAsdMode(d.asd_mode);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleAsdModeChange = async (mode: 'none' | 'asd_80' | 'asd_strict') => {
+    setChatAsdMode(mode);
+    try {
+      await fetch('/api/py/settings/general', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ asd_mode: mode }),
+      });
+    } catch (e) {
+      console.error('Falha ao salvar modo ASD:', e);
+    }
+  };
 
   const handleCopyText = (id: string, text: string) => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -477,6 +500,7 @@ export default function StitchExecutiveDashboard() {
           message: text,
           context_entity: selectedEntityChat,
           stream: false,
+          asd_mode: chatAsdMode,
         }),
       });
 
@@ -1870,7 +1894,47 @@ export default function StitchExecutiveDashboard() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
+              {/* Quick ASD Mode Pills */}
+              <div className="hidden xs:flex sm:flex items-center gap-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-1 rounded-full text-[11px] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => handleAsdModeChange('none')}
+                  className={`px-2.5 py-0.5 rounded-full transition text-[11px] font-medium ${
+                    chatAsdMode === 'none'
+                      ? 'bg-indigo-600 text-white shadow-sm font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title="Sem ASD: estilo livre convencional"
+                >
+                  Sem ASD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAsdModeChange('asd_80')}
+                  className={`px-2.5 py-0.5 rounded-full transition text-[11px] font-medium ${
+                    chatAsdMode === 'asd_80'
+                      ? 'bg-indigo-600 text-white shadow-sm font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title="80% ASD (Leve): frases curtas, voz ativa, tom natural e 1 analogia útil"
+                >
+                  80% ASD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAsdModeChange('asd_strict')}
+                  className={`px-2.5 py-0.5 rounded-full transition text-[11px] font-medium ${
+                    chatAsdMode === 'asd_strict'
+                      ? 'bg-indigo-600 text-white shadow-sm font-bold'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                  title="ASD Rígido: 100% ASD-STE100 integral, sem introdução/conclusão, glossário final"
+                >
+                  ASD Rígido
+                </button>
+              </div>
+
               <button
                 onClick={() => setIsAssistantOpen(false)}
                 aria-label="Fechar assistente"
@@ -2368,6 +2432,8 @@ export default function StitchExecutiveDashboard() {
         onClose={() => setIsSettingsOpen(false)}
         theme={theme}
         onThemeChange={handleThemeChange}
+        asdMode={chatAsdMode}
+        onAsdModeChange={handleAsdModeChange}
       />
 
       {/* 6. BANK STATEMENTS IMPORT & DEDUPLICATION MODAL */}

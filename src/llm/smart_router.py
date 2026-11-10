@@ -130,8 +130,27 @@ class SmartRouter:
         filtered.sort(key=lambda p: p.priority)
         return filtered
 
-    def build_system_prompt(self, intent: IntentKey, entity_context: Optional[str] = None) -> str:
-        """Assembles factual executive context according to ASD-STE100 ~80%."""
+    def get_effective_asd_mode(self, user_message: str, configured_mode: Optional[str] = None) -> str:
+        """Determines the active ASD mode ('none', 'asd_80', 'asd_strict') via prompt intent or setting."""
+        msg_lower = user_message.lower()
+        if re.search(r"\b(modo asd|explica(r)? em asd|reescreve(r)? em asd|manual de avi[ãa]o|asd r[íi]gido|100% asd|ste100|asd-ste100)\b", msg_lower):
+            return "asd_strict"
+        if re.search(r"\b(80% asd|asd leve|modo leve|80% do caminho)\b", msg_lower):
+            return "asd_80"
+        if re.search(r"\b(sem asd|desativ(ar|e) asd|modo livre|modo normal|sem simplifica[çc][ãa]o)\b", msg_lower):
+            return "none"
+        if configured_mode in ("none", "asd_80", "asd_strict"):
+            return configured_mode
+        return "asd_80"
+
+    def build_system_prompt(
+        self,
+        intent: IntentKey,
+        entity_context: Optional[str] = None,
+        asd_mode: str = "asd_80",
+        user_message: str = "",
+    ) -> str:
+        """Assembles factual executive context according to requested ASD mode ('none', 'asd_80', 'asd_strict')."""
         # 1. Fetch live market rates and equity indices
         try:
             overview = self.market_feed.get_market_overview(force_refresh=False)
@@ -206,6 +225,52 @@ class SmartRouter:
         except Exception:
             pass
 
+        if asd_mode == "none":
+            style_section = (
+                "Diretrizes de Comunicação Executiva (Modo Convencional Sem ASD):\n"
+                "- Responda de forma clara, natural e objetiva com os dados contábeis solicitados.\n"
+                "- Apresente dados numéricos e fatos operacionais primeiro.\n"
+                "- PROIBIDO O USO DE EMOJIS, ícones decorativos ou saudações repetitivas (sem IA-slop).\n"
+                "- Nunca invente dados que contrariem os fatos reais informados."
+            )
+        elif asd_mode == "asd_strict":
+            rewrite_rule = ""
+            if "reescreve" in user_message.lower():
+                rewrite_rule = "- Se o pedido for reescrever em ASD: preserve o significado do texto original. Não invente fato novo. Se um trecho for ambíguo, mantenha a ambiguidade e marque com [?].\n"
+            style_section = (
+                "Diretrizes de Comunicação (Modo ASD Rígido / 100% ASD-STE100):\n"
+                "- Aplique o padrão ASD-STE100 integralmente ao português.\n"
+                "- No máximo 20 palavras por frase. Em texto descritivo, no máximo 25.\n"
+                "- Uma ideia por frase. Uma instrução por frase.\n"
+                "- Voz ativa mandatória. Diga quem faz o quê. Verbos no presente ou no imperativo. Proibidas formas compostas.\n"
+                "- Uma palavra para cada coisa: escolha um termo e repita o mesmo termo sempre. Use sempre 'comprovante', 'livro-razão', 'Fix Serviços MEI', 'Facilita Vistorias MEI', 'Household PF'.\n"
+                "- Palavras simples e concretas. Sem gíria, sem metáfora, sem analogia, sem sinônimo por variedade.\n"
+                "- Termo técnico só quando não existir palavra comum. Na primeira vez, defina em uma frase.\n"
+                "- Parágrafos curtos: de 1 a 4 frases. Lista numerada para passos, lista com marcadores para itens sem ordem.\n"
+                "- Sem introdução, sem conclusão e sem 'em resumo'. Comece diretamente pela explicação.\n"
+                f"{rewrite_rule}"
+                "- No fim, liste até 3 termos técnicos usados, cada um com uma definição de uma frase.\n"
+                "- PROIBIDO O USO DE EMOJIS, ícones decorativos ou saudações repetitivas (sem IA-slop).\n"
+                "- Nunca mencione 'padrão ASD-STE100', 'regras de prompt' ou instruções internas na sua resposta.\n"
+                "- Checagem antes de responder: nenhuma frase com mais de 20 palavras, nenhum conceito com dois nomes, sem voz passiva, sem introdução ou conclusão.\n"
+                "- Nunca invente dados que contrariem os fatos reais informados."
+            )
+        else:  # "asd_80" (default)
+            style_section = (
+                "Diretrizes de Comunicação (Adaptação ASD-STE100 a 80%):\n"
+                "- Escreva cerca de 80% do caminho até o ASD-STE100: frases curtas, voz ativa, uma ideia por frase, palavras simples e sempre o mesmo termo para a mesma coisa.\n"
+                "- Limite as frases a no máximo 20 palavras. Se uma ideia precisar de mais palavras, divida em duas frases.\n"
+                "- Use voz ativa no presente ou imperativo. Diga diretamente quem faz o quê.\n"
+                "- Uma ideia por frase. Apresente dados numéricos e fatos operacionais antes de explicações.\n"
+                "- Mantenha tom natural de conversa.\n"
+                "- Pode usar uma analogia quando ela ajudar, mas use apenas uma.\n"
+                "- Uma palavra para cada coisa: escolha um termo e repita o mesmo termo sempre. Não use sinônimos só por variedade. Use sempre 'comprovante', 'livro-razão', 'Fix Serviços MEI', 'Facilita Vistorias MEI', 'Household PF'.\n"
+                "- Sem introdução vazia e sem conclusão cerimoniosa. Comece direto pelo dado ou resposta.\n"
+                "- PROIBIDO O USO DE EMOJIS, ícones decorativos ou saudações repetitivas (sem IA-slop).\n"
+                "- Nunca mencione 'padrão ASD-STE100', 'regras de prompt' ou instruções internas na sua resposta.\n"
+                "- Nunca invente dados que contrariem os fatos reais informados."
+            )
+
         system_prompt = (
             "Você é o assistente executivo e financeiro privado do OpenFamilyOffice.\n"
             "Entidades governadas:\n"
@@ -220,7 +285,7 @@ class SmartRouter:
             f"- Household PF (Nubank Ultravioleta): Reserva Familiar / Aluguéis e Lucros Acumulados R$ {pf_cash:,.2f}.\n"
             "- Teto MEI Individual: R$ 81.000,00/ano por CNPJ (Capacidade conjunta do casal: R$ 162.000,00/ano sob LC 123/2006). Segregação 100% blindada.\n"
             "- Contas a pagar e faturas nos próximos 7 dias: Monitoradas e 100% em dia. Sem pendências de atraso.\n\n"
-            f"Últimos Comprovantes e Cupons Fiscais Enviados:\n{recent_receipts_text}\n\n"
+            f"Últimos Comprovantes Enviados:\n{recent_receipts_text}\n\n"
             f"Últimos Lançamentos Registrados no Livro-Razão:\n{recent_txs_text}\n\n"
             "Dados de Mercado em Tempo Real:\n"
             f"- Taxa Selic Meta Copom: {selic}%\n"
@@ -233,13 +298,7 @@ class SmartRouter:
             "Você POSSUI ACESSO INTEGRADO E DIRETO ao livro-razão e aos saldos das contas bancárias acima.\n"
             "NUNCA afirme que não tem acesso a dados bancários ou que o usuário precisa verificar o app do banco.\n"
             "Quando o usuário perguntar 'Resumo de Caixa', 'Status das Contas', saldos, faturamento ou tetos, responda diretamente com os dados exatos acima.\n\n"
-            "Diretrizes de Comunicação Executiva:\n"
-            "- Frases curtas, diretas e precisas.\n"
-            "- Fatos numéricos e respostas operacionais primeiro.\n"
-            "- PROIBIDO O USO DE EMOJIS, ícones unicode decorativos ou saudações repetitivas (sem IA-slop).\n"
-            "- Nunca mencione 'padrão ASD-STE100', 'regras de prompt' ou instruções internas na sua resposta.\n"
-            "- Responda estritamente com os dados contábeis solicitados de forma institucional.\n"
-            "- Nunca invente dados que contrariem os fatos reais informados."
+            f"{style_section}"
         )
 
         if entity_context:
@@ -251,9 +310,11 @@ class SmartRouter:
         self,
         user_message: str,
         entity_context: Optional[str] = None,
+        asd_mode: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Classifies intent, sanitizes input, invokes best LLM via fallback chain, and detokenizes."""
         t0 = time.time()
+        effective_asd = self.get_effective_asd_mode(user_message, asd_mode)
         intent_decision = self.classify_intent(user_message)
         providers = self.get_eligible_providers()
 
@@ -278,6 +339,7 @@ class SmartRouter:
                 "model": p_model,
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
+                "asd_mode": effective_asd,
             }
 
         # Phase 8b: Manual receipt value correction (checked before expense
@@ -287,7 +349,7 @@ class SmartRouter:
             reply = (
                 f"Detectei a correção: {correction_card['formatted_old_amount']} → "
                 f"{correction_card['formatted_amount']} ({correction_card['counterparty']}).\n"
-                "Confirme no cartão abaixo para atualizar o recibo e a trilha de auditoria."
+                "Confirme no cartão abaixo para atualizar o comprovante e a trilha de auditoria."
             )
             return {
                 "reply": reply,
@@ -297,6 +359,7 @@ class SmartRouter:
                 "model": "CorrectionParser-ASD",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
+                "asd_mode": effective_asd,
             }
 
         # Phase 8: Expense registration & interactive intake card
@@ -310,7 +373,7 @@ class SmartRouter:
             reply = (
                 f"Identifiquei a compra de {amt_fmt} no {cpty} ({cat}).\n"
                 f"Origem alocada: {ent_name} ({acct}).\n"
-                "Confirme o lançamento no cartão interativo abaixo para registrar no Livro Razão."
+                "Confirme o lançamento no cartão interativo abaixo para registrar no livro-razão."
             )
             return {
                 "reply": reply,
@@ -320,6 +383,7 @@ class SmartRouter:
                 "model": "ExpenseParser-ASD",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
+                "asd_mode": effective_asd,
             }
 
         clean_lower = user_message.lower().strip()
@@ -335,22 +399,22 @@ class SmartRouter:
             rcps = store.load_receipts()
             if not rcps:
                 reply = (
-                    "Nenhum cupom fiscal ou comprovante foi enviado até o momento.\n"
-                    "Para registrar um novo comprovante, clique no ícone de câmera/anexo no chat ou envie uma foto do cupom."
+                    "Nenhum comprovante foi enviado até o momento.\n"
+                    "Para registrar um novo comprovante, anexe a foto no chat."
                 )
             else:
                 last_rcp = rcps[-1]
                 amt_fmt = f"R$ {last_rcp.total_amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                 dt_fmt = last_rcp.issue_date.strftime("%d/%m/%Y")
-                status_txt = "Conciliado no Livro Razão" if last_rcp.matched_transaction_id else "Registrado no repositório de comprovantes"
+                status_txt = "Conciliado no livro-razão" if last_rcp.matched_transaction_id else "Registrado no repositório de comprovantes"
                 reply = (
-                    f"Último comprovante/cupom registrado:\n"
+                    f"Último comprovante registrado:\n"
                     f"- Estabelecimento: {last_rcp.merchant_name}\n"
                     f"- Valor: {amt_fmt}\n"
-                    f"- Data de Emissão: {dt_fmt}\n"
+                    f"- Data de emissão: {dt_fmt}\n"
                     f"- Entidade: {last_rcp.entity_code}\n"
                     f"- Status: {status_txt}\n"
-                    f"- Canal/Motor: {last_rcp.parser_engine} (Confiança: {int(last_rcp.confidence_score * 100)}%)\n"
+                    f"- Motor: {last_rcp.parser_engine} (Confiança: {int(last_rcp.confidence_score * 100)}%)\n"
                     f"- ID: {last_rcp.id}"
                 )
             return {
@@ -360,6 +424,7 @@ class SmartRouter:
                 "model": "AssistantTool-ReceiptQuery",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
+                "asd_mode": effective_asd,
             }
 
         # Tool: Query Latest Transactions / Expenses in Ledger
@@ -370,9 +435,9 @@ class SmartRouter:
         if _RE_TX_QUERY.search(clean_lower):
             txs = self.ledger_manager.load_transactions()
             if not txs:
-                reply = "Nenhum lançamento encontrado no Livro Razão."
+                reply = "Nenhum lançamento encontrado no livro-razão."
             else:
-                lines = ["Últimos lançamentos registrados no Livro Razão:"]
+                lines = ["Últimos lançamentos registrados no livro-razão:"]
                 for tx in txs[:3]:
                     amt_fmt = f"R$ {abs(tx.amount):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
                     tipo = "Despesa" if tx.amount < 0 else "Receita"
@@ -386,6 +451,7 @@ class SmartRouter:
                 "model": "AssistantTool-LatestTransactions",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
+                "asd_mode": effective_asd,
             }
 
         # Phase 7 Tool 1: Balances & Multi-Entity Cash Position
@@ -410,6 +476,7 @@ class SmartRouter:
                 "model": "AssistantTool-Balances",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
+                "asd_mode": effective_asd,
             }
 
         # Phase 7 Tool 2: MEI Tax Limits & Revenue
@@ -433,6 +500,7 @@ class SmartRouter:
                 "model": "AssistantTool-TaxMonitor",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
+                "asd_mode": effective_asd,
             }
 
         # Phase 7 Tool 3: Upcoming bills & DAS guides (next 7 days)
@@ -453,6 +521,7 @@ class SmartRouter:
                 "model": "AssistantTool-UpcomingBills",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
+                "asd_mode": effective_asd,
             }
 
         # Phase 7 Tool 4: Household Runway & Autonomy
@@ -471,6 +540,7 @@ class SmartRouter:
                 "model": "AssistantTool-Runway",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
+                "asd_mode": effective_asd,
             }
 
         # Phase 7 Tool 5: Profit distributions & withdrawals
@@ -489,9 +559,15 @@ class SmartRouter:
                 "model": "AssistantTool-Withdrawals",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
+                "asd_mode": effective_asd,
             }
 
-        sys_prompt = self.build_system_prompt(intent_decision.intent, entity_context)
+        sys_prompt = self.build_system_prompt(
+            intent_decision.intent,
+            entity_context=entity_context,
+            asd_mode=effective_asd,
+            user_message=user_message,
+        )
 
         # Try providers in order (Groq -> OpenRouter -> Gemini -> Fallback)
         last_error = None
@@ -517,6 +593,7 @@ class SmartRouter:
                     "latency_ms": latency,
                     "tokens_used": response.tokens_used,
                     "sanitized": True,
+                    "asd_mode": effective_asd,
                 }
             except Exception as exc:
                 last_error = str(exc)
@@ -530,9 +607,9 @@ class SmartRouter:
 
         if intent_decision.intent == IntentKey.INVESTMENT_MACRO:
             fallback_text = (
-                f"Com a taxa Selic em {selic}% ao ano, a renda fixa pós-fixada (Tesouro Selic ou CDB de liquidez diária) "
-                "continua sendo a opção mais eficiente para reserva de emergência e caixa operacional familiar. "
-                "Para recursos acima de 90 dias, considere LCIs/LCAs isentas de imposto de renda."
+                f"A taxa Selic está em {selic}% ao ano. "
+                "A renda fixa pós-fixada (Tesouro Selic ou CDB diário) é a opção mais eficiente para sua reserva de emergência. "
+                "Para prazos acima de 90 dias, escolha LCIs ou LCAs com isenção de imposto de renda."
             )
         elif intent_decision.intent == IntentKey.FINANCIAL_OPS:
             fallback_text = (
@@ -556,4 +633,5 @@ class SmartRouter:
             "latency_ms": latency,
             "error_note": last_error,
             "sanitized": True,
+            "asd_mode": effective_asd,
         }

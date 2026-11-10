@@ -109,6 +109,7 @@ class ChatMessageRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=4000)
     context_entity: Optional[str] = Field(default=None, description="Optional entity tag, e.g. inter_cnpj, nubank_pf")
     stream: bool = Field(default=True, description="Whether to stream via SSE")
+    asd_mode: Optional[str] = Field(default=None, description="Optional ASD mode: 'none', 'asd_80', 'asd_strict'")
 
 
 @app.get("/health")
@@ -184,7 +185,16 @@ def get_smart_router() -> SmartRouter:
 async def chat_endpoint(request: ChatMessageRequest):
     """Chat endpoint supporting SSE streaming and Smart Auto-Routing across active LLMs."""
     router = get_smart_router()
-    result = router.execute_chat(request.message, entity_context=request.context_entity)
+    configured_asd = request.asd_mode
+    if not configured_asd:
+        gen = await get_general_settings()
+        configured_asd = gen.get("asd_mode", "asd_80")
+
+    result = router.execute_chat(
+        request.message,
+        entity_context=request.context_entity,
+        asd_mode=configured_asd,
+    )
 
     if request.stream:
         async def stream_generator() -> AsyncGenerator[str, None]:
@@ -196,7 +206,7 @@ async def chat_endpoint(request: ChatMessageRequest):
                 chunk = " ".join(words[i : i + 3]) + " "
                 yield f"id: {event_id}\ndata: {json.dumps({'type': 'chunk', 'text': chunk}, ensure_ascii=False)}\n\n"
                 await asyncio.sleep(0.04)
-            yield f"id: {event_id + 1}\ndata: {json.dumps({'type': 'done', 'provider': result.get('provider'), 'model': result.get('model'), 'latency_ms': result.get('latency_ms'), 'confirmation_card': result.get('confirmation_card'), 'status': 'completed'}, ensure_ascii=False)}\n\n"
+            yield f"id: {event_id + 1}\ndata: {json.dumps({'type': 'done', 'provider': result.get('provider'), 'model': result.get('model'), 'latency_ms': result.get('latency_ms'), 'confirmation_card': result.get('confirmation_card'), 'asd_mode': result.get('asd_mode'), 'status': 'completed'}, ensure_ascii=False)}\n\n"
 
         return StreamingResponse(
             stream_generator(),
@@ -218,6 +228,7 @@ async def chat_endpoint(request: ChatMessageRequest):
         "intent": result.get("intent"),
         "confirmation_card": result.get("confirmation_card"),
         "sanitized": True,
+        "asd_mode": result.get("asd_mode"),
     }
 
 
@@ -680,6 +691,7 @@ class GeneralSettingsPayload(BaseModel):
     currency: Optional[str] = "BRL"
     auto_sanitize: Optional[bool] = True
     notifications_enabled: Optional[bool] = True
+    asd_mode: Optional[str] = "asd_80"
 
 
 @app.get("/api/settings/providers")
@@ -903,13 +915,14 @@ async def import_nexus_env(payload: Optional[ImportNexusPayload] = None):
 @app.get("/api/settings/general")
 @app.get("/settings/general")
 async def get_general_settings():
-    """Returns general preferences (theme, entity, currency)."""
+    """Returns general preferences (theme, entity, currency, asd_mode)."""
     default_settings = {
         "theme": "dark",
         "default_entity": "fix_servicos",
         "currency": "BRL",
         "auto_sanitize": True,
         "notifications_enabled": True,
+        "asd_mode": "asd_80",
     }
     if SETTINGS_FILE.exists():
         try:
@@ -932,6 +945,7 @@ async def update_general_settings(payload: GeneralSettingsPayload):
         "currency": payload.currency or "BRL",
         "auto_sanitize": payload.auto_sanitize if payload.auto_sanitize is not None else True,
         "notifications_enabled": payload.notifications_enabled if payload.notifications_enabled is not None else True,
+        "asd_mode": payload.asd_mode or "asd_80",
     }
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(current, f, indent=2, ensure_ascii=False)
