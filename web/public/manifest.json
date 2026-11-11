@@ -1,0 +1,25 @@
+{
+  "name": "OpenFamilyOffice",
+  "short_name": "OFO",
+  "description": "Gestão Patrimonial Consolidada • 2 CNPJs MEI + Finanças Familiares",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d131f",
+  "theme_color": "#5B67F6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
