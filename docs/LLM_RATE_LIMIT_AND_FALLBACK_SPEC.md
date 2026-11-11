@@ -12,7 +12,7 @@ Major AI providers offer generous free tiers:
 * **Google Gemini API Free Tier**: ~15 RPM (Requests Per Minute), 1,000,000 TPM (Tokens Per Minute), 1,500 RPD (Requests Per Day) on models like Gemini 1.5/2.0 Flash.
 * **Groq Free Tier**: ~30 RPM, 6,000 to 30,000 TPM, 14,400 RPD on models like Llama 3.3 70B and Qwen 2.5.
 * **OpenRouter / Mistral Free Models**: Free community endpoints with rate limits.
-* **Local LLM (Ollama / NexusLocal)**: 0 RPM/TPM/RPD limits, 100% free, runs offline on local hardware.
+* **NVIDIA NIM APIs**: build.nvidia.com high-performance inference (Llama 3.3 70B, Nemotron, DeepSeek R1).
 
 However, naive implementations fail because:
 1. They hit hard **429 (Too Many Requests)** errors when a batch briefing or receipt analysis exceeds RPM or TPM limits.
@@ -57,8 +57,8 @@ flowchart TD
     ActiveProvider -->|429 / 5xx Error| CooldownTrigger["Mark Provider in 60s Cool-Down<br/>+ Instant Failover to Secondary Provider"]
     CooldownTrigger --> SeamlessSwitch
     
-    SeamlessSwitch -->|All Cloud Fails| LocalFallback["Tier 0: Local Ollama / NexusLocal<br/>(Always Available, Offline, Zero Rate Limit)"]
-    LocalFallback --> Response
+    SeamlessSwitch -->|Fallback Route| NIMFallback["Tier 4: NVIDIA NIM API<br/>(build.nvidia.com High-Performance Inference)"]
+    NIMFallback --> Response
 ```
 
 ---
@@ -90,7 +90,7 @@ The system defines an ordered cascade of providers:
 | **Tier 1 (Primary)** | **Google Gemini Flash (2.0 / 1.5)** | 15 RPM / 1M TPM / 1,500 RPD | Complex synthesis, receipt photo vision, weekly family briefing. |
 | **Tier 2 (Secondary)** | **Groq (Llama 3.3 70B / Qwen 2.5)** | 30 RPM / 6k-30k TPM / 14,400 RPD | High-speed text reasoning, categorization, anomaly auditing. |
 | **Tier 3 (Tertiary)** | **OpenRouter / Mistral Free Tier** | Varies by community endpoint | Backup conversational reasoning and translation. |
-| **Tier 0 (Privacy & Offline)** | **Local Ollama (Qwen 2.5 / Llama 3.3)** | $\infty$ RPM / $\infty$ TPM / $\infty$ RPD | Highly sensitive bank statements, zero cloud leakage, offline mode. |
+| **Tier 4 (High Performance)** | **NVIDIA NIM (Llama 3.3 / Nemotron)** | 40 RPM / 60k TPM / 5,000 RPD | Fast structured outputs and financial operations via build.nvidia.com. |
 
 ---
 

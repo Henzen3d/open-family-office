@@ -176,15 +176,15 @@ Financial data requires maximum security and compliance with the Brazilian Gener
 │ Transactions  │ "Client_A", "Supplier_04").     │ Retention agreement. │
 ├───────────────┼─────────────────────────────────┼──────────────────────┤
 │ TIER 3:       │ Full tax IDs (CPF/CNPJ), bank   │ NEVER sent to cloud  │
-│ Highly        │ account numbers, passwords,     │ APIs. Processed      │
-│ Confidential  │ client addresses, raw bank OFX. │ LOCALLY via Ollama   │
-│               │                                 │ or NexusLocal only.  │
+│ Highly        │ account numbers, passwords,     │ APIs. Sanitized      │
+│ Confidential  │ client addresses, raw bank OFX. │ LOCALLY with M-11    │
+│               │                                 │ masks beforehand.    │
 └───────────────┴─────────────────────────────────┴──────────────────────┘
 ```
 
 ### Local Processing Capabilities
-OpenFamilyOffice is architected to allow complete offline operation:
-* Local database (PostgreSQL / SQLite).
+OpenFamilyOffice is architected to allow complete private operation:
+* Local database (SQLite WAL ACID).
 * Local deterministic calculation engine (Python).
-* Local LLM routing (via Ollama or local endpoint) for sensitive categorization and parsing.
+* Local rule engine and PII sanitization before any provider query.
 

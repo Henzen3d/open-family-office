@@ -277,10 +277,12 @@ async def test_provider(payload: TestProviderPayload):
         }
 
 
+@router.post("/api/settings/import-env")
+@router.post("/settings/import-env")
 @router.post("/api/settings/import-nexus")
 @router.post("/settings/import-nexus")
 async def import_nexus_env(payload: Optional[ImportNexusPayload] = None):
-    """Imports LLM API keys and gateway configurations from NexusLocal / Hermes .env files."""
+    """Imports LLM API keys and gateway configurations from .env files or environment."""
     mgr = get_config_manager()
     importer = EnvImporter()
     imported_list = []
@@ -296,14 +298,12 @@ async def import_nexus_env(payload: Optional[ImportNexusPayload] = None):
 
     data_dir = get_data_dir()
     candidate_paths = [
-        data_dir / "nexus.env",
-        data_dir / "hermes.env",
-        Path("data/nexus.env"),
-        Path("data/hermes.env"),
-        Path("/home/osmar/openfamilyoffice/data/nexus.env"),
-        Path("/home/osmar/nexuslocal/.env"),
-        Path("/home/osmar/.hermes/.env"),
+        data_dir / ".env",
         Path(".env"),
+        Path("data/.env"),
+        data_dir / "hermes.env",
+        Path("data/hermes.env"),
+        Path("/home/osmar/.hermes/.env"),
     ]
 
     for path in candidate_paths:

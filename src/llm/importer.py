@@ -1,4 +1,4 @@
-"""Importer for environment variables (.env) from NexusLocal, Multi+, Hermes, or local files."""
+"""Importer for environment variables (.env) from Multi+, Hermes, or local environment files."""
 import os
 import re
 from typing import Dict, List, Tuple
@@ -76,12 +76,21 @@ class EnvImporter:
         },
         "NVIDIA_API_KEY": {
             "id": "nvidia-nim",
-            "name": "NVIDIA NIM Inference",
+            "name": "NVIDIA NIM APIs (build.nvidia.com)",
             "protocol": "openai",
             "base_url": "https://integrate.api.nvidia.com/v1",
             "model": "meta/llama-3.3-70b-instruct",
-            "priority": 8,
-            "limits": ProviderLimits(rpm_limit=40, tpm_limit=60000, rpd_limit=2000, proactive_threshold_pct=0.80),
+            "priority": 4,
+            "limits": ProviderLimits(rpm_limit=40, tpm_limit=60000, rpd_limit=5000, proactive_threshold_pct=0.80),
+        },
+        "NVIDIA_NIM_API_KEY": {
+            "id": "nvidia-nim",
+            "name": "NVIDIA NIM APIs (build.nvidia.com)",
+            "protocol": "openai",
+            "base_url": "https://integrate.api.nvidia.com/v1",
+            "model": "meta/llama-3.3-70b-instruct",
+            "priority": 4,
+            "limits": ProviderLimits(rpm_limit=40, tpm_limit=60000, rpd_limit=5000, proactive_threshold_pct=0.80),
         },
         "SILICONFLOW_API_KEY": {
             "id": "siliconflow-api",
@@ -229,23 +238,6 @@ class EnvImporter:
                 )
                 manager.add_provider(cfg)
                 imported.append((cfg.id, cfg.name))
-
-        # 4. Check for custom Ollama / local URL
-        ollama_url = env_vars.get("OLLAMA_BASE_URL") or env_vars.get("LOCAL_LLM_URL")
-        if ollama_url:
-            local_cfg = CustomProviderConfig(
-                id="local-ollama",
-                name="Local Ollama / NexusLocal",
-                protocol="openai",
-                base_url=ollama_url.rstrip("/"),
-                api_key="ollama",
-                model=env_vars.get("OLLAMA_MODEL", "qwen2.5:14b"),
-                priority=99,
-                enabled=True,
-                limits=ProviderLimits(rpm_limit=9999, tpm_limit=9999999, rpd_limit=999999, proactive_threshold_pct=0.99),
-            )
-            manager.add_provider(local_cfg)
-            imported.append((local_cfg.id, local_cfg.name))
 
         return imported
 

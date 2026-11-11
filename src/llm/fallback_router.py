@@ -12,7 +12,7 @@ class ProviderProfile:
     """Configured LLM provider profile."""
     name: str
     model_name: str
-    provider_type: str  # "GEMINI_FREE", "GROQ_FREE", "OPENROUTER_FREE", "LOCAL_OLLAMA", "CUSTOM"
+    provider_type: str  # "GEMINI_FREE", "GROQ_FREE", "OPENROUTER_FREE", "NVIDIA_NIM", "CUSTOM"
     priority: int       # 1 is highest priority
     limits: ProviderLimits
     config: Optional[CustomProviderConfig] = None
@@ -76,11 +76,11 @@ class LLMFallbackRouter:
                 limits=ProviderLimits(rpm_limit=20, tpm_limit=20000, rpd_limit=1000, proactive_threshold_pct=0.80),
             ),
             ProviderProfile(
-                name="Local Ollama / NexusLocal",
-                model_name="qwen2.5:14b",
-                provider_type="LOCAL_OLLAMA",
+                name="NVIDIA NIM API",
+                model_name="meta/llama-3.3-70b-instruct",
+                provider_type="NVIDIA_NIM",
                 priority=4,
-                limits=ProviderLimits(rpm_limit=9999, tpm_limit=9999999, rpd_limit=999999, proactive_threshold_pct=0.99),
+                limits=ProviderLimits(rpm_limit=40, tpm_limit=60000, rpd_limit=5000, proactive_threshold_pct=0.80),
             ),
         ]
 
@@ -102,13 +102,7 @@ class LLMFallbackRouter:
             if profile.rate_limiter.has_capacity(estimated_tokens, now=now):
                 return profile, 0.0
 
-        # Step 2: If interactive, fallback immediately to Local Ollama (Priority 4)
-        if is_interactive:
-            for profile in self.profiles:
-                if profile.provider_type == "LOCAL_OLLAMA":
-                    return profile, 0.0
-
-        # Step 3: For background batch, compute minimal wait time among providers
+        # Step 2: If all providers are in cooldown or at limit, select the one with minimal wait time
         best_profile = self.profiles[0]
         min_wait = best_profile.rate_limiter.calculate_wait_seconds(now=now)
 
@@ -118,7 +112,7 @@ class LLMFallbackRouter:
                 min_wait = wait
                 best_profile = profile
 
-        return best_profile, min_wait
+        return best_profile, (0.0 if is_interactive else min_wait)
 
     def record_success(self, provider_name: str, tokens_used: int = 500, now: float = None):
         """Records a successful LLM call on the specified provider."""

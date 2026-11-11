@@ -1,10 +1,10 @@
 """Auto Roteamento Inteligente (Smart Router) for OpenFamilyOffice.
 
-Inspired by NexusLocal Smart Router (nexuslocal/backend/ranking/smart_router.py).
+Dynamic Multi-Provider AI Orchestration.
 Implements:
 1. Fast Intent Classification (PT-BR regex < 1ms)
 2. Real-time Financial & Macro Context Injection (Selic, IPCA, PTAX, MEI limits)
-3. Dynamic Provider Selection across verified Free Tiers (Groq, OpenRouter, Gemini)
+3. Dynamic Provider Selection across verified Cloud Providers (Groq, OpenRouter, Gemini, NVIDIA NIM, etc.)
 4. Automatic Failover when provider is rate-limited or fails
 5. Full PII Sanitization / Detokenization
 6. Enforces ASD-STE100 (~80%) executive conciseness
@@ -124,8 +124,8 @@ class SmartRouter:
     def get_eligible_providers(self) -> List[CustomProviderConfig]:
         """Returns enabled providers ordered by priority."""
         providers = self.config_manager.list_providers(enabled_only=True)
-        # Filter out local-ollama if inactive
-        filtered = [p for p in providers if p.api_key or "local" in p.id]
+        # Filter providers that have an active API key or configured environment variable
+        filtered = [p for p in providers if (p.api_key and len(p.api_key.strip()) > 0) or p.api_key.startswith("${")]
         # Sort by priority ascending (1 = highest)
         filtered.sort(key=lambda p: p.priority)
         return filtered

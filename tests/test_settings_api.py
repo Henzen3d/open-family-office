@@ -85,7 +85,7 @@ class TestSettingsAndProviders(unittest.TestCase):
 
     def test_nexus_env_import_content(self):
         raw_env = """
-        # NexusLocal Environment Extract
+        # Environment Extract
         GEMINI_API_KEY=AIzaSyTest1234567890abcdef
         GROQ_API_KEY=gsk_test1234567890abcdef
         ANTHROPIC_BASE_URL=https://api.customanthropic.com/v1

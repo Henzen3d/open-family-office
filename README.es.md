@@ -50,7 +50,7 @@ $$\Large \textbf{El Código Determinista Calcula} \quad \boldsymbol{+} \quad \te
    * *El Elefante*: Mantiene el contexto a largo plazo y redacta especificaciones técnicas formales sin escribir código apresurado.
    * *El Pez Dorado (Auditor Adversario / Red Team)*: Agente sin sesgo conversacional previo que cuestiona supuestos frágiles y analiza escenarios extremos antes de que se apruebe cualquier decisión.
 5. **Gobernanza Familiar y Control Humano**: La IA nunca mueve dinero ni ejecuta pagos de forma autónoma. Todas las decisiones financieras relevantes requieren la aprobación explícita de los titulares familiares.
-6. **Privacidad y Soberanía de Datos**: Procesamiento de datos confidenciales y extractos bancarios en local mediante modelos LLM locales (Ollama), enviando a la nube únicamente resúmenes anonimizados.
+6. **Privacidad y Soberanía de Datos**: Procesamiento de datos confidenciales y extractos bancarios en local mediante SQLite WAL y motores deterministas, aplicando enmascaramiento estricto antes de enviar cualquier consulta a modelos en la nube.
 
 ---
 

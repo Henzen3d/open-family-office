@@ -16,7 +16,7 @@ Diferente de aplicativos comerciais comuns de orçamento (YNAB, Mobills, Organiz
 2. **Reconciliador de Faturas de Cartão**: Registro na data do fato gerador com compensação na liquidação da fatura.
 3. **Ingestão Fiscal com OCR Duplo**: Decodificador exato de chave QR-Code NFC-e (SEFAZ) com fallback via Tesseract/Indra OCR e higienização EXIF de fotos.
 4. **Governança Anti-Vazamento (PII Sanitizer & Egress Guard)**: Algoritmo Módulo-11 para CPF/CNPJ, máscara de 4 tipos de chave PIX e blindagem estrita antes do envio para qualquer LLM externa.
-5. **Roteamento Inteligente com Resiliência Gratuita (SmartRouter)**: Classificação de intenção sub-milissegundo, medição de taxa por janela deslizante (RPM/TPM/RPD) e transição transparente de provedores (Gemini $\rightarrow$ Groq $\rightarrow$ OpenRouter $\rightarrow$ Ollama local).
+5. **Roteamento Inteligente com Resiliência Gratuita (SmartRouter)**: Classificação de intenção sub-milissegundo, medição de taxa por janela deslizante (RPM/TPM/RPD) e transição transparente de provedores (Gemini $\rightarrow$ Groq $\rightarrow$ OpenRouter $\rightarrow$ NVIDIA NIM).
 6. **Suíte de Testes Automatizados**: 111 testes de unidade e integração no backend com 100% de aprovação.
 
 Entretanto, uma auditoria profunda do código-fonte revelou **gargalos arquiteturais, limitações de persistência e oportunidades cruciais de inovação** que impedem o sistema de atingir seu potencial pleno de "Gabinete de Inteligência Familiar Multigeracional", conforme preconizado no documento de pesquisa de mercado (`references/melhorias/pesquisa-melhorias.md`).

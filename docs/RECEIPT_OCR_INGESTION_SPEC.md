@@ -23,7 +23,7 @@ flowchart TD
     Upload --> CheckQR{"Contains Fiscal QR-Code?<br/>(NFC-e / SAT / Fiscal URL)"}
     
     CheckQR -->|Yes (Deterministic)| QRParse["1. QR-Code Decoder (SEFAZ API / Public Portal)<br/>100% Exact XML Data & Chave de Acesso"]
-    CheckQR -->|No / International| VisionAI["2. Multimodal Vision AI Parser<br/>(Local Qwen2-VL / Ollama or Cloud Gemini/Claude)"]
+    CheckQR -->|No / International| VisionAI["2. Multimodal Vision AI Parser<br/>(Indra/Tesseract OCR or Cloud Gemini/Claude)"]
     
     QRParse --> Normalize["Normalized Receipt Object (Merchant, CNPJ, Date, Items, Total, Payment Method)"]
     VisionAI --> Normalize
@@ -55,7 +55,7 @@ In Brazil, federal and state tax laws mandate that almost all retail and commerc
 When a receipt lacks a QR-Code (e.g., credit card POS slip, US/European receipt, handwritten ticket, or damaged paper):
 
 * **How it works**:
-  1. The image is passed to a multimodal vision model (Local: `Qwen2-VL`, `Llava` via Ollama/NexusLocal; Cloud: `Gemini 1.5/2.0 Flash`, `Claude 3.5 Sonnet`, `GPT-4o`).
+  1. The image is passed to a vision model (Cloud: `Gemini 1.5/2.0 Flash`, `Claude 3.5 Sonnet`, `GPT-4o`; or local `Indra OCR / Tesseract`).
   2. The model extracts structured JSON following [`prompts/08_receipt_ocr_parser.md`](../prompts/08_receipt_ocr_parser.md).
   3. Extracts:
      - Merchant Name & Tax ID (CNPJ/EIN/VAT).
@@ -149,5 +149,5 @@ CREATE TABLE receipt_items (
 ## 6. Privacy & Security Safeguards
 
 * **Local Storage First**: Photos are stored locally in the user's data directory (e.g., `data/receipts/YYYY/MM/`), excluded from git via `.gitignore`.
-* **PII Redaction**: When using cloud multimodal APIs, customer personal CPF/Name printed on the receipt can be blurred or redacted prior to cloud transmission, or processed exclusively via local vision models (Ollama with `qwen2-vl` or `llava`).
+* **PII Redaction**: When using cloud multimodal APIs, customer personal CPF/Name printed on the receipt is blurred or redacted prior to cloud transmission, or processed locally via regex/Indra OCR.
 

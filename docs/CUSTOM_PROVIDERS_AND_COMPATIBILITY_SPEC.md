@@ -1,6 +1,6 @@
 # Custom LLM Providers & Multi-Protocol Compatibility Specification
 
-> **Technical Specification: Universal Provider Registry, Anthropic & OpenAI Protocol Compatibility, Dynamic Base URL Configuration, and NexusLocal / .env Importer.**
+> **Technical Specification: Universal Provider Registry, Anthropic & OpenAI Protocol Compatibility, Dynamic Base URL Configuration, and Automated .env Importer.**
 
 ---
 
@@ -10,9 +10,9 @@ AI infrastructure evolves at breakneck speed. New inference providers (such as G
 
 Hardcoding specific providers into a codebase creates rigidity and obsolescence:
 1. When a new provider launches with a generous free tier or lower latency, developers shouldn't need to refactor the core system to support it.
-2. Users who already have API keys configured in other tools (e.g., **NexusLocal / Multi+**) should not have to manually re-type dozens of keys.
+2. Users who already have API keys configured in environment files (`.env`) should not have to manually re-type dozens of keys.
 3. Different providers communicate via two primary API protocols in the modern ecosystem:
-   * **OpenAI-Compatible (`/v1/chat/completions`)**: Used by 90% of open-source and alternative model clouds (Groq, Cerebras, DeepSeek, OpenRouter, SambaNova, SiliconFlow, Ollama, vLLM).
+   * **OpenAI-Compatible (`/v1/chat/completions`)**: Used by 90% of open-source and model clouds (Groq, NVIDIA NIM, Cerebras, DeepSeek, OpenRouter, SambaNova, SiliconFlow, vLLM).
    * **Anthropic-Compatible (`/v1/messages`)**: Used by Anthropic Claude and custom enterprise/proxy gateways supporting Anthropic headers (`x-api-key`, `anthropic-version`).
 
 **OpenFamilyOffice** introduces a **Universal, Extensible Provider Registry** that allows users to register **any current or future LLM provider** simply by specifying its `protocol`, `base_url`, `api_key`, and `model`.
@@ -23,14 +23,14 @@ Hardcoding specific providers into a codebase creates rigidity and obsolescence:
 
 ```mermaid
 flowchart TD
-    ConfigSources["Configuration Sources<br/>• config/providers.json<br/>• .env / Environment Variables<br/>• NexusLocal / Multi+ Importer"] --> Registry["Universal Provider Registry<br/>(ProviderConfigManager)"]
+    ConfigSources["Configuration Sources<br/>• config/providers.json<br/>• .env / Environment Variables<br/>• Automated .env Importer"] --> Registry["Universal Provider Registry<br/>(ProviderConfigManager)"]
     
     Registry --> Router["LLM Fallback Router & Rate Limiter"]
     
     Router --> Client["Universal Multi-Protocol HTTP Client<br/>(src/llm/client.py)"]
     
     subgraph Protocols["Supported Protocols"]
-        P1["OpenAI-Compatible Adapter<br/>POST {base_url}/chat/completions<br/>Header: Authorization: Bearer {key}<br/>Groq, Cerebras, DeepSeek, Ollama, OpenRouter"]
+        P1["OpenAI-Compatible Adapter<br/>POST {base_url}/chat/completions<br/>Header: Authorization: Bearer {key}<br/>NVIDIA NIM, Groq, Cerebras, DeepSeek, OpenRouter"]
         P2["Anthropic-Compatible Adapter<br/>POST {base_url}/messages<br/>Header: x-api-key: {key}, anthropic-version: 2023-06-01<br/>Anthropic Claude, Custom Bedrock/Cloudflare Gateways"]
         P3["Gemini Native / OpenAI-Compat Adapter<br/>POST {base_url}/chat/completions<br/>Google AI Studio Free Tier"]
     end
@@ -80,9 +80,9 @@ Every registered provider in `config/providers.json` conforms to this schema:
 
 ---
 
-## 4. NexusLocal / Multi+ Automated Importer
+## 4. Automated .env Importer
 
-The system includes a dedicated migration utility ([`src/llm/importer.py`](../src/llm/importer.py)) capable of ingesting an existing `.env` file from **NexusLocal / Multi+** or other local setups:
+The system includes a dedicated migration utility ([`src/llm/importer.py`](../src/llm/importer.py)) capable of ingesting an existing `.env` file:
 
 ### Recognized Key Mappings:
 | Environment Variable | Auto-Configured Provider | Protocol | Default Free Model |
@@ -90,12 +90,12 @@ The system includes a dedicated migration utility ([`src/llm/importer.py`](../sr
 | `GEMINI_API_KEY` | Google Gemini Free | `gemini` / `openai` | `gemini-2.0-flash` |
 | `GROQ_API_KEY` | Groq Ultra-Fast | `openai` | `llama-3.3-70b-versatile` |
 | `OPENROUTER_API_KEY` | OpenRouter Community | `openai` | `meta-llama/llama-3.3-70b-instruct:free` |
+| `NVIDIA_API_KEY` | NVIDIA NIM APIs (build.nvidia.com) | `openai` | `meta/llama-3.3-70b-instruct` |
 | `CEREBRAS_API_KEY` | Cerebras Inference | `openai` | `llama3.3-70b` |
 | `SAMBANOVA_API_KEY` | SambaNova Systems | `openai` | `Meta-Llama-3.3-70B-Instruct` |
 | `DEEPSEEK_API_KEY` | DeepSeek AI | `openai` | `deepseek-chat` |
 | `MISTRAL_API_KEY` | Mistral AI | `openai` | `mistral-small-latest` |
 | `ANTHROPIC_API_KEY` | Anthropic Claude | `anthropic` | `claude-3-5-sonnet-20241022` |
-| `OLLAMA_BASE_URL` | Local Ollama | `openai` | `qwen2.5:14b` |
 
 ---
 
@@ -107,8 +107,8 @@ Users can manage providers without editing code:
 # List all registered providers and their priority/status
 python -m src.cli config list
 
-# Auto-import keys from an existing NexusLocal .env
-python -m src.cli config import --source "J:\Arquivos Osmar\Multi+\.env"
+# Auto-import keys from an existing .env
+python -m src.cli config import --source ".env"
 
 # Register any custom OpenAI-compatible provider
 python -m src.cli config add \

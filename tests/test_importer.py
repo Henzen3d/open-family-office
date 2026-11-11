@@ -16,7 +16,7 @@ class TestEnvImporter(unittest.TestCase):
             f.write("GROQ_API_KEY=test-groq-key\n")
             f.write("DEEPSEEK_API_KEY=test-deepseek-key\n")
             f.write("ANTHROPIC_API_KEY=test-anthropic-key\n")
-            f.write("OLLAMA_BASE_URL=http://localhost:11434\n")
+            f.write("NVIDIA_API_KEY=nvapi-test-key-123456\n")
 
     def tearDown(self):
         for f in [self.mock_env, self.mock_config]:
@@ -34,7 +34,13 @@ class TestEnvImporter(unittest.TestCase):
         self.assertIn("groq-free", imported_ids)
         self.assertIn("deepseek-api", imported_ids)
         self.assertIn("anthropic-claude", imported_ids)
-        self.assertIn("local-ollama", imported_ids)
+        self.assertIn("nvidia-nim", imported_ids)
+
+        # Verify NVIDIA NIM was correctly imported
+        nvidia = manager.providers["nvidia-nim"]
+        self.assertEqual(nvidia.protocol, "openai")
+        self.assertEqual(nvidia.base_url, "https://integrate.api.nvidia.com/v1")
+        self.assertEqual(nvidia.api_key, "nvapi-test-key-123456")
 
         # Verify Anthropic protocol was correctly mapped
         claude = manager.providers["anthropic-claude"]

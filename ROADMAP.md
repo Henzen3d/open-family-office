@@ -61,12 +61,12 @@ flowchart LR
 - [x] Multi-Provider Free-Tier LLM Rate Limiter & Fallback Router ([`docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md`](docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md), `src/llm/`):
   - Sliding-window tracking for RPM, TPM, and RPD.
   - Proactive switching at 80% capacity to avoid 429 errors.
-  - Cascade: Google Gemini Free -> Groq Free -> OpenRouter Free -> Local Ollama.
+  - Cascade: Google Gemini Free -> Groq Free -> OpenRouter Free -> NVIDIA NIM API.
   - Zero-latency switching for interactive user calls; smooth non-blocking delay queue for background batch tasks.
 - [x] Universal Custom Provider Registry & Multi-Protocol Client ([`docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md`](docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md), `src/llm/`):
   - Full support for **Anthropic-Compatible** (`/v1/messages`) and **OpenAI-Compatible** (`/v1/chat/completions`) endpoints.
   - Dynamic registration of any current or future provider by setting `base_url`, `api_key`, `protocol`, and `model`.
-  - Automated importer for **NexusLocal / Multi+** `.env` files (`python -m src.cli config import`).
+  - Automated importer for `.env` files (`python -m src.cli config import`).
   - Interactive CLI management: `config list`, `config add`, `config remove`, `config import`.
 - [x] Daily Real-Time Macroeconomic Grounding & News Ingestion ([`docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md`](docs/MACRO_NEWS_AND_MARKET_INTELLIGENCE_SPEC.md), `src/intelligence/`):
   - Banco Central do Brasil (BCB/SGS) public API client for Selic Meta, Dólar PTAX, and IPCA 12M with zero API keys.
@@ -83,9 +83,9 @@ flowchart LR
   3. Feed the validated JSON payload to the Family CFO prompt;
   4. Automatically run the Risk & Adversarial Audit (Red Team) pass;
   5. Render the final 1-page Markdown Weekly Executive Briefing (`reports/briefing_YYYY-MM-DD.md`).
-- [x] Add dual-LLM backend support:
-  - **Local Privacy Mode**: Ollama / NexusLocal (qwen2.5, llama3.3) for zero cloud transmission of sensitive financial data.
-  - **Cloud Mode**: Claude 3.5 Sonnet, GPT-4o, or Gemini 1.5/2.0 with automated fallback and rate-limit avoidance.
+- [x] Multi-provider LLM backend support:
+  - **High-Performance Inference & Proactive Failover**: Google Gemini, Groq, NVIDIA NIM, OpenRouter, DeepSeek, Mistral, Anthropic Claude.
+  - **Local PII Guard**: Strict Modulo-11 / SHA-256 masking before any provider call.
 
 ---
 

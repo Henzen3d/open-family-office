@@ -65,18 +65,18 @@ OpenFamilyOffice is engineered using Google's open-source **[Elephant-Goldfish M
 * **Dual-Key Approval**: Family principals (e.g., Osmar & Vera) establish discretionary spending limits and jointly approve major investments, price changes, and contracts.
 
 ### 7. Local-First Privacy (LGPD & GDPR Compliant)
-Sensitive financial transactions and tax identifiers can be processed 100% on-premises via local LLMs (Ollama, NexusLocal). Cloud LLMs receive only sanitized, redacted, and aggregated data.
+Sensitive financial transactions and tax identifiers are protected locally with strict Modulo-11 and SHA-256 masking. Cloud LLMs receive only sanitized, redacted data.
 
 ### 8. Instant Receipt & NFC-e Photo Ingestion (Zero-Friction Mobile Capture)
 Snap a photo of any supermarket receipt, hardware store slip, or fuel invoice:
 * **Brazil NFC-e / SAT QR-Code Reader**: Instantly reads official SEFAZ fiscal QR codes, retrieving 100% exact itemized line items, unit prices, and seller CNPJ with zero OCR error.
-* **Multimodal Vision AI Fallback**: Local or cloud vision models extract items, taxes, payment method, and merchant from non-QR paper slips.
+* **Multimodal Vision AI Fallback**: Local OCR or cloud vision models extract items, taxes, payment method, and merchant from non-QR paper slips.
 * **Anti-Duplication Card Matching**: Automatically detects if the receipt corresponds to a card transaction already logged on the statement, enriching the transaction with itemized details without duplicating the expense. See [`docs/RECEIPT_OCR_INGESTION_SPEC.md`](docs/RECEIPT_OCR_INGESTION_SPEC.md).
 
 ### 9. Multi-Provider Free-Tier LLM Router & Proactive Rate Limiting
 Run OpenFamilyOffice at **\$0/month operating cost** using free-tier API quotas safely:
 * **Sliding Window Tracking**: Proactively monitors rolling RPM (Requests Per Minute), TPM (Tokens Per Minute), and RPD (Requests Per Day).
-* **Proactive Failover**: When reaching 80% capacity, the router automatically fails over to the next healthy provider (Gemini 2.0 Flash $\rightarrow$ Groq Llama 3.3 70B $\rightarrow$ OpenRouter $\rightarrow$ Local Ollama) *before* hitting a 429 error.
+* **Proactive Failover**: When reaching 80% capacity, the router automatically fails over to the next healthy provider (Gemini 2.0 Flash $\rightarrow$ Groq Llama 3.3 70B $\rightarrow$ OpenRouter $\rightarrow$ NVIDIA NIM) *before* hitting a 429 error.
 * **Dual-Path Latency**: Zero wait time for interactive user chats; smooth background delay queue for batch tasks. See [`docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md`](docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md).
 
 ### 10. Real-Time Macroeconomic Grounding & Daily Financial News
@@ -88,7 +88,7 @@ Grounds AI advisory agents in verified, real-world economic reality rather than 
 ### 11. Universal Custom Provider Registry (Anthropic & OpenAI Compatible)
 Future-proof architecture allowing dynamic registration of any current or future LLM provider without touching code:
 * **Multi-Protocol Support**: Seamlessly dispatches requests to both **Anthropic-Compatible** (`/v1/messages`) and **OpenAI-Compatible** (`/v1/chat/completions`) endpoints.
-* **NexusLocal / Multi+ Importer**: Instantly imports configured API keys from existing `.env` files via `python -m src.cli config import`.
+* **Automated .env Importer**: Instantly imports configured API keys from existing `.env` files via `python -m src.cli config import`.
 * **Zero Lock-In**: Simply specify a `base_url`, `api_key`, `protocol`, and `model` to connect any enterprise proxy, custom cloud gateway, or local instance. See [`docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md`](docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md).
 
 ### 12. Curated Free Public APIs Suite (Finance, Crypto, CNPJ, Calendar)
@@ -223,7 +223,7 @@ python -m src.cli market
 python -m src.cli holidays
 python -m src.cli cnpj 12345678000195
 
-# Configure LLM providers or import keys from .env (NexusLocal / Multi+)
+# Configure LLM providers or import keys from .env
 python -m src.cli config list
 python -m src.cli config import --source path/to/.env
 ```
@@ -233,7 +233,7 @@ python -m src.cli config import --source path/to/.env
 ## Roadmap
 
 * **Phase 1 (Complete)**: Deterministic Core & Data Engine (Python data models, transfer neutralizer, card reconciler, runway math, MEI monitor).
-* **Phase 2 (Complete)**: AI Advisory Suite CLI, Receipt Vision Ingestion & Automated Briefings (Local Ollama / Cloud API runners, BCB macro & Public APIs, Family CFO + Risk Red Team).
+* **Phase 2 (Complete)**: AI Advisory Suite CLI, Receipt Vision Ingestion & Automated Briefings (Multi-provider execution with Gemini, Groq, NVIDIA NIM, DeepSeek, BCB macro & Public APIs).
 * **Phase 3 (Next)**: Interactive Web Dashboard & Mobile Ingestion (FastAPI + Modern UI, mobile camera upload, spousal approval UI).
 * **Phase 4**: Multi-Agent Autonomous Orchestration & Global Tax Plugins (US, UK, Spain, Germany).
 

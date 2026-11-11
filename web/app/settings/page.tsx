@@ -23,6 +23,7 @@ import {
   Save,
   Database,
   Building2,
+  Zap,
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { BankAccountItem } from '../components/SettingsModal';
@@ -44,6 +45,10 @@ export default function SettingsPage() {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, { ok: boolean; msg: string }>>({});
+  const [editingKeyId, setEditingKeyId] = useState<string | null>(null);
+  const [keyInput, setKeyInput] = useState('');
+  const [isAddingProvider, setIsAddingProvider] = useState(false);
+  const [importingEnv, setImportingEnv] = useState(false);
 
   // Limits State
   const [meiLimit, setMeiLimit] = useState(81000);
@@ -200,6 +205,92 @@ export default function SettingsPage() {
     }
   };
 
+  const handleToggleProvider = async (providerId: string) => {
+    try {
+      const res = await fetch(`/api/py/settings/providers/${providerId}/toggle`, { method: 'PATCH' });
+      if (res.ok) {
+        showFeedback('Status do provedor alternado com sucesso.');
+        await loadSettings();
+      }
+    } catch (e) {
+      console.error('Failed to toggle provider:', e);
+    }
+  };
+
+  const handleSaveProviderKey = async (provider: any) => {
+    try {
+      const res = await fetch('/api/py/settings/providers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: provider.id,
+          name: provider.name,
+          protocol: provider.protocol,
+          base_url: provider.base_url,
+          api_key: keyInput.trim(),
+          model: provider.model,
+          priority: provider.priority,
+          enabled: provider.enabled,
+          limits: provider.limits,
+        }),
+      });
+      if (res.ok) {
+        showFeedback(`Chave de API do provedor ${provider.name} atualizada com sucesso.`);
+        setEditingKeyId(null);
+        setKeyInput('');
+        await loadSettings();
+      }
+    } catch (e) {
+      console.error('Failed to save provider key:', e);
+    }
+  };
+
+  const handleDeleteProvider = async (providerId: string, providerName: string) => {
+    if (!confirm(`Deseja realmente remover o provedor "${providerName}"?`)) return;
+    try {
+      const res = await fetch(`/api/py/settings/providers/${providerId}`, { method: 'DELETE' });
+      if (res.ok) {
+        showFeedback(`Provedor "${providerName}" removido.`);
+        await loadSettings();
+      }
+    } catch (e) {
+      console.error('Failed to delete provider:', e);
+    }
+  };
+
+  const handleAddPreset = async (preset: any) => {
+    try {
+      const res = await fetch('/api/py/settings/providers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(preset),
+      });
+      if (res.ok) {
+        showFeedback(`Provedor "${preset.name}" cadastrado com sucesso!`);
+        setIsAddingProvider(false);
+        await loadSettings();
+      }
+    } catch (e) {
+      console.error('Failed to add preset:', e);
+    }
+  };
+
+  const handleImportEnv = async () => {
+    try {
+      setImportingEnv(true);
+      const res = await fetch('/api/py/settings/import-env', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        showFeedback(`${data.imported_count || 0} provedores importados do ambiente.`);
+        await loadSettings();
+      }
+    } catch (e) {
+      console.error('Failed to import from env:', e);
+    } finally {
+      setImportingEnv(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-[#0c1017] text-slate-800 dark:text-slate-100 transition-colors font-sans antialiased overflow-x-hidden">
       {/* Sidebar Navigation */}
@@ -293,66 +384,303 @@ export default function SettingsPage() {
 
         {/* Tab 1: AI Providers */}
         {activeTab === 'providers' && (
-          <div className="bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">
-              Chaves de API & Provedores de Inteligência Artificial
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
-              As chaves são salvas criptografadas exclusivamente na máquina local. O OpenFamilyOffice nunca envia segredos para servidores externos.
-            </p>
+          <div className="bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/5">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                  Chaves de API & Provedores de Inteligência Artificial
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Orquestração com fallback automático (NVIDIA NIM, Google Gemini, Groq, OpenRouter, DeepSeek, etc.). As credenciais são criptografadas localmente.
+                </p>
+              </div>
 
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleImportEnv}
+                  disabled={importingEnv}
+                  className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-xs font-semibold flex items-center gap-2 transition disabled:opacity-50"
+                  title="Importa chaves salvas em arquivo .env"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${importingEnv ? 'animate-spin' : ''}`} />
+                  <span>{importingEnv ? 'Importando...' : 'Importar de .env'}</span>
+                </button>
+
+                <button
+                  onClick={() => setIsAddingProvider(!isAddingProvider)}
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-pill flex items-center gap-2 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{isAddingProvider ? 'Fechar Presets' : 'Adicionar Provedor'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Presets Drawer */}
+            {isAddingProvider && (
+              <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 space-y-3 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                    Selecione um preset para adicionar aos modelos disponíveis:
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  {/* NVIDIA NIM Preset */}
+                  <button
+                    onClick={() =>
+                      handleAddPreset({
+                        id: 'nvidia-nim',
+                        name: 'NVIDIA NIM APIs (build.nvidia.com)',
+                        protocol: 'openai',
+                        base_url: 'https://integrate.api.nvidia.com/v1',
+                        api_key: '',
+                        model: 'meta/llama-3.3-70b-instruct',
+                        priority: 4,
+                        enabled: true,
+                        limits: { rpm_limit: 40, tpm_limit: 60000, rpd_limit: 5000, proactive_threshold_pct: 0.8 },
+                      })
+                    }
+                    className="p-3 text-left bg-white dark:bg-[#1b2230] hover:border-emerald-500 border border-slate-200 dark:border-white/10 rounded-xl transition group shadow-xs"
+                  >
+                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold text-xs mb-1">
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>NVIDIA NIM API</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      build.nvidia.com • Llama 3.3 70B / Nemotron
+                    </div>
+                  </button>
+
+                  {/* Gemini Preset */}
+                  <button
+                    onClick={() =>
+                      handleAddPreset({
+                        id: 'gemini-free',
+                        name: 'Google Gemini 2.0 Flash',
+                        protocol: 'gemini',
+                        base_url: 'https://generativelanguage.googleapis.com/v1beta/openai',
+                        api_key: '',
+                        model: 'gemini-2.0-flash',
+                        priority: 1,
+                        enabled: true,
+                        limits: { rpm_limit: 15, tpm_limit: 1000000, rpd_limit: 1500, proactive_threshold_pct: 0.8 },
+                      })
+                    }
+                    className="p-3 text-left bg-white dark:bg-[#1b2230] hover:border-indigo-500 border border-slate-200 dark:border-white/10 rounded-xl transition group shadow-xs"
+                  >
+                    <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-bold text-xs mb-1">
+                      <Cpu className="w-3.5 h-3.5" />
+                      <span>Google Gemini</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Gemini 2.0 Flash • Janela massiva
+                    </div>
+                  </button>
+
+                  {/* Groq Preset */}
+                  <button
+                    onClick={() =>
+                      handleAddPreset({
+                        id: 'groq-free',
+                        name: 'Groq Ultra-Fast',
+                        protocol: 'openai',
+                        base_url: 'https://api.groq.com/openai/v1',
+                        api_key: '',
+                        model: 'llama-3.3-70b-versatile',
+                        priority: 2,
+                        enabled: true,
+                        limits: { rpm_limit: 30, tpm_limit: 30000, rpd_limit: 14400, proactive_threshold_pct: 0.8 },
+                      })
+                    }
+                    className="p-3 text-left bg-white dark:bg-[#1b2230] hover:border-amber-500 border border-slate-200 dark:border-white/10 rounded-xl transition group shadow-xs"
+                  >
+                    <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-xs mb-1">
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Groq Cloud</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Llama 3.3 70B • Latência sub-segundo
+                    </div>
+                  </button>
+
+                  {/* DeepSeek Preset */}
+                  <button
+                    onClick={() =>
+                      handleAddPreset({
+                        id: 'deepseek-api',
+                        name: 'DeepSeek AI',
+                        protocol: 'openai',
+                        base_url: 'https://api.deepseek.com/v1',
+                        api_key: '',
+                        model: 'deepseek-chat',
+                        priority: 6,
+                        enabled: true,
+                        limits: { rpm_limit: 60, tpm_limit: 100000, rpd_limit: 5000, proactive_threshold_pct: 0.8 },
+                      })
+                    }
+                    className="p-3 text-left bg-white dark:bg-[#1b2230] hover:border-blue-500 border border-slate-200 dark:border-white/10 rounded-xl transition group shadow-xs"
+                  >
+                    <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold text-xs mb-1">
+                      <Cpu className="w-3.5 h-3.5" />
+                      <span>DeepSeek API</span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      DeepSeek Chat / R1 Reasoning
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Providers Listing */}
             <div className="space-y-4">
               {providers.length > 0 ? (
-                providers.map((p) => (
-                  <div
-                    key={p.id}
-                    className="p-4 bg-slate-50 dark:bg-[#121722] rounded-2xl border border-slate-200/60 dark:border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-slate-900 dark:text-white">{p.name}</span>
-                        {p.is_local && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">
-                            Local / Offline
-                          </span>
-                        )}
-                        {p.enabled && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
-                            Ativo
-                          </span>
-                        )}
+                providers.map((p) => {
+                  const isEditingKey = editingKeyId === p.id;
+                  const isKeyRevealed = showKeys[p.id];
+
+                  return (
+                    <div
+                      key={p.id}
+                      className={`p-4 rounded-2xl border transition ${
+                        p.enabled
+                          ? 'bg-slate-50 dark:bg-[#121722] border-slate-200/60 dark:border-white/5'
+                          : 'bg-slate-100/50 dark:bg-[#0e121a]/60 border-slate-200/30 dark:border-white/5 opacity-60'
+                      }`}
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{p.name}</span>
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300">
+                              P{p.priority}
+                            </span>
+                            <button
+                              onClick={() => handleToggleProvider(p.id)}
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition ${
+                                p.enabled
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-600'
+                                  : 'bg-slate-200 dark:bg-slate-800 text-slate-500 border-slate-300 dark:border-slate-700'
+                              }`}
+                            >
+                              {p.enabled ? 'Ativo' : 'Desativado'}
+                            </button>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                            <span>
+                              Modelo: <code className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{p.model}</code>
+                            </span>
+                            <span className="truncate max-w-xs font-mono text-[11px] text-slate-400">
+                              {p.base_url}
+                            </span>
+                          </div>
+
+                          {/* API Key Inline Row */}
+                          <div className="mt-3 flex items-center gap-2">
+                            {isEditingKey ? (
+                              <div className="flex items-center gap-2 w-full max-w-md">
+                                <div className="relative flex-1">
+                                  <input
+                                    type={isKeyRevealed ? 'text' : 'password'}
+                                    value={keyInput}
+                                    onChange={(e) => setKeyInput(e.target.value)}
+                                    placeholder="Cole aqui a nova chave de API (ex: nvapi-...)"
+                                    className="w-full pl-3 pr-9 py-1.5 bg-white dark:bg-[#161c28] border border-indigo-500 rounded-xl font-mono text-xs text-slate-900 dark:text-white outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowKeys((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
+                                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-slate-600"
+                                  >
+                                    {isKeyRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                  </button>
+                                </div>
+                                <button
+                                  onClick={() => handleSaveProviderKey(p)}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-xs flex items-center gap-1"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Salvar</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingKeyId(null);
+                                    setKeyInput('');
+                                  }}
+                                  className="px-2.5 py-1.5 bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-300 transition"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                {p.has_api_key ? (
+                                  <span className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-[#161c28] px-2.5 py-1 rounded-xl border border-slate-200 dark:border-white/10 font-mono">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                    <span>{p.api_key_masked || '••••••••'}</span>
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-xl border border-amber-200 dark:border-amber-800">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>Sem chave cadastrada</span>
+                                  </span>
+                                )}
+
+                                <button
+                                  onClick={() => {
+                                    setEditingKeyId(p.id);
+                                    setKeyInput('');
+                                  }}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200 dark:hover:bg-white/5 transition"
+                                  title="Editar Chave de API"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Test & Actions Column */}
+                        <div className="flex flex-row md:flex-col items-end gap-2 shrink-0">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleTestProvider(p.id)}
+                              disabled={testingProvider === p.id}
+                              className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#1b2230] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-[#252f42] text-xs font-semibold shadow-xs transition"
+                            >
+                              {testingProvider === p.id ? 'Testando...' : 'Testar Conexão'}
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteProvider(p.id, p.name)}
+                              className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+                              title="Remover Provedor"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {testResult[p.id] && (
+                            <span
+                              className={`text-[11px] font-semibold px-2.5 py-1 rounded-xl border mt-1 ${
+                                testResult[p.id].ok
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                                  : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                              }`}
+                            >
+                              {testResult[p.id].msg}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Modelo recomendado: <code className="font-mono text-xs text-indigo-600 dark:text-indigo-400">{p.recommended_model || 'Padrão'}</code>
-                      </p>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleTestProvider(p.id)}
-                        disabled={testingProvider === p.id}
-                        className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#1b2230] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-[#252f42] text-xs font-semibold shadow-xs transition"
-                      >
-                        {testingProvider === p.id ? 'Testando...' : 'Testar Conexão'}
-                      </button>
-
-                      {testResult[p.id] && (
-                        <span
-                          className={`text-xs font-semibold px-2.5 py-1 rounded-xl border ${
-                            testResult[p.id].ok
-                              ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200'
-                              : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200'
-                          }`}
-                        >
-                          {testResult[p.id].msg}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="py-8 text-center text-slate-500 text-xs">
-                  Carregando provedores configurados...
+                  Nenhum provedor configurado. Clique em &quot;Adicionar Provedor&quot; para cadastrar NVIDIA NIM ou outros modelos.
                 </div>
               )}
             </div>

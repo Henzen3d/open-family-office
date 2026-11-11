@@ -319,7 +319,7 @@ def main():
     rem_parser.add_argument("--id", required=True, help="Provider ID to remove")
 
     # config import
-    imp_parser = config_sub.add_parser("import", help="Import providers from .env file (NexusLocal / Multi+)")
+    imp_parser = config_sub.add_parser("import", help="Import providers from .env file")
     imp_parser.add_argument("--source", help="Path to .env file to import from")
 
     # Market overview command (public-apis)

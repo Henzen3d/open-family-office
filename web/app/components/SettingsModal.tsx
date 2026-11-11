@@ -946,7 +946,7 @@ export default function SettingsModal({
                     Roteamento Inteligente de IA (Fallback & Quota Zero)
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                    Orquestração multi-provedor (OpenAI, Anthropic, Gemini, Groq, Ollama) com prevenção proativa de Rate Limits.
+                    Orquestração multi-provedor (OpenAI, Anthropic, Gemini, Groq, NVIDIA NIM, DeepSeek) com prevenção proativa de Rate Limits.
                   </p>
                 </div>
 
@@ -954,11 +954,11 @@ export default function SettingsModal({
                   <button
                     onClick={handleImportNexus}
                     disabled={importingNexus}
-                    title="Importa chaves do arquivo local do Nexus ou Hermes (.env)"
+                    title="Importa chaves de arquivo .env"
                     className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-white dark:bg-[#1a202c] text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-900/40 shadow-sm flex items-center justify-center gap-2 transition disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${importingNexus ? 'animate-spin' : ''}`} />
-                    {importingNexus ? 'Importando...' : 'Importar do Nexus Local'}
+                    {importingNexus ? 'Importando...' : 'Importar de .env'}
                   </button>
 
                   <button
@@ -996,6 +996,80 @@ export default function SettingsModal({
                       <X className="w-4 h-4" />
                     </button>
                   </div>
+
+                  {!formData.id && (
+                    <div className="space-y-1.5 pb-2 border-b border-slate-200 dark:border-white/10">
+                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                        Preenchimento rápido por modelo / provedor:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({
+                            ...formData,
+                            id: 'nvidia-nim',
+                            name: 'NVIDIA NIM APIs (build.nvidia.com)',
+                            protocol: 'openai',
+                            base_url: 'https://integrate.api.nvidia.com/v1',
+                            model: 'meta/llama-3.3-70b-instruct',
+                            rpm_limit: 40,
+                            tpm_limit: 60000,
+                          })}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-[11px] font-bold hover:scale-105 transition"
+                        >
+                          ⚡ NVIDIA NIM
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({
+                            ...formData,
+                            id: 'gemini-free',
+                            name: 'Google Gemini 2.0 Flash',
+                            protocol: 'gemini',
+                            base_url: 'https://generativelanguage.googleapis.com/v1beta/openai',
+                            model: 'gemini-2.0-flash',
+                            rpm_limit: 15,
+                            tpm_limit: 1000000,
+                          })}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 text-[11px] font-medium hover:bg-slate-200 transition"
+                        >
+                          Gemini
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({
+                            ...formData,
+                            id: 'groq-free',
+                            name: 'Groq Ultra-Fast',
+                            protocol: 'openai',
+                            base_url: 'https://api.groq.com/openai/v1',
+                            model: 'llama-3.3-70b-versatile',
+                            rpm_limit: 30,
+                            tpm_limit: 30000,
+                          })}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 text-[11px] font-medium hover:bg-slate-200 transition"
+                        >
+                          Groq
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({
+                            ...formData,
+                            id: 'deepseek-api',
+                            name: 'DeepSeek AI',
+                            protocol: 'openai',
+                            base_url: 'https://api.deepseek.com/v1',
+                            model: 'deepseek-chat',
+                            rpm_limit: 60,
+                            tpm_limit: 100000,
+                          })}
+                          className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 text-[11px] font-medium hover:bg-slate-200 transition"
+                        >
+                          DeepSeek
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
@@ -1144,7 +1218,7 @@ export default function SettingsModal({
                   </div>
                 ) : providers.length === 0 ? (
                   <div className="py-8 text-center text-xs text-slate-400 border border-dashed border-slate-300 dark:border-white/10 rounded-2xl">
-                    Nenhum provedor configurado. Clique em &quot;Importar do Nexus Local&quot; ou adicione manualmente.
+                    Nenhum provedor configurado. Clique em &quot;Importar de .env&quot; ou adicione manualmente.
                   </div>
                 ) : (
                   providers.map((prov) => {
@@ -1447,9 +1521,9 @@ export default function SettingsModal({
                 </div>
 
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#1a202c] border border-slate-200 dark:border-white/10">
-                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">Local Nexus / Ollama</div>
-                  <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400 mt-1">Ilimitado (Offline)</div>
-                  <div className="text-[11px] text-slate-400 mt-1">Fallback final sem custo</div>
+                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">NVIDIA NIM API</div>
+                  <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400 mt-1">40 RPM / 60k TPM</div>
+                  <div className="text-[11px] text-slate-400 mt-1">build.nvidia.com (Llama 3.3 / Nemotron)</div>
                 </div>
               </div>
 

@@ -50,7 +50,7 @@ Financial reality cannot be captured by a single ledger view. OpenFamilyOffice s
 ### Principle 6: Local-First Privacy & Data Protection (LGPD / GDPR)
 * Financial records represent the most sensitive data a family possesses.
 * Multi-tiered data classification:
-  * Highly sensitive transaction details can be processed entirely on-device via local LLMs (e.g., Ollama, NexusLocal).
+  * Highly sensitive transaction details are processed on-device via local deterministic rule engines and SQLite WAL ACID.
   * Cloud LLM interactions utilize sanitized, redacted, and aggregated payloads.
 
 ---

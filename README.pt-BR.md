@@ -65,18 +65,18 @@ O desenvolvimento do OpenFamilyOffice segue a metodologia open-source da Google 
 * **Aprovação Dupla**: O casal define limites de gastos individuais e aprova conjuntamente decisões patrimoniais, novos contratos e orçamentos de novos negócios.
 
 ### 7. Privacidade Local-First (LGPD & GDPR)
-Classificação em camadas de dados: extratos completos e dados sensíveis de clientes podem rodar 100% localmente em LLMs on-premise (via Ollama ou NexusLocal), enviando para a nuvem apenas dados agregados e anonimizados.
+Classificação em camadas de dados: extratos completos e dados sensíveis rodam localmente com mascaramento e blindagem estrita (Módulo-11 e hashes), enviando para os modelos em nuvem apenas dados anonimizados.
 
 ### 8. Captura Instantânea por Foto de Cupom Fiscal & NFC-e (Zero Atrito)
 Vá ao supermercado, padaria ou loja de materiais elétricos e simplesmente tire uma foto do cupom:
 * **Leitor de QR-Code NFC-e / SAT (Brasil)**: Decodifica o QR-Code fiscal da SEFAZ na foto, extraindo os itens detalhados, preços unitários e CNPJ do emissor com 100% de exatidão e sem erros de OCR.
-* **IA de Visão Multimodal Fallback**: Para recibos manuais ou sem QR-Code, modelos de visão locais ou em nuvem extraem valores, método de pagamento, data e itens.
+* **IA de Visão Multimodal Fallback**: Para recibos manuais ou sem QR-Code, modelos de visão em nuvem ou OCR local extraem valores, método de pagamento, data e itens.
 * **Pareamento Inteligente Anti-Duplicação**: Se a compra foi paga no cartão Nubank, o sistema identifica a transação correspondente no extrato bancário e anexa os itens do cupom a ela, enriquecendo o registro **sem duplicar a despesa**. Veja a especificação em [`docs/RECEIPT_OCR_INGESTION_SPEC.md`](docs/RECEIPT_OCR_INGESTION_SPEC.md).
 
 ### 9. Roteador de IA com Free Tier & Proteção Proativa contra Limites (RPM/TPM/RPD)
 Permite operar o OpenFamilyOffice com **custo zero de infraestrutura e APIs (R\$ 0/mês)**:
 * **Monitoramento por Janela Deslizante**: Acompanha em tempo real requisições por minuto (RPM), tokens por minuto (TPM) e requisições diárias (RPD).
-* **Troca Proativa de Modelo (Failover)**: Ao atingir 80% da cota de um provedor, o sistema alterna automaticamente para o próximo da fila gratuita (Gemini 2.0 Flash $\rightarrow$ Groq Llama 3.3 70B $\rightarrow$ OpenRouter $\rightarrow$ Ollama Local) *antes* de bater no erro 429.
+* **Troca Proativa de Modelo (Failover)**: Ao atingir 80% da cota de um provedor, o sistema alterna automaticamente para o próximo da fila (Gemini 2.0 Flash $\rightarrow$ Groq Llama 3.3 70B $\rightarrow$ OpenRouter $\rightarrow$ NVIDIA NIM) *antes* de bater no erro 429.
 * **Experiência Sem Atraso**: Zero delay para conversas interativas do usuário; fila suave assíncrona para tarefas de background (briefings longos e leitura de cupons). Veja [`docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md`](docs/LLM_RATE_LIMIT_AND_FALLBACK_SPEC.md).
 
 ### 10. Inteligência Macroeconômica em Tempo Real & Notícias do Mercado
@@ -88,7 +88,7 @@ Alimenta as IAs com o cenário econômico real do dia, garantindo análises fié
 ### 11. Cadastro Dinâmico de Provedores Customizados (Compatível com Anthropic & OpenAI)
 Arquitetura flexível e à prova de futuro para cadastrar qualquer novo provedor de IA sem mexer no código do sistema:
 * **Suporte Multi-Protocolo Nativo**: Conecta tanto a endpoints **compatíveis com Anthropic** (`/v1/messages`) quanto **compatíveis com OpenAI** (`/v1/chat/completions`).
-* **Importador Automático do NexusLocal / Multi+**: Importa todas as chaves existentes do `.env` com um único comando: `python -m src.cli config import`.
+* **Importador Automático de .env**: Importa todas as chaves existentes do `.env` com um único comando: `python -m src.cli config import`.
 * **Zero Engessamento**: Cadastre novos provedores informando apenas a `base_url`, `api_key`, `protocol` e `model` via CLI (`python -m src.cli config add`) ou pelo arquivo `config/providers.json`. Veja [`docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md`](docs/CUSTOM_PROVIDERS_AND_COMPATIBILITY_SPEC.md).
 
 ### 12. Suíte de APIs Públicas e Gratuitas (Câmbio, Crypto, CNPJ, Feriados Bancários)
@@ -215,7 +215,7 @@ python -m src.cli market
 python -m src.cli holidays
 python -m src.cli cnpj 12345678000195
 
-# Gerenciamento de provedores LLM ou importação de .env (NexusLocal / Multi+)
+# Gerenciamento de provedores LLM ou importação de .env
 python -m src.cli config list
 python -m src.cli config import --source caminho/para/.env
 ```
@@ -225,7 +225,7 @@ python -m src.cli config import --source caminho/para/.env
 ## Roteiro de Evolução (Roadmap)
 
 * **Fase 1 (Concluída)**: Núcleo Determinístico & Dados (Modelos Python, neutralizador de transferências, reconciliador de cartões e cálculo de runway).
-* **Fase 2 (Concluída)**: CLI do Conselho de IA, Ingestão de Cupons com Visão & Briefings Automáticos (Executores locais via Ollama/NexusLocal, nuvem, APIs públicas do BCB e Red Team de Risco).
+* **Fase 2 (Concluída)**: CLI do Conselho de IA, Ingestão de Cupons com Visão & Briefings Automáticos (Executores multi-provedor com Gemini, Groq, NVIDIA NIM, APIs públicas do BCB e Red Team de Risco).
 * **Fase 3 (Próxima)**: Painel Web Interativo & Ingestão Móvel (FastAPI + Interface moderna, foto via Telegram/WhatsApp e tela de aprovação do casal).
 * **Fase 4**: Orquestração Multi-Agente & Plugins Tributários Internacionais (EUA, Reino Unido, Espanha, Alemanha).
 

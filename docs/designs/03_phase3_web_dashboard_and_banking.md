@@ -43,13 +43,10 @@ flowchart TD
             Router["LLM Fallback Router & Rate Limiter"]
         end
 
-        subgraph LocalAI["Local Inference (Zero Network Egress)"]
-            Ollama["Local Ollama / NexusLocal (qwen2.5:14b)"]
-        end
     end
 
     subgraph CloudAI["Cloud Inference (Sanitized Payloads Only)"]
-        Gemini["Google Gemini Free / Groq / Anthropic"]
+        Gemini["Google Gemini / Groq / NVIDIA NIM / Anthropic"]
     end
 
     Browser -->|HTTP / SSE on :3000| AppRouter
@@ -57,7 +54,6 @@ flowchart TD
     ProxyRewrites -->|Internal Loopback 127.0.0.1:8000| APIEndpoints
     APIEndpoints --> PIISanitizer
     PIISanitizer --> Router
-    Router -->|Private Data| Ollama
     Router -->|Sanitized Tokens Only| Gemini
     APIEndpoints --> ReceiptEngine
     APIEndpoints --> BankIngest
@@ -155,8 +151,8 @@ flowchart TD
      `r"\[?\s*(?:PRINCIPAL[_\s]A|ENTITY[_\s]01[_\s]MEI)\s*\]?"`
    - Replaces matches back with friendly local labels in the UI layer.
 5. **Absolute Cloud Egress Guard**:
-   - Sanitization is NOT bypassed in local mode.
-   - If `FallbackRouter` shifts from local Ollama to cloud LLMs, the egress client verifies that the sanitization pipeline executed. If unmasked PII is detected, the request is rejected immediately with `SecurityEgressException`.
+   - Sanitization is strictly enforced before all LLM calls.
+   - When `FallbackRouter` shifts across providers, the egress client verifies that the sanitization pipeline executed. If unmasked PII is detected, the request is rejected immediately with `SecurityEgressException`.
 
 ---
 

@@ -53,19 +53,19 @@
     }
   },
   {
-    "id": "local-ollama",
-    "name": "Local Ollama / NexusLocal (Offline & Zero-Cost)",
+    "id": "nvidia-nim",
+    "name": "NVIDIA NIM APIs (build.nvidia.com)",
     "protocol": "openai",
-    "base_url": "http://localhost:11434/v1",
-    "api_key": "ollama",
-    "model": "qwen2.5:14b",
+    "base_url": "https://integrate.api.nvidia.com/v1",
+    "api_key": "${NVIDIA_API_KEY}",
+    "model": "meta/llama-3.3-70b-instruct",
     "priority": 4,
     "enabled": true,
     "limits": {
-      "rpm_limit": 9999,
-      "tpm_limit": 9999999,
-      "rpd_limit": 999999,
-      "proactive_threshold_pct": 0.99
+      "rpm_limit": 40,
+      "tpm_limit": 60000,
+      "rpd_limit": 5000,
+      "proactive_threshold_pct": 0.8
     },
     "custom_headers": {}
   }
