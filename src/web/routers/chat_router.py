@@ -162,7 +162,8 @@ class ConfirmCardRequest(BaseModel):
     account_name: str
     notes: Optional[str] = None
     corrects_receipt: Optional[str] = Field(default=None, description="Receipt id or image filename stem being corrected by this confirmation")
-    card_type: Optional[str] = Field(default=None, description="Card type: EXPENSE_CONFIRMATION or CORRECTION_CONFIRMATION")
+    card_type: Optional[str] = Field(default=None, description="Card type: EXPENSE_CONFIRMATION, REVENUE_CONFIRMATION or CORRECTION_CONFIRMATION")
+    is_revenue: Optional[bool] = Field(default=None, description="Whether this transaction is revenue/income (+) rather than expense (-)")
 
 
 @router.post("/api/chat")
@@ -256,15 +257,29 @@ async def confirm_ledger_card(request: ConfirmCardRequest):
     except ValueError:
         tx_date = datetime.now().date()
 
+    is_rev = request.is_revenue if request.is_revenue is not None else (request.card_type == "REVENUE_CONFIRMATION")
+
+    signed_amount = Decimal(str(abs(request.amount))) if is_rev else Decimal(str(-abs(request.amount)))
+    raw_desc = (
+        f"Receita confirmada via Assistente: {request.counterparty}"
+        if is_rev
+        else f"Compra confirmada via Assistente: {request.counterparty}"
+    )
+    clean_desc = (
+        f"Receita {request.counterparty} ({request.category})"
+        if is_rev
+        else f"Compra {request.counterparty} ({request.category})"
+    )
+
     new_tx = Transaction(
         id=tx_id,
         entity_code=request.entity_code,
         account_name=request.account_name,
         date=tx_date,
-        amount=Decimal(str(-abs(request.amount))),
+        amount=signed_amount,
         currency="BRL",
-        raw_description=f"Compra confirmada via Assistente: {request.counterparty}",
-        clean_description=f"Compra {request.counterparty} ({request.category})",
+        raw_description=raw_desc,
+        clean_description=clean_desc,
         category_code=request.category,
         counterparty=request.counterparty,
         is_transfer=False,
@@ -307,11 +322,11 @@ async def confirm_ledger_card(request: ConfirmCardRequest):
             "account_name": request.account_name,
             "clean_description": new_tx.clean_description,
             "counterparty": request.counterparty,
-            "amount": -abs(request.amount),
+            "amount": float(signed_amount),
             "is_transfer": False,
             "notes": new_tx.notes,
             "status": "CONFIRMED",
         },
         "receipt_correction": receipt_correction,
-        "message": f"Lançamento de R$ {request.amount:,.2f} registrado com sucesso no Livro Razão.",
+        "message": f"Lançamento de {'+R$' if is_rev else '-R$'} {abs(request.amount):,.2f} registrado com sucesso no Livro Razão.",
     }

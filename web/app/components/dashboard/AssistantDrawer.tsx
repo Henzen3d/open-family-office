@@ -211,8 +211,14 @@ export default function AssistantDrawer({
                       <div className="mt-3.5 p-4 bg-white dark:bg-[#121724] border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm text-slate-900 dark:text-white animate-card-reveal">
                         <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 dark:border-white/10 mb-3">
                           <div className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-                            <FileText className="w-4 h-4 text-indigo-500" />
-                            <span>{msg.confirmationCard.type === 'CORRECTION_CONFIRMATION' ? 'Correção do Cupom' : 'Cupom Identificado'}</span>
+                            <FileText className={`w-4 h-4 ${msg.confirmationCard.is_revenue || msg.confirmationCard.type === 'REVENUE_CONFIRMATION' ? 'text-emerald-500' : 'text-indigo-500'}`} />
+                            <span>
+                              {msg.confirmationCard.type === 'CORRECTION_CONFIRMATION'
+                                ? 'Correção do Cupom'
+                                : (msg.confirmationCard.is_revenue || msg.confirmationCard.type === 'REVENUE_CONFIRMATION'
+                                    ? 'Receita Identificada'
+                                    : 'Despesa / Cupom')}
+                            </span>
                           </div>
                           {msg.confirmationCard.status === 'CONFIRMED' ? (
                             <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1">
@@ -232,12 +238,17 @@ export default function AssistantDrawer({
 
                         {/* Hero Amount */}
                         <div className="mb-3">
-                          <div className="text-2xl font-extrabold font-mono text-slate-900 dark:text-white tracking-tight">
+                          <div className={`text-2xl font-extrabold font-mono tracking-tight ${
+                            msg.confirmationCard.is_revenue || msg.confirmationCard.type === 'REVENUE_CONFIRMATION'
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-slate-900 dark:text-white'
+                          }`}>
                             {msg.confirmationCard.type === 'CORRECTION_CONFIRMATION' && msg.confirmationCard.formatted_old_amount ? (
                               <span className="text-lg font-bold text-slate-400 dark:text-slate-500 line-through mr-2">
                                 {msg.confirmationCard.formatted_old_amount}
                               </span>
                             ) : null}
+                            {(msg.confirmationCard.is_revenue || msg.confirmationCard.type === 'REVENUE_CONFIRMATION') ? '+' : ''}
                             {msg.confirmationCard.formatted_amount}
                           </div>
                           <div className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
@@ -304,10 +315,14 @@ export default function AssistantDrawer({
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleConfirmCard(msg.confirmationCard!, msg.id)}
-                                className="flex-1 py-3 px-4 min-h-[48px] bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition active:scale-95"
+                                className={`flex-1 py-3 px-4 min-h-[48px] text-white font-bold text-sm rounded-xl shadow-sm flex items-center justify-center gap-1.5 transition active:scale-95 ${
+                                  msg.confirmationCard.is_revenue || msg.confirmationCard.type === 'REVENUE_CONFIRMATION'
+                                    ? 'bg-emerald-600 hover:bg-emerald-500'
+                                    : 'bg-indigo-600 hover:bg-indigo-500'
+                                }`}
                               >
                                 <CheckCircle2 className="w-4 h-4" />
-                                <span>Confirmar Lançamento</span>
+                                <span>{msg.confirmationCard.is_revenue || msg.confirmationCard.type === 'REVENUE_CONFIRMATION' ? 'Confirmar Receita' : 'Confirmar Lançamento'}</span>
                               </button>
                               <button
                                 onClick={() => handleDiscardCard(msg.id)}
@@ -413,6 +428,20 @@ export default function AssistantDrawer({
             >
               <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
               <span>Runway</span>
+            </button>
+            <button
+              onClick={() => handleSendMessage('Qual o valor da minha carteira de ações nos Estados Unidos?')}
+              className="px-3 py-1.5 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-medium shrink-0 flex items-center gap-1.5 transition active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Ações EUA</span>
+            </button>
+            <button
+              onClick={() => handleSendMessage('Diagnóstico de lacunas e estimativa de gastos para fechar contas')}
+              className="px-3 py-1.5 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-medium shrink-0 flex items-center gap-1.5 transition active:scale-95"
+            >
+              <FileText className="w-3.5 h-3.5 text-amber-500" />
+              <span>Estimar Gastos</span>
             </button>
             <button
               onClick={() => handleSendMessage('Quanto já retiramos das empresas para a família este ano?')}

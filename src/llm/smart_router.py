@@ -35,6 +35,15 @@ from src.intelligence.assistant_tools import (
     extract_expense_proposal,
     extract_correction_proposal,
 )
+from src.intelligence.nlp_transaction_parser import (
+    parse_natural_transaction,
+    parse_balance_list,
+    parse_us_stocks_list,
+    parse_estimation_request,
+)
+from src.controller.portfolio_manager import PortfolioManager
+from src.controller.account_manager import AccountManager
+from src.engine.expense_estimator import ExpenseEstimatorEngine
 
 
 class IntentKey(str, Enum):
@@ -345,6 +354,137 @@ class SmartRouter:
                 "intent": intent_decision.intent.value,
                 "provider": p_name,
                 "model": p_model,
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
+
+        # Phase 7 Feature 2: Bank Balance List Update from Chat
+        balance_updates = parse_balance_list(user_message)
+        if balance_updates and len(balance_updates) >= 1:
+            acct_mgr = AccountManager()
+            updated_accounts = []
+            for b in balance_updates:
+                adjusted = acct_mgr.adjust_balance(
+                    account_id=b["account_id"],
+                    new_balance=b["new_balance"],
+                    note="Ajuste de saldo em lote via chat",
+                    source="chat_batch_sync",
+                )
+                if adjusted:
+                    updated_accounts.append(adjusted)
+
+            tot_cash = sum(a.balance for a in acct_mgr.load_accounts())
+            tot_fmt = f"R$ {tot_cash:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            lines = ["Saldos bancários atualizados com sucesso no sistema:"]
+            for a in updated_accounts:
+                lines.append(f"- {a.name}: {a.to_dict()['formatted_balance']}")
+            lines.append(f"Novo saldo total consolidado: {tot_fmt}.")
+            lines.append("Trilha de auditoria registrada com segurança em data/governance/balance_adjustments.jsonl.")
+            return {
+                "reply": "\n".join(lines),
+                "intent": "financial_ops",
+                "provider": "Sincronizador Bancário Local",
+                "model": "BankSync-NLP",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
+
+        # Phase 7 Feature 3: US Stock Portfolio Ingestion from Chat
+        us_stocks_data = parse_us_stocks_list(user_message)
+        if us_stocks_data and us_stocks_data.get("items"):
+            port_mgr = PortfolioManager()
+            saved_positions = port_mgr.batch_upsert(
+                items=us_stocks_data["items"],
+                broker_default=us_stocks_data.get("broker", "Avenue"),
+            )
+            summary = port_mgr.get_summary()
+            lines = [
+                f"Carteira de ações norte-americanas registrada na corretora {us_stocks_data.get('broker', 'Avenue')}:",
+            ]
+            for p in saved_positions:
+                lines.append(f"- {p.shares:g}x {p.ticker} ({p.company_name}) → US$ {p.total_usd:,.2f}")
+            lines.append(f"Total em ações americanas: {summary.to_dict()['formatted_total_usd']} ({summary.to_dict()['formatted_total_brl']} via PTAX R$ {summary.ptax_rate:.2f}).")
+            lines.append(f"Status Bacen: {summary.cbe_status}.")
+            return {
+                "reply": "\n".join(lines),
+                "intent": "investment_macro",
+                "provider": "Gestor de Carteira Internacional",
+                "model": "USPortfolio-NLP",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
+
+        # Phase 7 Feature 4: Gap Estimation for Missing Months
+        if parse_estimation_request(user_message):
+            estimator = ExpenseEstimatorEngine(self.ledger_manager)
+            gap_plans = estimator.identify_gap_months()
+            if not gap_plans:
+                reply = (
+                    "Nenhuma lacuna crítica de meses encontrada no livro-razão.\n"
+                    "Todos os meses recentes possuem lançamentos ativos suficientes."
+                )
+            else:
+                total_gap_tx = sum(len(p.proposals) for p in gap_plans)
+                total_gap_val = sum(p.proposed_expenses_total for p in gap_plans)
+                val_fmt = f"R$ {total_gap_val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                clean_msg_low = user_message.lower().strip()
+
+                is_explicit_apply = any(w in clean_msg_low for w in ["aplicar estimativa", "aplicar estimativas", "lancar estimativas", "lançar estimativas", "confirmar estimativas", "executar estimativas"])
+
+                if is_explicit_apply:
+                    created = estimator.apply_estimated_proposals(gap_plans)
+                    reply = (
+                        f"Reconstituição contábil executada com sucesso!\n"
+                        f"- Meses com lacunas identificados: {len(gap_plans)}\n"
+                        f"- Total de lançamentos estimados gerados: {len(created)}\n"
+                        f"- Impacto total provisionado: -{val_fmt}\n"
+                        f"- Status contábil: 100% marcados como 'ESTIMATED' no livro-razão.\n"
+                        "Esses lançamentos provisionais fecham o gap contábil e permanecem abertos para substituição futura quando você tiver os cupons ou faturas reais."
+                    )
+                else:
+                    lines = [
+                        f"Diagnóstico de Lacunas Contábeis ({len(gap_plans)} meses com poucos lançamentos):",
+                        f"- Provisão estimada calculada pela média: -{val_fmt} ({total_gap_tx} lançamentos sugeridos)",
+                    ]
+                    for p in gap_plans[:3]:
+                        lines.append(f"- {p.year_month}: {p.existing_transactions_count} lançamentos reais → {p.proposed_estimates_count} estimativas sugeridas (-R$ {p.proposed_expenses_total:,.2f})")
+                    lines.append("Para aplicar essas estimativas no livro-razão, diga: 'Aplicar estimativa de gastos para fechar as contas'.")
+                    reply = "\n".join(lines)
+
+            return {
+                "reply": reply,
+                "intent": "financial_ops",
+                "provider": "Motor Estatístico de Estimativas",
+                "model": "ExpenseEstimator-ASD",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
+
+        # Phase 7 Feature 1: Natural Language Transaction (Revenues and Expenses)
+        nlp_tx = parse_natural_transaction(user_message, entity_context)
+        if nlp_tx:
+            amt_fmt = nlp_tx["formatted_amount"]
+            cpty = nlp_tx["counterparty"]
+            cat = nlp_tx["category"]
+            ent_name = nlp_tx["entity_name"]
+            acct = nlp_tx["account_name"]
+            is_rev = nlp_tx["is_revenue"]
+            action_desc = "receita recebida" if is_rev else "despesa/compra"
+            reply = (
+                f"Identifiquei a {action_desc} de {amt_fmt} ({nlp_tx['clean_description']}).\n"
+                f"Entidade: {ent_name} | Conta: {acct} | Categoria: {cat}.\n"
+                "Confirme no cartão interativo abaixo para registrar no livro-razão."
+            )
+            return {
+                "reply": reply,
+                "intent": "nlp_transaction_intake",
+                "confirmation_card": nlp_tx,
+                "provider": "Engine Local de Lançamentos NLP",
+                "model": "NLPTransactionParser-ASD",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
                 "asd_mode": effective_asd,

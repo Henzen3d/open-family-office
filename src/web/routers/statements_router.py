@@ -285,3 +285,77 @@ async def get_statements_summary():
         "status": "empty",
         "message": "Nenhum histórico consolidado encontrado. Execute o script de ingestão.",
     }
+
+
+@router.get("/api/ledger/gaps/preview")
+@router.get("/ledger/gaps/preview")
+async def preview_ledger_gaps(min_tx_count: int = 4):
+    """Analyzes historical transactions, computes category averages, and previews gap months."""
+    from src.engine.expense_estimator import ExpenseEstimatorEngine
+    ledger_mgr = get_ledger_manager()
+    estimator = ExpenseEstimatorEngine(ledger_mgr)
+    
+    averages = estimator.compute_category_averages()
+    gap_plans = estimator.identify_gap_months(min_tx_count=min_tx_count)
+    
+    total_proposed_expenses = sum(p.proposed_expenses_total for p in gap_plans)
+    total_proposed_txs = sum(p.proposed_estimates_count for p in gap_plans)
+
+    return {
+        "gap_months_count": len(gap_plans),
+        "total_proposed_estimates_count": total_proposed_txs,
+        "total_proposed_expenses": round(total_proposed_expenses, 2),
+        "formatted_total_proposed": f"R$ {total_proposed_expenses:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+        "category_averages": [
+            {
+                "entity_code": est.entity_code,
+                "category_code": est.category_code,
+                "monthly_average": est.monthly_average,
+                "formatted_average": f"R$ {est.monthly_average:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                "account_name": est.account_name,
+                "sample_months_count": est.sample_months_count,
+            }
+            for est in averages.values()
+        ],
+        "gap_plans": [
+            {
+                "year_month": p.year_month,
+                "existing_transactions_count": p.existing_transactions_count,
+                "existing_expenses_total": p.existing_expenses_total,
+                "proposed_estimates_count": p.proposed_estimates_count,
+                "proposed_expenses_total": p.proposed_expenses_total,
+                "proposals": p.proposals,
+            }
+            for p in gap_plans
+        ],
+    }
+
+
+@router.post("/api/ledger/gaps/apply")
+@router.post("/ledger/gaps/apply")
+async def apply_ledger_gaps(min_tx_count: int = 4):
+    """Commits estimated provisional transactions into the ledger for all detected gap months."""
+    from src.engine.expense_estimator import ExpenseEstimatorEngine
+    ledger_mgr = get_ledger_manager()
+    estimator = ExpenseEstimatorEngine(ledger_mgr)
+
+    gap_plans = estimator.identify_gap_months(min_tx_count=min_tx_count)
+    if not gap_plans:
+        return {
+            "status": "NO_GAPS",
+            "message": "Nenhum mês com lacunas encontrado. Livro razão está completo.",
+            "created_count": 0,
+        }
+
+    created = estimator.apply_estimated_proposals(gap_plans)
+    total_amount = sum(abs(float(t.amount)) for t in created)
+
+    return {
+        "status": "APPLIED",
+        "created_count": len(created),
+        "gap_months_covered": len(gap_plans),
+        "total_estimated_amount": round(total_amount, 2),
+        "formatted_total": f"R$ {total_amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+        "message": f"{len(created)} lançamentos provisionais estimados adicionados com sucesso ao livro razão.",
+    }
+

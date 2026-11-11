@@ -301,6 +301,7 @@ export default function StitchExecutiveDashboard() {
           entity_code: card.entity_code,
           account_name: card.account_name,
           card_type: card.type,
+          is_revenue: card.is_revenue,
           corrects_receipt: card.source_receipt || card.receipt_ref || undefined,
         }),
       });

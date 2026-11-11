@@ -46,15 +46,18 @@ export interface LedgerTransaction {
   receipt_merchant?: string;
   receipt_date?: string;
   receipt_image_url?: string;
+  reconciliation_status?: string;
 }
 
 export default function LedgerPage() {
   const [transactions, setTransactions] = useState<LedgerTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [estimating, setEstimating] = useState(false);
+  const [estimateFeedback, setEstimateFeedback] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [accountFilter, setAccountFilter] = useState<'all' | 'inter' | 'caixa' | 'nubank'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'inflows' | 'outflows' | 'transfers' | 'receipts'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'inflows' | 'outflows' | 'transfers' | 'receipts' | 'estimated'>('all');
   const [dateRangeFilter, setDateRangeFilter] = useState<'all' | '2026' | '2025' | 'recent_90'>('all');
 
   // Pagination
@@ -105,6 +108,23 @@ export default function LedgerPage() {
     setIsReceiptViewerOpen(true);
   };
 
+  const handleApplyEstimates = async () => {
+    try {
+      setEstimating(true);
+      const res = await fetch('/api/py/ledger/gaps/apply', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setEstimateFeedback(data.message || 'Estimativas provisionais aplicadas com sucesso!');
+        await loadTransactions();
+        setTimeout(() => setEstimateFeedback(null), 6000);
+      }
+    } catch (e) {
+      console.error('Failed to apply estimates:', e);
+    } finally {
+      setEstimating(false);
+    }
+  };
+
   // Filter pipeline
   const filteredTransactions = useMemo(() => {
     return transactions.filter((tx) => {
@@ -118,6 +138,7 @@ export default function LedgerPage() {
       if (typeFilter === 'outflows' && tx.amount >= 0) return false;
       if (typeFilter === 'transfers' && !tx.is_transfer) return false;
       if (typeFilter === 'receipts' && !tx.has_receipt) return false;
+      if (typeFilter === 'estimated' && tx.reconciliation_status !== 'ESTIMATED') return false;
 
       // Date Range filter
       if (dateRangeFilter === '2026' && !tx.date.startsWith('2026')) return false;
@@ -231,6 +252,15 @@ export default function LedgerPage() {
 
           <div className="flex items-center gap-2 flex-wrap">
             <button
+              onClick={handleApplyEstimates}
+              disabled={estimating}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-2xl text-xs font-bold shadow-pill transition active:scale-95 disabled:opacity-50"
+              title="Gera estimativas estatísticas para fechar as lacunas de meses sem lançamentos"
+            >
+              <Layers className="w-4 h-4" />
+              <span>{estimating ? 'Processando...' : 'Preencher Meses Vazios'}</span>
+            </button>
+            <button
               onClick={() => setIsStatementOpen(true)}
               className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl text-xs font-bold shadow-pill transition active:scale-95"
             >
@@ -247,6 +277,13 @@ export default function LedgerPage() {
             </button>
           </div>
         </div>
+
+        {estimateFeedback && (
+          <div className="mb-4 p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 text-xs font-semibold text-amber-800 dark:text-amber-200 flex items-center justify-between animate-card-reveal">
+            <span>{estimateFeedback}</span>
+            <button onClick={() => setEstimateFeedback(null)} className="text-amber-600 hover:underline">Fechar</button>
+          </div>
+        )}
 
         {/* Aggregate KPI Strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -390,6 +427,17 @@ export default function LedgerPage() {
               <Camera className="w-3.5 h-3.5" />
               <span>Com Cupom</span>
             </button>
+            <button
+              onClick={() => { setTypeFilter('estimated'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 rounded-xl font-semibold transition whitespace-nowrap flex items-center gap-1 ${
+                typeFilter === 'estimated'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Estimados</span>
+            </button>
           </div>
         </div>
 
@@ -438,8 +486,13 @@ export default function LedgerPage() {
                         </span>
                       </td>
                       <td className="py-3.5">
-                        <div className="text-slate-900 dark:text-white font-semibold">
-                          {tx.description}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-slate-900 dark:text-white font-semibold">{tx.description}</span>
+                          {tx.reconciliation_status === 'ESTIMATED' && (
+                            <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold text-[10px] border border-amber-200 dark:border-amber-500/30">
+                              Estimado
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-slate-500 dark:text-slate-400">
                           {tx.counterparty || 'Sem contraparte identificada'}

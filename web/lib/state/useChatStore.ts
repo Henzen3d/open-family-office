@@ -20,6 +20,7 @@ export interface ConfirmationCardData {
   formatted_old_amount?: string;
   receipt_ref?: string;
   source_receipt?: string;
+  is_revenue?: boolean;
 }
 
 export interface ChatMessage {

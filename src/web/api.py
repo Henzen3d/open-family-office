@@ -26,6 +26,7 @@ from src.web.routers import (
     economic_schools_router,
     cross_border_router,
     vault_router,
+    portfolio_router,
 )
 
 # Application Initialization
@@ -111,5 +112,6 @@ app.include_router(strategy_router)
 app.include_router(economic_schools_router)
 app.include_router(cross_border_router)
 app.include_router(vault_router)
+app.include_router(portfolio_router)
 
 __all__ = ["app", "DATA_DIR", "REPORTS_DIR", "sanitizer"]

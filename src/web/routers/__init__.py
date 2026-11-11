@@ -8,6 +8,7 @@ from src.web.routers.strategy_router import router as strategy_router
 from src.web.routers.economic_schools_router import router as economic_schools_router
 from src.web.routers.cross_border_router import router as cross_border_router
 from src.web.routers.vault_router import router as vault_router
+from src.web.routers.portfolio_router import router as portfolio_router
 
 __all__ = [
     "chat_router",
@@ -19,5 +20,6 @@ __all__ = [
     "economic_schools_router",
     "cross_border_router",
     "vault_router",
+    "portfolio_router",
 ]
 

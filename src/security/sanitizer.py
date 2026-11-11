@@ -120,12 +120,11 @@ class PIISanitizer:
 
         # 1. Mask Vault Trade Names & People (longest first)
         for original, token in self._sorted_vault:
-            if original in sanitized:
-                # Use word boundaries if it's alphanumeric
-                pattern = re.compile(re.escape(original), re.IGNORECASE)
-                if pattern.search(sanitized):
-                    token_map[token] = original
-                    sanitized = pattern.sub(token, sanitized)
+            pattern = re.compile(re.escape(original), re.IGNORECASE)
+            match = pattern.search(sanitized)
+            if match:
+                token_map[token] = match.group(0)
+                sanitized = pattern.sub(token, sanitized)
 
         # 2. Mask Validated CNPJs
         cnpj_matches = list(self.RE_CNPJ_CANDIDATE.finditer(sanitized))
