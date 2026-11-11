@@ -14,6 +14,7 @@ import {
   ArrowDownLeft,
   FileText,
 } from 'lucide-react';
+import CurrencyToggle from '../cross_border/CurrencyToggle';
 
 interface DashboardHeaderProps {
   activeTab: 'all' | 'fix' | 'facilita' | 'pf';
@@ -116,6 +117,9 @@ export default function DashboardHeader({
             <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <span>Semana 45 • 2026</span>
           </button>
+
+          {/* Global Multi-Currency Toggle */}
+          <CurrencyToggle />
 
           {/* Quick Theme Switcher */}
           <button

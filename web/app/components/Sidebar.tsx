@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Settings,
   Receipt,
+  Compass,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -128,6 +129,18 @@ export default function Sidebar({
             }`}
           >
             <Receipt className="w-5 h-5" />
+          </Link>
+
+          <Link
+            href="/strategy"
+            title="Central de Estratégias & Simuladores"
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition ${
+              pathname === '/strategy'
+                ? 'bg-indigo-600 text-white shadow-pill scale-105'
+                : 'bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm'
+            }`}
+          >
+            <Compass className="w-5 h-5" />
           </Link>
 
           {isHome ? (

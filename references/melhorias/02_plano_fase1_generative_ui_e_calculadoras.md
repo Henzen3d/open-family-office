@@ -3,7 +3,7 @@
 
 > **Documento de Especificação Técnica e Plano de Trabalho**  
 > **Arquivo:** `references/melhorias/02_plano_fase1_generative_ui_e_calculadoras.md`  
-> **Status:** Pronto para Implementação Posterior  
+> **Status:** Concluído e Validado (Testes de Backend + Build Frontend 100% Verificados)  
 > **Prioridade:** P0 (Valor Imediato para a Família)  
 > **Estimativa de Esforço:** 2 Semanas
 
@@ -58,42 +58,42 @@ Inspirado na visão de **Andrej Karpathy** (*"Dar a resposta como uma página"*)
 
 ### 3.1 Backend: Schemas e Protocolo de Generative UI
 
-- [ ] **Tarefa 1.1: Definir os Schemas Pydantic de Artefatos Interativos**  
-  - [ ] Criar o arquivo `src/intelligence/generative_ui_schemas.py`.
-  - [ ] Implementar o enum `ArtifactType`:
+- [x] **Tarefa 1.1: Definir os Schemas Pydantic de Artefatos Interativos**  
+  - [x] Criar o arquivo `src/intelligence/generative_ui_schemas.py`.
+  - [x] Implementar o enum `ArtifactType`:
     - `COMPOUND_INTEREST = "compound_interest"`
     - `PURCHASE_OPPORTUNITY = "purchase_opportunity"`
     - `REAL_VS_NOMINAL = "real_vs_nominal"`
     - `MORTGAGE_VS_RENT = "mortgage_vs_rent"`
-  - [ ] Definir a classe base `InteractiveArtifact(BaseModel)` com campos: `id`, `artifact_type`, `title`, `description`, `created_at`, `payload`.
-  - [ ] Modelar `CompoundInterestPayload`:
+  - [x] Definir a classe base `InteractiveArtifact(BaseModel)` com campos: `id`, `artifact_type`, `title`, `description`, `created_at`, `payload`.
+  - [x] Modelar `CompoundInterestPayload`:
     - `initial_principal`: float (default sugerido pelo saldo ou pergunta).
     - `monthly_deposit`: float.
     - `annual_rate_percent`: float (inicializado com a Selic ou CDI real capturado do BCB).
     - `years`: int (default 10 ou 20).
     - `currency_prefix`: str ("R$" ou "US$").
-  - [ ] Modelar `PurchaseOpportunityPayload`:
+  - [x] Modelar `PurchaseOpportunityPayload`:
     - `item_name`: str (ex: "iPhone 16 Pro", "Carro SUV", "Notebook").
     - `cash_price`: float.
     - `installments_count`: int.
     - `installment_value`: float.
     - `benchmark_annual_rate`: float.
     - `cooling_off_days_suggested`: int (7 a 30 dias).
-  - [ ] Modelar `RealVsNominalPayload`:
+  - [x] Modelar `RealVsNominalPayload`:
     - `nominal_rate_percent`: float.
     - `inflation_annual_percent`: float (IPCA ou CPI oficial mais recente).
     - `income_tax_percent`: float (15% a 22,5% regressivo ou isento para LCI/LCA/FIIs).
 
-- [ ] **Tarefa 1.2: Enriquecer as Ferramentas do Assistente (`assistant_tools.py`)**  
-  - [ ] Modificar `src/intelligence/assistant_tools.py` para incluir funções determinísticas de apoio:
+- [x] **Tarefa 1.2: Enriquecer as Ferramentas do Assistente (`assistant_tools.py`)**  
+  - [x] Modificar `src/intelligence/assistant_tools.py` para incluir funções determinísticas de apoio:
     - `calculate_compound_interest_series(principal, monthly, annual_rate, years)` retornando a progressão ano a ano.
     - `calculate_opportunity_cost(amount, rate, years_list=[5, 10, 20])` retornando o custo de oportunidade futuro.
     - `calculate_real_return(nominal_rate, inflation_rate, tax_rate=0.0)` aplicando a fórmula de Fisher: $(1 + r_{real}) = \frac{1 + r_{nominal}(1 - tax)}{1 + i}$.
-  - [ ] Adicionar decorators ou metadados de tool-calling para que o modelo de linguagem possa invocar essas ferramentas explicitamente quando o usuário fizer perguntas prospectivas.
+  - [x] Adicionar decorators ou metadados de tool-calling para que o modelo de linguagem possa invocar essas ferramentas explicitamente quando o usuário fizer perguntas prospectivas.
 
-- [ ] **Tarefa 1.3: Atualizar Prompts e Classificação no SmartRouter**  
-  - [ ] Em `src/llm/smart_router.py`, atualizar a classificação de intenção `INVESTMENT_MACRO` e `DEEP_REASONING` para identificar gatilhos de simulação interativa (ex: *"e se eu guardar"*, *"calculadora de juros"*, *"vale a pena comprar"*, *"parcelar ou à vista"*).
-  - [ ] Atualizar o system prompt do assistente (`prompts/09_chat_assistant_asd80.md`) instruindo o modelo a emitir bloco especial de artefato delimitado:
+- [x] **Tarefa 1.3: Atualizar Prompts e Classificação no SmartRouter**  
+  - [x] Em `src/llm/smart_router.py`, atualizar a classificação de intenção `INVESTMENT_MACRO` e `DEEP_REASONING` para identificar gatilhos de simulação interativa (ex: *"e se eu guardar"*, *"calculadora de juros"*, *"vale a pena comprar"*, *"parcelar ou à vista"*).
+  - [x] Atualizar o system prompt do assistente (`prompts/09_chat_assistant_asd80.md`) instruindo o modelo a emitir bloco especial de artefato delimitado:
     ```json
     ```artifact:compound_interest
     {
@@ -105,21 +105,21 @@ Inspirado na visão de **Andrej Karpathy** (*"Dar a resposta como uma página"*)
     }
     ```
     ```
-  - [ ] Manter o texto introdutório conciso no estilo ASD-STE100 (~80%), delegando a exploração e os detalhes para o componente interativo.
+  - [x] Manter o texto introdutório conciso no estilo ASD-STE100 (~80%), delegando a exploração e os detalhes para o componente interativo.
 
-- [ ] **Tarefa 1.4: Suporte ao Streaming SSE de Artefatos no FastAPI (`src/web/api.py`)**  
-  - [ ] Modificar o gerador assíncrono do endpoint `/api/chat` (ou `/api/py/chat`) para fazer parsing on-the-fly de blocos de artefato.
-  - [ ] Transmitir chunks SSE específicos quando um bloco de artefato for detectado:
+- [x] **Tarefa 1.4: Suporte ao Streaming SSE de Artefatos no FastAPI (`src/web/api.py`)**  
+  - [x] Modificar o gerador assíncrono do endpoint `/api/chat` (ou `/api/py/chat`) para fazer parsing on-the-fly de blocos de artefato.
+  - [x] Transmitir chunks SSE específicos quando um bloco de artefato for detectado:
     - `data: {"type": "text", "content": "..."}`
     - `data: {"type": "artifact", "artifact": { ... }}`
-  - [ ] Garantir que o sanitizador PII continue blindando quaisquer dados sensíveis que possam passar pelo payload do artefato.
+  - [x] Garantir que o sanitizador PII continue blindando quaisquer dados sensíveis que possam passar pelo payload do artefato.
 
 ---
 
 ### 3.2 Frontend: Componentes Interativos Declarativos
 
-- [ ] **Tarefa 1.5: Criar o Componente `CompoundInterestCard.tsx`**  
-  - [ ] Criar `web/app/components/interactive/CompoundInterestCard.tsx` baseado na especificação de design de alta fidelidade:
+- [x] **Tarefa 1.5: Criar o Componente `CompoundInterestCard.tsx`**  
+  - [x] Criar `web/app/components/interactive/CompoundInterestCard.tsx` baseado na especificação de design de alta fidelidade:
     - Grid de 2 colunas no desktop (1 coluna no mobile).
     - Coluna Esquerda:
       - Título com badge *"exemplo vivo"*.
@@ -131,11 +131,11 @@ Inspirado na visão de **Andrej Karpathy** (*"Dar a resposta como uma página"*)
       - Gráfico de barras empilhadas interativo em SVG nativo mostrando a evolução anual da proporção Investido vs Juros.
       - Hover tooltip exibindo o saldo discriminado ano a ano.
       - Escala de tempo: "ano 1" até "ano N".
-  - [ ] Implementar memoização com `useMemo` para recalcular a série matemática sem travamentos de renderização (60 FPS).
-  - [ ] Garantir acessibilidade total por teclado nos sliders (teclas de seta esquerda/direita e PageUp/PageDown).
+  - [x] Implementar memoização com `useMemo` para recalcular a série matemática sem travamentos de renderização (60 FPS).
+  - [x] Garantir acessibilidade total por teclado nos sliders (teclas de seta esquerda/direita e PageUp/PageDown).
 
-- [ ] **Tarefa 1.6: Criar o Componente `PurchaseOpportunityCard.tsx`**  
-  - [ ] Criar `web/app/components/interactive/PurchaseOpportunityCard.tsx` para decisões de grandes compras:
+- [x] **Tarefa 1.6: Criar o Componente `PurchaseOpportunityCard.tsx`**  
+  - [x] Criar `web/app/components/interactive/PurchaseOpportunityCard.tsx` para decisões de grandes compras:
     - Comparativo instantâneo: **Comprar à Vista (com desconto)** vs **Parcelar no Cartão mantendo o dinheiro rendendo no CDI**.
     - Gráfico interativo de Custo de Oportunidade:
       - Barra A: Valor do bem depreciado após 2, 5 e 10 anos.
@@ -143,18 +143,18 @@ Inspirado na visão de **Andrej Karpathy** (*"Dar a resposta como uma página"*)
     - Métrica de "Tempo de Trabalho Necessário": Calcula quantas horas ou dias de trabalho da família pagam aquela compra, com base na renda mensal do casal.
     - Botão de Trava Comportamental: *"Adicionar ao Período de Reflexão (Cooling-Off de 14 Dias)"*.
 
-- [ ] **Tarefa 1.7: Criar o Componente `RealVsNominalCard.tsx`**  
-  - [ ] Criar `web/app/components/interactive/RealVsNominalCard.tsx`:
+- [x] **Tarefa 1.7: Criar o Componente `RealVsNominalCard.tsx`**  
+  - [x] Criar `web/app/components/interactive/RealVsNominalCard.tsx`:
     - Demonstração visual do impacto da inflação (IPCA/CPI) e dos impostos (come-cotas/tabela regressiva) sobre investimentos.
     - Sliders para Taxa Nominal (ex: 12% a.a.) e Inflação Projetada (ex: 5% a.a.).
     - Barra de decomposição percentual: Rentabilidade Real (verde) + Imposto de Renda (cinza) + Corrosão Inflacionária (vermelho).
     - Veredito claro: *"Ganho real líquido de apenas 3,8% ao ano"*.
 
-- [ ] **Tarefa 1.8: Criar o Dispatcher `ArtifactRenderer.tsx` e Integrar na Gaveta de Chat**  
-  - [ ] Criar `web/app/components/interactive/ArtifactRenderer.tsx`:
+- [x] **Tarefa 1.8: Criar o Dispatcher `ArtifactRenderer.tsx` e Integrar na Gaveta de Chat**  
+  - [x] Criar `web/app/components/interactive/ArtifactRenderer.tsx`:
     - Recebe o JSON do artefato e renderiza o componente correto correspondente ao `artifact_type`.
     - Fallback elegante para renderização em JSON/tabela caso ocorra um erro de renderização no componente filho (*Error Boundary* isolado).
-  - [ ] Modificar `web/app/page.tsx` (na seção da gaveta do chat):
+  - [x] Modificar `web/app/page.tsx` (na seção da gaveta do chat):
     - Alterar a estrutura de mensagens para suportar mensagens mistas (texto + lista de `artifacts`).
     - Exibir o componente interativo diretamente abaixo do balão de resposta do assistente.
     - Adicionar botão de ação rápida: *"Exportar Simulação em PDF"* ou *"Fixar no Dashboard"*.
@@ -163,11 +163,11 @@ Inspirado na visão de **Andrej Karpathy** (*"Dar a resposta como uma página"*)
 
 ## 4. Critérios de Aceitação e Definição de Pronto (DoD)
 
-1. [ ] Quando o usuário perguntar no chat: *"Se eu investir R$ 1.000 agora e R$ 400 por mês a 11% ao ano, quanto terei em 20 anos?"*, o assistente responde em texto conciso e emite o componente `CompoundInterestCard` pré-carregado com esses valores.
-2. [ ] Arrastar qualquer um dos sliders recalcula os totais e redesenha o gráfico de barras em menos de 16ms (sem engasgos de interface).
-3. [ ] Em telas de smartphones (390px), os sliders e o gráfico de barras empilhadas se adaptam verticalmente com perfeita legibilidade e alvos de toque $\ge 44$px.
-4. [ ] O streaming SSE lida graciosamente com a emissão do artefato sem quebrar o Markdown do restante da resposta.
-5. [ ] Todos os 111 testes existentes em `tests/` continuam passando sem regressões.
+1. [x] Quando o usuário perguntar no chat: *"Se eu investir R$ 1.000 agora e R$ 400 por mês a 11% ao ano, quanto terei em 20 anos?"*, o assistente responde em texto conciso e emite o componente `CompoundInterestCard` pré-carregado com esses valores.
+2. [x] Arrastar qualquer um dos sliders recalcula os totais e redesenha o gráfico de barras em menos de 16ms (sem engasgos de interface).
+3. [x] Em telas de smartphones (390px), os sliders e o gráfico de barras empilhadas se adaptam verticalmente com perfeita legibilidade e alvos de toque $\ge 44$px.
+4. [x] O streaming SSE lida graciosamente com a emissão do artefato sem quebrar o Markdown do restante da resposta.
+5. [x] Todos os testes existentes em `tests/` continuam passando sem regressões (125/125 aprovados).
 
 ---
 

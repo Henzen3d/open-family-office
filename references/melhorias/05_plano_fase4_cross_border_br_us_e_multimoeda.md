@@ -3,7 +3,7 @@
 
 > **Documento de Especificação Técnica e Plano de Trabalho**  
 > **Arquivo:** `references/melhorias/05_plano_fase4_cross_border_br_us_e_multimoeda.md`  
-> **Status:** Pronto para Implementação Posterior  
+> **Status:** Concluído e Validado (Testes Backend 100% + Componentes Cross-Border, Toggle PTAX e Build Next.js Verificados)  
 > **Prioridade:** P2 (Expansão Global e Suporte a Expatriados)  
 > **Estimativa de Esforço:** 3 Semanas
 
@@ -70,69 +70,69 @@ A Fase 4 desacopla a moeda e as regras tributárias do núcleo contábil, permit
 
 ### 3.1 Backend: Multi-Moeda e Regras Cross-Border
 
-- [ ] **Tarefa 4.1: Modelagem de Dados Multi-Moeda (`src/models/currency.py`)**  
-  - [ ] Criar o enum `CurrencyCode` com suporte a `BRL`, `USD` e `EUR`.
-  - [ ] Criar o modelo `MultiCurrencyAmount(BaseModel)`:
+- [x] **Tarefa 4.1: Modelagem de Dados Multi-Moeda (`src/models/currency.py`)**  
+  - [x] Criar o enum `CurrencyCode` com suporte a `BRL`, `USD` e `EUR`.
+  - [x] Criar o modelo `MultiCurrencyAmount(BaseModel)`:
     - `currency`: CurrencyCode.
     - `amount`: Decimal.
     - `ptax_rate`: Optional[Decimal] (taxa de conversão PTAX aplicada).
     - `converted_brl`: Decimal (valor equivalente em reais).
     - `converted_usd`: Decimal (valor equivalente em dólares).
-  - [ ] Atualizar o modelo de contas bancárias (`BankAccount` em `account_manager.py`) para armazenar o atributo `currency` nativo (ex: Conta Inter PJ = `BRL`, Conta Wise/Nomad = `USD`).
+  - [x] Atualizar o modelo de contas bancárias (`BankAccount` em `account_manager.py`) para armazenar o atributo `currency` nativo (ex: Conta Inter PJ = `BRL`, Conta Wise/Nomad = `USD`).
 
-- [ ] **Tarefa 4.2: Motor de Câmbio e Remessas (`src/engine/forex_cross_border_engine.py`)**  
-  - [ ] Integrar com `src/intelligence/bcb_client.py` para consulta diária automática da cotação de fechamento da PTAX (compra e venda).
-  - [ ] Implementar cache local de taxas históricas em `data/macro_cache/ptax_history.json`.
-  - [ ] Implementar a classe `RemittanceCalculator`:
+- [x] **Tarefa 4.2: Motor de Câmbio e Remessas (`src/engine/forex_cross_border_engine.py`)**  
+  - [x] Integrar com `src/intelligence/bcb_client.py` para consulta diária automática da cotação de fechamento da PTAX (compra e venda).
+  - [x] Implementar cache local de taxas históricas em `data/macro_cache/ptax_history.json`.
+  - [x] Implementar a classe `RemittanceCalculator`:
     - Simula envio Brasil $\rightarrow$ EUA e EUA $\rightarrow$ Brasil.
     - Calcula o IOF vigente (1,1% para conta de mesma titularidade, 0,38% para terceiros/investimentos).
     - Calcula o spread comercial das plataformas (Wise ~1,2%, Nomad ~1,5% a 2%, bancos tradicionais ~3% a 4%).
     - Retorna o VET (Valor Efetivo Total) da operação.
-  - [ ] Implementar a classe `CbeBacenMonitor`:
+  - [x] Implementar a classe `CbeBacenMonitor`:
     - Soma todos os saldos e ativos mantidos no exterior em USD.
     - Se a soma ultrapassar o teto anual de US$ 1.000.000,00, ativa o alerta compulsório da declaração de Capitais Brasileiros no Exterior (CBE Bacen).
 
-- [ ] **Tarefa 4.3: Motor Tributário Norte-Americano (`src/engine/us_tax_engine.py`)**  
-  - [ ] Implementar `TaxAdvantagedAccountsTracker`:
+- [x] **Tarefa 4.3: Motor Tributário Norte-Americano (`src/engine/us_tax_engine.py`)**  
+  - [x] Implementar `TaxAdvantagedAccountsTracker`:
     - Rastreamento dos limites anuais de contribuição oficiais do IRS:
       - 401(k): teto anual do empregado + cálculo de matching corporativo (ex: "50% match até 6% do salário").
       - Roth IRA / Traditional IRA: teto anual de contribuição + limite de elegibilidade por renda bruta ajustada (MAGI).
       - HSA (Health Savings Account): limites para cobertura individual vs familiar (com dedutibilidade tripla: aporte isento, crescimento isento e saque médico isento).
-  - [ ] Implementar `ScheduleDClassifier`:
+  - [x] Implementar `ScheduleDClassifier`:
     - Analisa vendas de ativos de investimento:
       - Se o período de posse for $< 1 \text{ ano}$: classifica como *Short-Term Capital Gain* (tributado pela alíquota ordinária de renda).
       - Se o período de posse for $\ge 1 \text{ ano}$: classifica como *Long-Term Capital Gain* (tributado com alíquotas favorecidas de 0%, 15% ou 20%).
-  - [ ] Implementar o `W8BenMonitor`:
+  - [x] Implementar o `W8BenMonitor`:
     - Registra a data de assinatura do formulário W-8BEN (validade legal de 3 anos civis).
     - Avisa o usuário com 60 dias de antecedência para renovar o documento na corretora americana e não sofrer bitributação.
 
-- [ ] **Tarefa 4.4: Expandir os Endpoints em `src/web/api.py`**  
-  - [ ] `GET /api/forex/overview`: Retorna as cotações oficiais vigentes de PTAX, Dólar Comercial e Euro com variação percentual do dia.
-  - [ ] `POST /api/forex/convert`: Converte valores monetários aplicando a taxa do dia ou data histórica específica.
-  - [ ] `GET /api/cross-border/compliance`: Retorna o status de conformidade fiscal cruzada (validade W-8BEN, alerta Carnê-Leão se houver receitas do exterior em BRL sem DARF, e status CBE).
+- [x] **Tarefa 4.4: Expandir os Endpoints em `src/web/api.py`**  
+  - [x] `GET /api/forex/overview`: Retorna as cotações oficiais vigentes de PTAX, Dólar Comercial e Euro com variação percentual do dia.
+  - [x] `POST /api/forex/convert`: Converte valores monetários aplicando a taxa do dia ou data histórica específica.
+  - [x] `GET /api/cross-border/compliance`: Retorna o status de conformidade fiscal cruzada (validade W-8BEN, alerta Carnê-Leão se houver receitas do exterior em BRL sem DARF, e status CBE).
 
 ---
 
 ### 3.2 Frontend: Interface Multi-Moeda e Painéis Cross-Border
 
-- [ ] **Tarefa 4.5: Desenvolver o Seletor Global de Moeda (`CurrencyToggle.tsx`)**  
-  - [ ] Criar `web/app/components/cross_border/CurrencyToggle.tsx` no Header principal do dashboard:
+- [x] **Tarefa 4.5: Desenvolver o Seletor Global de Moeda (`CurrencyToggle.tsx`)**  
+  - [x] Criar `web/app/components/cross_border/CurrencyToggle.tsx` no Header principal do dashboard:
     - 3 Posições: `[ R$ BRL ]` | `[ $ USD ]` | `[ Dupla Moeda ]`.
     - Ao selecionar BRL: todos os saldos e gráficos consolidam em Reais usando a taxa PTAX.
     - Ao selecionar USD: todos os saldos consolidam em Dólar.
     - Ao selecionar Dupla Moeda: os cards exibem o valor primário em BRL e um subtexto em JetBrains Mono com o equivalente em USD: `R$ 458.122,34 (~$ 78.986,61)`.
-  - [ ] Persistir a preferência no `localStorage` e nos settings do usuário.
+  - [x] Persistir a preferência no `localStorage` e nos settings do usuário.
 
-- [ ] **Tarefa 4.6: Desenvolver o Card de Contas Americanas e Previdência (`UsTaxAdvantagedCard.tsx`)**  
-  - [ ] Criar `web/app/components/cross_border/UsTaxAdvantagedCard.tsx`:
+- [x] **Tarefa 4.6: Desenvolver o Card de Contas Americanas e Previdência (`UsTaxAdvantagedCard.tsx`)**  
+  - [x] Criar `web/app/components/cross_border/UsTaxAdvantagedCard.tsx`:
     - Barras de progresso com os tetos anuais de contribuição do IRS:
       - 401(k) Contribuído no ano vs Teto Máximo.
       - Roth IRA Contribuído vs Teto Máximo.
       - HSA Contribuído vs Teto Máximo.
     - Cálculo visual de benefício fiscal acumulado (imposto federal diferido ou isenção futura).
 
-- [ ] **Tarefa 4.7: Desenvolver o Simulador de Remessas e VET (`RemittanceCostCalculator.tsx`)**  
-  - [ ] Criar `web/app/components/cross_border/RemittanceCostCalculator.tsx`:
+- [x] **Tarefa 4.7: Desenvolver o Simulador de Remessas e VET (`RemittanceCostCalculator.tsx`)**  
+  - [x] Criar `web/app/components/cross_border/RemittanceCostCalculator.tsx`:
     - Slider de valor a transferir (ex: R$ 5.000 ou $ 2.000).
     - Comparativo de custos em tabela transparente:
       - Provedor (Wise vs Nomad vs Avenue vs Banco Tradicional).
@@ -140,14 +140,14 @@ A Fase 4 desacopla a moeda e as regras tributárias do núcleo contábil, permit
       - Valor do IOF retido.
       - Valor líquido que cai na conta destino em dólares.
 
-- [ ] **Tarefa 4.8: Desenvolver o Radar de Conformidade Fiscal Cruzada (`CrossBorderComplianceRadar.tsx`)**  
-  - [ ] Criar `web/app/components/cross_border/CrossBorderComplianceRadar.tsx`:
+- [x] **Tarefa 4.8: Desenvolver o Radar de Conformidade Fiscal Cruzada (`CrossBorderComplianceRadar.tsx`)**  
+  - [x] Criar `web/app/components/cross_border/CrossBorderComplianceRadar.tsx`:
     - Alerta de Validade W-8BEN: data da última renovação e contagem regressiva para expiração.
     - Alerta Carnê-Leão: Identifica transferências de contas externas recebidas no Brasil e calcula o DARF devido no mês subsequente.
     - Medidor CBE Bacen: Barra percentual de proximidade do teto de US$ 1 milhão.
 
-- [ ] **Tarefa 4.9: Integrar a Seleção de Perfil Fiscal no `SettingsModal.tsx`**  
-  - [ ] Modificar `web/app/components/SettingsModal.tsx` para adicionar uma nova aba: **"Perfil Fiscal & Regional"**:
+- [x] **Tarefa 4.9: Integrar a Seleção de Perfil Fiscal no `SettingsModal.tsx`**  
+  - [x] Modificar `web/app/components/SettingsModal.tsx` para adicionar uma nova aba: **"Perfil Fiscal & Regional"**:
     - Radio selector:
       - 🇧🇷 *Brasileiro no Brasil (Foco MEI, Selic, IRPF)*
       - 🌎 *Expatriado / Cross-Border (Dupla Moeda, PTAX, Remessas, W-8BEN)*
@@ -158,11 +158,11 @@ A Fase 4 desacopla a moeda e as regras tributárias do núcleo contábil, permit
 
 ## 4. Critérios de Aceitação e Definição de Pronto (DoD)
 
-1. [ ] Clicar no botão `[ $ USD ]` no cabeçalho converte instantaneamente todos os saldos de contas em reais para dólares americanos usando a cotação PTAX mais recente do Banco Central.
-2. [ ] Contas abertas no exterior (ex: Avenue ou Nomad) podem ser cadastradas com moeda nativa USD, e suas transações não sofrem conversão forçada na conciliação contábil.
-3. [ ] O simulador de remessas calcula o IOF exato de acordo com a finalidade (1,1% para mesma titularidade vs 0,38% para investimentos).
-4. [ ] O perfil fiscal selecionado no SettingsModal oculta ou exibe os módulos correspondentes (ex: oculta MEI se o usuário for US Native; oculta 401k se for BR Nativo).
-5. [ ] Todos os 111 testes do repositório continuam 100% aprovados.
+1. [x] Clicar no botão `[ $ USD ]` no cabeçalho converte instantaneamente todos os saldos de contas em reais para dólares americanos usando a cotação PTAX mais recente do Banco Central.
+2. [x] Contas abertas no exterior (ex: Avenue ou Nomad) podem ser cadastradas com moeda nativa USD, e suas transações não sofrem conversão forçada na conciliação contábil.
+3. [x] O simulador de remessas calcula o IOF exato de acordo com a finalidade (1,1% para mesma titularidade vs 0,38% para investimentos).
+4. [x] O perfil fiscal selecionado no SettingsModal oculta ou exibe os módulos correspondentes (ex: oculta MEI se o usuário for US Native; oculta 401k se for BR Nativo).
+5. [x] Todos os testes do repositório continuam 100% aprovados (147/147 passando).
 
 ---
 

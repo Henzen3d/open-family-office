@@ -15,6 +15,7 @@ import QuickPixCard from './components/dashboard/QuickPixCard';
 import RecentTransactionsTable from './components/dashboard/RecentTransactionsTable';
 import AssistantDrawer from './components/dashboard/AssistantDrawer';
 import MobileNav from './components/dashboard/MobileNav';
+import EconomicScorecardCard from './components/economic_schools/EconomicScorecardCard';
 import { CobrancaModal, DasModal, RunwayModal } from './components/ExecutiveModals';
 import { ChatMessage, ConfirmationCardData } from '@/lib/state/useChatStore';
 
@@ -450,6 +451,7 @@ export default function StitchExecutiveDashboard() {
           provider: data.provider,
           latencyMs: data.latency_ms,
           confirmationCard: data.confirmation_card,
+          artifact: data.artifact,
         },
       ]);
     } catch {
@@ -560,7 +562,12 @@ export default function StitchExecutiveDashboard() {
           />
         </div>
 
-        {/* 5. ROW 3: Transaction Ledger Table & Money Movement */}
+        {/* 5. Macro Health: The 5 Economic Schools Scorecard */}
+        <div className="mb-6">
+          <EconomicScorecardCard />
+        </div>
+
+        {/* 6. ROW 3: Transaction Ledger Table & Money Movement */}
         <RecentTransactionsTable
           ledgerTransactions={ledgerTransactions}
           ledgerFilter={ledgerFilter}

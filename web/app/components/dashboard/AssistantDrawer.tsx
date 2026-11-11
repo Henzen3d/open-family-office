@@ -19,6 +19,7 @@ import {
   ArrowUp,
 } from 'lucide-react';
 import { ChatMessage, ConfirmationCardData } from '@/lib/state/useChatStore';
+import ArtifactRenderer from '../interactive/ArtifactRenderer';
 
 interface AssistantDrawerProps {
   isAssistantOpen: boolean;
@@ -317,6 +318,13 @@ export default function AssistantDrawer({
                             </div>
                           </>
                         )}
+                      </div>
+                    )}
+
+                    {/* Phase 1: Generative UI Interactive Artifact Card */}
+                    {msg.artifact && (
+                      <div className="mt-2 animate-card-reveal">
+                        <ArtifactRenderer artifact={msg.artifact} />
                       </div>
                     )}
                   </div>

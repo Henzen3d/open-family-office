@@ -32,6 +32,7 @@ export interface ChatMessage {
   provider?: string;
   latencyMs?: number;
   confirmationCard?: ConfirmationCardData;
+  artifact?: any;
 }
 
 export function useChatState() {

@@ -492,3 +492,123 @@ def extract_correction_proposal(text: str, default_entity: Optional[str] = None)
         "raw_text": clean_text,
     }
 
+
+def calculate_compound_interest_series(
+    principal: float,
+    monthly: float,
+    annual_rate_percent: float,
+    years: int = 15,
+) -> Dict[str, Any]:
+    """Calculates year-by-year compound interest series with monthly contributions."""
+    p = float(principal)
+    pmt = float(monthly)
+    r_annual = float(annual_rate_percent) / 100.0
+    r_monthly = (1.0 + r_annual) ** (1.0 / 12.0) - 1.0 if r_annual > 0 else 0.0
+
+    series = []
+    current_balance = p
+
+    for y in range(1, years + 1):
+        for _ in range(12):
+            current_balance = current_balance * (1.0 + r_monthly) + pmt
+        total_invested = p + (pmt * y * 12)
+        total_interest = max(0.0, current_balance - total_invested)
+        series.append({
+            "year": y,
+            "total_invested": round(total_invested, 2),
+            "total_interest": round(total_interest, 2),
+            "total_balance": round(current_balance, 2),
+            "interest_ratio_pct": round((total_interest / current_balance) * 100, 1) if current_balance > 0 else 0.0,
+        })
+
+    final_balance = current_balance
+    final_invested = p + (pmt * years * 12)
+    final_interest = max(0.0, final_balance - final_invested)
+
+    return {
+        "initial_principal": p,
+        "monthly_deposit": pmt,
+        "annual_rate_percent": float(annual_rate_percent),
+        "years": years,
+        "final_balance": round(final_balance, 2),
+        "total_invested": round(final_invested, 2),
+        "total_interest": round(final_interest, 2),
+        "series": series,
+    }
+
+
+def calculate_opportunity_cost(
+    amount: float,
+    annual_rate_percent: float = 11.25,
+    years_list: Optional[List[int]] = None,
+    item_name: str = "Bem de Consumo",
+    family_monthly_income: float = 15000.0,
+) -> Dict[str, Any]:
+    """Calculates future opportunity cost of spending vs investing at CDI/Selic."""
+    if years_list is None:
+        years_list = [2, 5, 10, 20]
+    
+    cost = float(amount)
+    rate = float(annual_rate_percent) / 100.0
+
+    # Hours/Days of work needed based on 160h/month
+    hourly_rate = (family_monthly_income / 160.0) if family_monthly_income > 0 else 1.0
+    hours_of_work = round(cost / hourly_rate, 1)
+    days_of_work = round(hours_of_work / 8.0, 1)
+
+    projections = []
+    # Standard consumer electronics/vehicle depreciation decay
+    depreciation_schedule = {2: 0.55, 5: 0.25, 10: 0.08, 20: 0.01}
+
+    for y in years_list:
+        invested_fv = cost * ((1.0 + rate) ** y)
+        depreciated_value = cost * depreciation_schedule.get(y, max(0.05, 1.0 - (0.12 * y)))
+        opportunity_loss = invested_fv - depreciated_value
+        projections.append({
+            "years": y,
+            "invested_fv": round(invested_fv, 2),
+            "depreciated_value": round(depreciated_value, 2),
+            "opportunity_loss": round(opportunity_loss, 2),
+        })
+
+    return {
+        "item_name": item_name,
+        "cost": round(cost, 2),
+        "benchmark_annual_rate": float(annual_rate_percent),
+        "hours_of_work": hours_of_work,
+        "days_of_work": days_of_work,
+        "projections": projections,
+        "suggested_cooling_off_days": 14 if cost > 1000 else 7,
+    }
+
+
+def calculate_real_return(
+    nominal_rate_percent: float,
+    inflation_annual_percent: float,
+    income_tax_percent: float = 15.0,
+) -> Dict[str, Any]:
+    """Calculates net real return using Fisher's Equation: (1 + r_real) = (1 + r_net) / (1 + i)."""
+    nom = float(nominal_rate_percent) / 100.0
+    inf = float(inflation_annual_percent) / 100.0
+    tax = float(income_tax_percent) / 100.0
+
+    net_nominal = nom * (1.0 - tax)
+    # Fisher Equation
+    real_rate = ((1.0 + net_nominal) / (1.0 + inf)) - 1.0
+    real_rate_percent = round(real_rate * 100.0, 2)
+
+    return {
+        "nominal_rate_percent": float(nominal_rate_percent),
+        "inflation_annual_percent": float(inflation_annual_percent),
+        "income_tax_percent": float(income_tax_percent),
+        "net_nominal_rate_percent": round(net_nominal * 100.0, 2),
+        "real_rate_percent": real_rate_percent,
+        "is_positive": real_rate_percent > 0,
+        "verdict": (
+            f"Ganho real líquido de {real_rate_percent}% a.a. acima da inflação."
+            if real_rate_percent > 0
+            else f"Perda de poder de compra de {abs(real_rate_percent)}% a.a."
+        ),
+    }
+
+
