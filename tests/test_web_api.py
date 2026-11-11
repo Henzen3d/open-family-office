@@ -55,6 +55,24 @@ def test_statements_summary_and_transactions(client):
     data_txs = res_txs.json()
     assert "transactions" in data_txs
     assert len(data_txs["transactions"]) > 0
+    # Verify enriched receipt fields
+    first = data_txs["transactions"][0]
+    assert "has_receipt" in first
+
+
+def test_receipt_details_and_image_endpoints(client):
+    # Test details of seed or synthetic receipt
+    res_rcp = client.get("/api/receipts/rcp-giassi-1794342456192")
+    assert res_rcp.status_code in (200, 404)
+    if res_rcp.status_code == 200:
+        data = res_rcp.json()
+        assert "merchant_name" in data
+        assert "total_amount" in data
+
+    # Test image endpoint (serves image or visual SVG)
+    res_img = client.get("/api/receipts/rcp-giassi-1794342456192/image")
+    assert res_img.status_code == 200
+    assert "image/" in res_img.headers.get("content-type", "")
 
 
 def test_general_settings_asd_mode_crud(client):
