@@ -81,6 +81,33 @@ class TestTransferNeutralizer(unittest.TestCase):
         self.assertEqual(len(pairs), 0)
 
 
+    def test_does_not_neutralize_customer_revenue_or_general_expenses(self):
+        # A customer revenue (e.g. Client Alfa paying Fix) must NEVER be neutralized against a household expense
+        tx_customer_revenue = Transaction(
+            id="tx-rev-client",
+            entity_code="FIX_SERVICOS",
+            account_name="Inter PJ",
+            date=date(2026, 11, 8),
+            amount=Decimal("250.00"),
+            raw_description="PIX RECEBIDO CLIENTE ALFA",
+            clean_description="Instalação Elétrica Residencial",
+        )
+        tx_grocery_expense = Transaction(
+            id="tx-exp-giassi",
+            entity_code="HOUSEHOLD_OSMAR",
+            account_name="Nubank PF",
+            date=date(2026, 11, 8),
+            amount=Decimal("-250.00"),
+            raw_description="SUPERMERCADO GIASSI",
+            clean_description="Compras do mês",
+        )
+
+        txs, pairs = self.neutralizer.match_transfers([tx_customer_revenue, tx_grocery_expense])
+        self.assertEqual(len(pairs), 0)
+        self.assertFalse(tx_customer_revenue.is_transfer)
+        self.assertFalse(tx_grocery_expense.is_transfer)
+
+
 if __name__ == "__main__":
     unittest.main()
 

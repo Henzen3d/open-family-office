@@ -129,3 +129,4 @@ class USPortfolioSummary:
             "last_updated": self.last_updated,
             "positions": [p.to_dict() for p in self.positions],
         }
+

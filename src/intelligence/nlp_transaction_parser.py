@@ -16,34 +16,95 @@ from typing import Any, Dict, List, Optional, Tuple
 from src.models.portfolio import BENCHMARK_US_PRICES
 
 
+def _clean_number_to_float(raw: str) -> Optional[float]:
+    """Converts a formatted Brazilian or international numeric string to float."""
+    raw = raw.strip()
+    if not raw:
+        return None
+
+    # Handle both separators: e.g. 1.250.000,50 or 1,250,000.50
+    if "." in raw and "," in raw:
+        last_dot = raw.rfind(".")
+        last_comma = raw.rfind(",")
+        if last_comma > last_dot:
+            # Brazilian format: 1.500,00 or 1.250.000,50
+            cleaned = raw.replace(".", "").replace(",", ".")
+        else:
+            # US format: 1,500.00
+            cleaned = raw.replace(",", "")
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+
+    # If only comma is present: e.g. 100,00 or 45,50
+    if "," in raw:
+        cleaned = raw.replace(",", ".")
+        try:
+            return float(cleaned)
+        except ValueError:
+            return None
+
+    # If only dot is present:
+    if "." in raw:
+        parts = raw.split(".")
+        # Multiple dots: e.g. 1.250.000 -> 1250000.0
+        if len(parts) > 2:
+            cleaned = raw.replace(".", "")
+            try:
+                return float(cleaned)
+            except ValueError:
+                return None
+        # Single dot: e.g. 1.500 or 45.50 or 12.500
+        # In Brazilian Portuguese, 3 digits after the dot represents a thousands separator
+        if len(parts[1]) == 3:
+            cleaned = raw.replace(".", "")
+            try:
+                return float(cleaned)
+            except ValueError:
+                return None
+        else:
+            try:
+                return float(raw)
+            except ValueError:
+                return None
+
+    # Plain integer
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
 def parse_monetary_amount(text: str) -> Optional[float]:
     """Extracts a monetary amount in BRL or raw decimal format."""
-    # Pattern 1: R$ 1.234,56 or R$ 1234,56 or R$ 100
-    m = re.search(r"r\$\s*([\d\.]+,\d{2}|\d+,\d{2}|\d+\.\d{2}|\d+)", text, re.IGNORECASE)
-    if m:
-        raw = m.group(1).replace(".", "").replace(",", ".")
-        try:
-            return float(raw)
-        except ValueError:
-            pass
+    # Pattern 1: R$ prefix with amounts like R$ 1.250.000,00 or R$ 1.500 or R$ 100,50 or R$100
+    m1 = re.search(r"r\$\s*([0-9]+(?:[\.,][0-9]+)*)", text, re.IGNORECASE)
+    if m1:
+        val = _clean_number_to_float(m1.group(1))
+        if val is not None:
+            return val
 
-    # Pattern 2: 100 reais, 50 conto
-    m2 = re.search(r"\b(\d+[\.,]?\d*)\s*(?:reais|conto|pila)\b", text, re.IGNORECASE)
+    # Pattern 2: Suffix with colloquial currency: 1500 reais, 50 conto, 30 pila, 1.500 reais
+    m2 = re.search(r"\b([0-9]+(?:[\.,][0-9]+)*)\s*(?:reais|conto|pila|barrões|barroes)\b", text, re.IGNORECASE)
     if m2:
-        raw = m2.group(1).replace(",", ".")
-        try:
-            return float(raw)
-        except ValueError:
-            pass
+        val = _clean_number_to_float(m2.group(1))
+        if val is not None:
+            return val
 
-    # Pattern 3: Lone number with 2 decimals like 100,00 or 45.90
-    m3 = re.search(r"\b(\d+,\d{2}|\d+\.\d{2})\b", text)
+    # Pattern 3: Number with thousands separators (e.g. 1.250.000 or 1.500,00 or 12.500)
+    m3 = re.search(r"\b(\d{1,3}(?:\.\d{3})+(?:,\d{2})?)\b", text)
     if m3:
-        raw = m3.group(1).replace(",", ".")
-        try:
-            return float(raw)
-        except ValueError:
-            pass
+        val = _clean_number_to_float(m3.group(1))
+        if val is not None:
+            return val
+
+    # Pattern 4: Number with decimal point or comma: e.g. 100,00 or 45.50
+    m4 = re.search(r"\b(\d+,\d{2}|\d+\.\d{2})\b", text)
+    if m4:
+        val = _clean_number_to_float(m4.group(1))
+        if val is not None:
+            return val
 
     return None
 
@@ -87,18 +148,28 @@ def parse_natural_transaction(text: str, default_entity: Optional[str] = None) -
             return None
 
     # Determine Entity, Bank Account and Category
-    if any(k in clean_lower for k in ["fix", "fix serviços", "fix servicos", "lâmpada", "lampada", "reparo", "instalação", "instalando", "chuveiro", "elétrica"]):
-        entity_code = "FIX_SERVICOS"
-        entity_name = "Fix Serviços MEI (Osmar)"
-        account_name = "Banco Inter PJ"
-        category = "Serviços Prestados" if is_revenue else "Materiais Operacionais"
-        default_cpty = "Cliente Fix Serviços" if is_revenue else "Fornecedor Fix"
-    elif any(k in clean_lower for k in ["facilita", "facilita vistorias", "facilita vistoria", "vistoria", "vistorias", "laudo"]):
+    # Check for explicit household indicators (supermarket, personal care, home cues)
+    is_explicit_household = any(k in clean_lower for k in [
+        "para casa", "em casa", "casa", "pessoal", "doméstico", "domestico", "família", "familia",
+        "mercado", "supermercado", "giassi", "bistek", "angeloni", "açougue", "acougue",
+        "farmácia", "farmacia", "posto", "gasolina", "almoço", "almoco", "jantar"
+    ])
+
+    if any(k in clean_lower for k in ["facilita", "facilita vistorias", "facilita vistoria"]) or (is_revenue and any(k in clean_lower for k in ["vistoria", "vistorias", "laudo"])):
         entity_code = "FACILITA_VISTORIAS"
         entity_name = "Facilita Vistorias MEI (Vera)"
         account_name = "Caixa PJ"
         category = "Vistorias Imobiliárias" if is_revenue else "Despesas Operacionais"
         default_cpty = "Cliente Imobiliária / Proprietário" if is_revenue else "Fornecedor Facilita"
+    elif not is_explicit_household and (
+        any(k in clean_lower for k in ["fix", "fix serviços", "fix servicos", "inter pj"])
+        or (is_revenue and any(k in clean_lower for k in ["instalando", "instalação", "instalacao", "reparo", "conserto", "elétrica", "eletrica", "chuveiro", "lâmpada", "lampada"]))
+    ):
+        entity_code = "FIX_SERVICOS"
+        entity_name = "Fix Serviços MEI (Osmar)"
+        account_name = "Banco Inter PJ"
+        category = "Serviços Prestados" if is_revenue else "Materiais Operacionais"
+        default_cpty = "Cliente Fix Serviços" if is_revenue else "Fornecedor Fix"
     else:
         entity_code = "HOUSEHOLD_OSMAR"
         entity_name = "Família (Osmar & Vera)"
@@ -115,8 +186,12 @@ def parse_natural_transaction(text: str, default_entity: Optional[str] = None) -
         elif any(k in clean_lower for k in ["farmácia", "farmacia", "remédio", "remedio"]):
             category = "Saúde"
             default_cpty = "Farmácia"
+        elif any(k in clean_lower for k in ["lâmpada", "lampada", "chuveiro", "reparo", "conserto"]):
+            category = "Manutenção da Casa"
+            default_cpty = "Loja de Materiais de Construção"
         else:
             category = "Outros"
+            default_cpty = "Diversos"
             default_cpty = "Diversos"
 
     # Refine description

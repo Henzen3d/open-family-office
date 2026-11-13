@@ -44,9 +44,9 @@ export default function DashboardHeader({
   return (
     <>
       {/* Top Header Bar */}
-      <header className="w-full flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+      <header className="w-full flex flex-col xl:flex-row items-center justify-between gap-4 mb-6">
         {/* Search Input with ⌘K */}
-        <div className="w-full md:w-96 relative">
+        <div className="w-full xl:w-80 relative shrink-0">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
             <Search className="w-4 h-4" />
           </div>
@@ -62,48 +62,58 @@ export default function DashboardHeader({
           </div>
         </div>
 
-        {/* Quick Entity Filter Pill Switches */}
-        <div className="hidden xl:flex items-center bg-white dark:bg-[#161c28] p-1 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm text-xs">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`px-3.5 py-1.5 rounded-xl font-semibold transition ${
-              activeTab === 'all'
-                ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            Consolidado
-          </button>
-          <button
-            onClick={() => setActiveTab('fix')}
-            className={`px-3.5 py-1.5 rounded-xl font-semibold transition ${
-              activeTab === 'fix'
-                ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            Fix Serviços MEI (Osmar)
-          </button>
-          <button
-            onClick={() => setActiveTab('facilita')}
-            className={`px-3.5 py-1.5 rounded-xl font-semibold transition ${
-              activeTab === 'facilita'
-                ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            Facilita Vistorias MEI (Vera)
-          </button>
-          <button
-            onClick={() => setActiveTab('pf')}
-            className={`px-3.5 py-1.5 rounded-xl font-semibold transition ${
-              activeTab === 'pf'
-                ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            Família PF (Casal)
-          </button>
+        {/* Quick Entity Filter Pill Switches - Visible & Responsive on Mobile, Tablet & Desktop */}
+        <div className="w-full xl:w-auto overflow-x-auto no-scrollbar py-1">
+          <div className="flex items-center gap-1.5 bg-white dark:bg-[#161c28] p-1.5 rounded-2xl border border-slate-200 dark:border-white/10 shadow-sm text-xs min-w-max mx-auto xl:mx-0">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition ${
+                activeTab === 'all'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#212a3d]'
+              }`}
+              title="Visão Consolidada Familiar (Todas as contas)"
+            >
+              <span className={`w-2 h-2 rounded-full ${activeTab === 'all' ? 'bg-white' : 'bg-indigo-500'}`} />
+              <span>Consolidado</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('fix')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition ${
+                activeTab === 'fix'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#212a3d]'
+              }`}
+              title="Fix Serviços MEI (Titularidade: Osmar • Inter PJ)"
+            >
+              <span className={`w-2 h-2 rounded-full ${activeTab === 'fix' ? 'bg-white' : 'bg-amber-500'}`} />
+              <span>Fix Serviços MEI (Osmar)</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('facilita')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition ${
+                activeTab === 'facilita'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#212a3d]'
+              }`}
+              title="Facilita Vistorias MEI (Titularidade: Vera • Caixa PJ)"
+            >
+              <span className={`w-2 h-2 rounded-full ${activeTab === 'facilita' ? 'bg-white' : 'bg-purple-500'}`} />
+              <span>Facilita Vistorias MEI (Vera)</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('pf')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-semibold transition ${
+                activeTab === 'pf'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#212a3d]'
+              }`}
+              title="Família PF (Comunhão de Bens • Nubank PF)"
+            >
+              <span className={`w-2 h-2 rounded-full ${activeTab === 'pf' ? 'bg-white' : 'bg-blue-500'}`} />
+              <span>Família PF (Casal)</span>
+            </button>
+          </div>
         </div>
 
         {/* Right Action Bar */}
@@ -162,6 +172,36 @@ export default function DashboardHeader({
           <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium text-pretty">
             Gestão Patrimonial Consolidada • 2 CNPJs MEI (Titularidades Separadas) + Finanças Familiares (PF) • Processamento Local e Privado
           </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Contexto:</span>
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                activeTab === 'fix'
+                  ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/30'
+                  : activeTab === 'facilita'
+                  ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-500/30'
+                  : activeTab === 'pf'
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-500/30'
+                  : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-500/30'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  activeTab === 'fix'
+                    ? 'bg-amber-500'
+                    : activeTab === 'facilita'
+                    ? 'bg-purple-500'
+                    : activeTab === 'pf'
+                    ? 'bg-blue-500'
+                    : 'bg-indigo-500'
+                }`}
+              />
+              {activeTab === 'fix' && 'Fix Serviços MEI • Titularidade: Osmar (Banco Inter PJ)'}
+              {activeTab === 'facilita' && 'Facilita Vistorias MEI • Titularidade: Vera (Caixa PJ)'}
+              {activeTab === 'pf' && 'Família PF • Comunhão Conjugal (Nubank PF)'}
+              {activeTab === 'all' && 'Visão Consolidada Familiar (3 Entidades)'}
+            </span>
+          </div>
         </div>
 
         {/* Quick Action Pill Group */}

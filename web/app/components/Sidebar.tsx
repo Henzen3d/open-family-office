@@ -89,7 +89,7 @@ export default function Sidebar({
             title="Visão Geral / Dashboard"
             onClick={handleHomeClick}
             className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-              isHome && activeTab === 'all'
+              isHome
                 ? 'bg-indigo-600 text-white shadow-pill scale-105'
                 : 'bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm'
             }`}
@@ -97,27 +97,17 @@ export default function Sidebar({
             <Home className="w-5 h-5" />
           </Link>
 
-          {isHome ? (
-            <button
-              title="Livro Razão & Conciliação"
-              onClick={handleLedgerClick}
-              className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
-            >
-              <FileText className="w-5 h-5" />
-            </button>
-          ) : (
-            <Link
-              href="/ledger"
-              title="Livro Razão & Conciliação"
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition ${
-                pathname === '/ledger'
-                  ? 'bg-indigo-600 text-white shadow-pill scale-105'
-                  : 'bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm'
-              }`}
-            >
-              <FileText className="w-5 h-5" />
-            </Link>
-          )}
+          <Link
+            href="/ledger"
+            title="Livro Razão & Conciliação"
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center transition ${
+              pathname === '/ledger'
+                ? 'bg-indigo-600 text-white shadow-pill scale-105'
+                : 'bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm'
+            }`}
+          >
+            <FileText className="w-5 h-5" />
+          </Link>
 
           <Link
             href="/receipts"
@@ -151,7 +141,15 @@ export default function Sidebar({
             >
               <CreditCard className="w-5 h-5" />
             </button>
-          ) : null}
+          ) : (
+            <Link
+              href="/#ledger-section"
+              title="Cartões & Contas Multientidade"
+              className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
+            >
+              <CreditCard className="w-5 h-5" />
+            </Link>
+          )}
 
           {isHome ? (
             <button
@@ -165,7 +163,15 @@ export default function Sidebar({
             >
               <TrendingUp className="w-5 h-5" />
             </button>
-          ) : null}
+          ) : (
+            <Link
+              href="/"
+              title="Curva Patrimonial & Analytics"
+              className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
+            >
+              <TrendingUp className="w-5 h-5" />
+            </Link>
+          )}
 
           {isHome ? (
             <button
@@ -175,7 +181,15 @@ export default function Sidebar({
             >
               <ShieldCheck className="w-5 h-5" />
             </button>
-          ) : null}
+          ) : (
+            <Link
+              href="/#governance-card"
+              title="Governança Conjugal (Dual-Signature)"
+              className="w-12 h-12 rounded-2xl bg-white dark:bg-[#161c28] text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-[#1f2738] border border-slate-200/80 dark:border-white/5 shadow-sm flex items-center justify-center transition"
+            >
+              <ShieldCheck className="w-5 h-5" />
+            </Link>
+          )}
         </nav>
       </div>
 

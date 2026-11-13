@@ -86,3 +86,4 @@ Se implementássemos um enxame dedicado no OpenFamilyOffice, a governança seria
 - [x] **Subtarefa 7.6**: Implementar endpoints de portfólio US e estimativa de gastos no backend FastAPI.
 - [x] **Subtarefa 7.7**: Atualizar a interface do chat (`AssistantDrawer.tsx` e `ArtifactRenderer.tsx`) com renderizadores visuais para receitas, saldos e carteira.
 - [x] **Subtarefa 7.8**: Criar testes automatizados para os novos motores e validar a suíte completa de testes.
+

@@ -15,7 +15,42 @@ def test_parse_monetary_amount():
     assert parse_monetary_amount("Ganhei R$100 na fix") == 100.0
     assert parse_monetary_amount("paguei 45.50 na farmacia") == 45.50
     assert parse_monetary_amount("faturei 1500 reais") == 1500.0
+    assert parse_monetary_amount("R$ 1.500") == 1500.0
+    assert parse_monetary_amount("R$ 1.500,00") == 1500.0
+    assert parse_monetary_amount("1.250.000") == 1250000.0
+    assert parse_monetary_amount("R$ 12.500") == 12500.0
+    assert parse_monetary_amount("gastei 50 conto") == 50.0
+    assert parse_monetary_amount("30 pila") == 30.0
     assert parse_monetary_amount("sem valor aqui") is None
+
+
+def test_parse_natural_expense_household_items_dont_force_fix_servicos():
+    # Household items like lampada and chuveiro should default to HOUSEHOLD_OSMAR when not an explicit Fix business transaction
+    res1 = parse_natural_transaction("Comprei lâmpada para casa por R$ 25,00")
+    assert res1 is not None
+    assert res1["entity_code"] == "HOUSEHOLD_OSMAR"
+    assert res1["account_name"] == "Nubank PF"
+    assert res1["is_revenue"] is False
+    assert res1["amount"] == 25.0
+
+    res2 = parse_natural_transaction("Gastei 150 reais no conserto do chuveiro de casa")
+    assert res2 is not None
+    assert res2["entity_code"] == "HOUSEHOLD_OSMAR"
+    assert res2["account_name"] == "Nubank PF"
+    assert res2["is_revenue"] is False
+    assert res2["amount"] == 150.0
+
+    res3 = parse_natural_transaction("Comprei lâmpada led 30 conto")
+    assert res3 is not None
+    assert res3["entity_code"] == "HOUSEHOLD_OSMAR"
+    assert res3["is_revenue"] is False
+
+    # Explicit Fix Servicios purchase should route to FIX_SERVICOS
+    res4 = parse_natural_transaction("Comprei materiais para a fix serviços por 80 reais")
+    assert res4 is not None
+    assert res4["entity_code"] == "FIX_SERVICOS"
+    assert res4["account_name"] == "Banco Inter PJ"
+    assert res4["is_revenue"] is False
 
 
 def test_parse_natural_revenue_fix_servicos():

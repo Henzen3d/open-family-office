@@ -94,6 +94,7 @@ node_modules/
 .next/
 web/.next/
 web/node_modules/
+*.tsbuildinfo
 
 # Impeccable
 .impeccable/captures/

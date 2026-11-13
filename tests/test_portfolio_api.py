@@ -75,3 +75,4 @@ def test_confirm_card_revenue_endpoint(client):
     assert data["status"] == "CONFIRMED"
     assert data["transaction"]["amount"] == 100.0  # Positive amount for revenue!
     assert "Receita" in data["transaction"]["clean_description"]
+

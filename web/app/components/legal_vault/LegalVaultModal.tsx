@@ -50,14 +50,17 @@ export default function LegalVaultModal({ isOpen, onClose }: LegalVaultModalProp
       const res = await fetch('/api/vault/status');
       if (res.ok) {
         const data = await res.json();
-        setIsUnlocked(data.unlocked);
-        if (data.unlocked) {
+        const unlocked = Boolean(data.unlocked);
+        setIsUnlocked(unlocked);
+        if (unlocked) {
           loadDocuments();
         }
+      } else {
+        setIsUnlocked(false);
       }
     } catch {
-      // offline fallback
-      setIsUnlocked(true);
+      // Security fallback: vault must remain locked when service is unavailable or offline
+      setIsUnlocked(false);
     }
   };
 

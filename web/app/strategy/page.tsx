@@ -12,6 +12,7 @@ import {
   GraduationCap,
   Globe,
   Lock,
+  TrendingUp,
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import OpportunityRadarView from '../components/strategy/OpportunityRadarView';
@@ -22,10 +23,11 @@ import MultiSchoolCouncilCard from '../components/strategy/MultiSchoolCouncilCar
 import RemittanceCostCalculator from '../components/cross_border/RemittanceCostCalculator';
 import UsTaxAdvantagedCard from '../components/cross_border/UsTaxAdvantagedCard';
 import CrossBorderComplianceRadar from '../components/cross_border/CrossBorderComplianceRadar';
+import UsStocksPortfolioCard from '../components/cross_border/UsStocksPortfolioCard';
 import LegalVaultModal from '../components/legal_vault/LegalVaultModal';
 import SuccessionChecklistCard from '../components/legal_vault/SuccessionChecklistCard';
 
-type StrategyTab = 'radar' | 'car' | 'home' | 'gadget' | 'council' | 'crossborder' | 'vault';
+type StrategyTab = 'radar' | 'stocks' | 'crossborder' | 'car' | 'home' | 'gadget' | 'council' | 'vault';
 
 export default function StrategyPage() {
   const [activeTab, setActiveTab] = useState<StrategyTab>('radar');
@@ -124,6 +126,18 @@ export default function StrategyPage() {
             </button>
 
             <button
+              onClick={() => setActiveTab('stocks')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 ${
+                activeTab === 'stocks'
+                  ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              Ações US (Avenue)
+            </button>
+
+            <button
               onClick={() => setActiveTab('crossborder')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0 ${
                 activeTab === 'crossborder'
@@ -152,12 +166,14 @@ export default function StrategyPage() {
         {/* Tab Content Display */}
         <div className="w-full">
           {activeTab === 'radar' && <OpportunityRadarView />}
+          {activeTab === 'stocks' && <UsStocksPortfolioCard />}
           {activeTab === 'car' && <CarSimulatorCard />}
           {activeTab === 'home' && <HomeVsRentCard />}
           {activeTab === 'gadget' && <GadgetOpportunityCard />}
           {activeTab === 'council' && <MultiSchoolCouncilCard />}
           {activeTab === 'crossborder' && (
             <div className="space-y-6">
+              <UsStocksPortfolioCard />
               <CrossBorderComplianceRadar />
               <RemittanceCostCalculator />
               <UsTaxAdvantagedCard />

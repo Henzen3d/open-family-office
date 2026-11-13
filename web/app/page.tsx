@@ -70,6 +70,24 @@ export default function StitchExecutiveDashboard() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
+  // Synchronized Entity Tab Switching
+  const handleEntityTabChange = (tab: 'all' | 'fix' | 'facilita' | 'pf') => {
+    setActiveTab(tab);
+    if (tab === 'fix') {
+      setLedgerFilter('inter');
+      setSelectedEntityChat('inter_cnpj');
+    } else if (tab === 'facilita') {
+      setLedgerFilter('caixa');
+      setSelectedEntityChat('caixa_pj');
+    } else if (tab === 'pf') {
+      setLedgerFilter('nubank');
+      setSelectedEntityChat('nubank_pf');
+    } else {
+      setLedgerFilter('all');
+      setSelectedEntityChat('inter_cnpj');
+    }
+  };
+
   // Modals Visibility State
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -243,45 +261,51 @@ export default function StitchExecutiveDashboard() {
     }
   }, [messages, isAssistantOpen]);
 
-  // Quick PIX Handler
+  // Quick PIX Handler (Honest Operational Provision)
   const handleQuickTransfer = () => {
     const rawVal = parseFloat(transferAmount.replace(/\./g, '').replace(',', '.')) || 0;
     if (rawVal <= 0) return;
 
+    const isVera = selectedContact === 'Vera';
     const newTx = {
-      id: `TX-PIX-${Date.now()}`,
+      id: `TX-PROVISAO-PIX-${Date.now()}`,
       date: new Date().toISOString().split('T')[0],
-      entity_code: selectedContact === 'Vera' ? 'HOUSEHOLD_OSMAR' : 'FIX_SERVICOS',
-      account_name: selectedContact === 'Vera' ? 'Nubank PF' : 'Banco Inter PJ',
-      clean_description: selectedContact === 'Vera'
-        ? 'Distribuição de Lucros Isenta MEI (Vera)'
-        : `Pagamento PIX: ${selectedContact}`,
+      entity_code: isVera ? 'HOUSEHOLD_OSMAR' : 'FIX_SERVICOS',
+      account_name: isVera ? 'Nubank PF' : 'Banco Inter PJ',
+      clean_description: isVera
+        ? 'Distribuição de Lucros Isenta MEI [Provisionada]'
+        : `Pagamento Provisionado: ${selectedContact}`,
       counterparty: selectedContact,
-      amount: selectedContact === 'Vera' ? rawVal : -rawVal,
-      is_transfer: selectedContact === 'Vera',
-      notes: `Transferência rápida autorizada via OpenFamilyOffice (${selectedContact})`,
-      status: 'CONFIRMED',
+      amount: isVera ? rawVal : -rawVal,
+      is_transfer: isVera,
+      notes: `[PROVISÃO PIX] Lançamento provisionado via OpenFamilyOffice (${selectedContact}) • Aguarda comprovante bancário`,
+      reconciliation_status: 'PROVISIONAL',
+      status: 'PROVISIONAL',
+      has_receipt: false,
     };
 
     setLedgerTransactions((prev) => [newTx, ...prev]);
-    setTransferFeedback(`PIX de R$ ${transferAmount} para ${selectedContact} registrado no Livro Razão!`);
-    setTimeout(() => setTransferFeedback(null), 5000);
+    setTransferFeedback(`Provisão de R$ ${transferAmount} para ${selectedContact} registrada com sucesso.`);
+    setTimeout(() => setTransferFeedback(null), 7000);
   };
 
-  // Conjugal Approval Handler
+  // Conjugal Approval Handler (Dual-Signature Protocol • LC 123/2006)
   const handleApproveConjugal = () => {
     setConjugalApproved(true);
+    const nowIso = new Date().toISOString();
     const newTx = {
       id: `TX-CONJUGAL-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: nowIso.split('T')[0],
       entity_code: 'HOUSEHOLD_OSMAR',
       account_name: 'Nubank PF',
-      clean_description: 'Distribuição de Lucros Isenta MEI (Dupla Assinatura Concluída)',
+      clean_description: 'Distribuição de Lucros Isenta MEI (Homologada: Osmar & Vera)',
       counterparty: 'Fix Serviços MEI → Nubank PF',
       amount: 3500.0,
       is_transfer: true,
-      notes: 'Acordo Conjugal assinado por Osmar e Vera (Blindagem LC 123/2006)',
+      notes: `[ACORDO CONJUGAL HOMOLOGADO] Dupla assinatura Osmar & Vera registrada em ${new Date().toLocaleTimeString()} (Blindagem Art. 18-A LC 123/2006)`,
+      reconciliation_status: 'CONJUGAL_APPROVED',
       status: 'CONFIRMED',
+      has_receipt: false,
     };
     setLedgerTransactions((prev) => [newTx, ...prev]);
   };
@@ -470,23 +494,59 @@ export default function StitchExecutiveDashboard() {
     }
   };
 
-  // Dynamic MEI calculation values
+  // Real Dynamic MEI calculation values from ledger and historical records
   const rev2026 = historySummary?.by_year?.['2026']?.total_revenue ?? 103632.34;
-  const meiOsmarIssued = 58200.0;
-  const meiOsmarMargin = 81000.0 - meiOsmarIssued;
-  const meiOsmarPct = ((meiOsmarIssued / 81000.0) * 100).toFixed(1);
-  const meiVeraIssued = 42132.34;
-  const meiVeraMargin = 81000.0 - meiVeraIssued;
-  const meiVeraPct = ((meiVeraIssued / 81000.0) * 100).toFixed(1);
+  
+  const fixTransactions2026 = ledgerTransactions.filter((t) => {
+    const is2026 = (t.date || '').startsWith('2026');
+    const amt = Number(t.amount) || 0;
+    const isTransfer = !!t.is_transfer;
+    const code = (t.entity_code || '').toUpperCase();
+    return is2026 && amt > 0 && !isTransfer && (code === 'FIX_SERVICOS' || (t.account_name || '').toLowerCase().includes('inter'));
+  });
+  const meiOsmarRealIssued = fixTransactions2026.length > 0
+    ? fixTransactions2026.reduce((s, t) => s + Number(t.amount || 0), 0)
+    : (historySummary?.by_year?.['2026']?.fix_servicos_revenue ?? 100332.34);
+
+  const facilitaTransactions2026 = ledgerTransactions.filter((t) => {
+    const is2026 = (t.date || '').startsWith('2026');
+    const amt = Number(t.amount) || 0;
+    const isTransfer = !!t.is_transfer;
+    const code = (t.entity_code || '').toUpperCase();
+    return is2026 && amt > 0 && !isTransfer && (code === 'FACILITA_VISTORIAS' || (t.account_name || '').toLowerCase().includes('caixa'));
+  });
+  const meiVeraRealIssued = facilitaTransactions2026.length > 0
+    ? facilitaTransactions2026.reduce((s, t) => s + Number(t.amount || 0), 0)
+    : 0;
+
+  const meiOsmarMargin = Math.max(0, 81000.0 - meiOsmarRealIssued);
+  const meiOsmarPct = ((meiOsmarRealIssued / 81000.0) * 100).toFixed(1);
+  const meiVeraMargin = Math.max(0, 81000.0 - meiVeraRealIssued);
+  const meiVeraPct = ((meiVeraRealIssued / 81000.0) * 100).toFixed(1);
+
   const avgMonthlyInflow = rev2026 / 9;
   const avgMonthlyOutflow = (historySummary?.by_year?.['2026']?.total_expenses ?? 10363.22) / 9;
+
+  // Reactive Entity-Filtered Accounts & Balance
+  const filteredAccounts = accounts.filter((acct) => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'fix') return acct.entity_code === 'FIX_SERVICOS' || acct.id.includes('inter');
+    if (activeTab === 'facilita') return acct.entity_code === 'FACILITA_VISTORIAS' || acct.id.includes('caixa');
+    if (activeTab === 'pf') return acct.entity_code === 'HOUSEHOLD_OSMAR' || acct.id.includes('nubank');
+    return true;
+  });
+
+  const activeContextBalance =
+    activeTab === 'all'
+      ? totalAccountsBalance
+      : filteredAccounts.reduce((acc, a) => acc + (a.balance || 0), 0);
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-[#0c1017] text-slate-800 dark:text-slate-100 transition-colors font-sans antialiased overflow-x-hidden selection:bg-indigo-500/20 selection:text-indigo-600 dark:selection:text-indigo-300">
       {/* 1. LEFT COMPACT FLOATING ICON SIDEBAR */}
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleEntityTabChange}
         setLedgerFilter={setLedgerFilter}
         liquidityView={liquidityView}
         setLiquidityView={setLiquidityView}
@@ -504,7 +564,7 @@ export default function StitchExecutiveDashboard() {
         {/* Top Header Bar & Greeting */}
         <DashboardHeader
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleEntityTabChange}
           theme={theme}
           handleThemeChange={handleThemeChange}
           setIsSettingsOpen={setIsSettingsOpen}
@@ -518,13 +578,15 @@ export default function StitchExecutiveDashboard() {
         {/* 3. ROW 1: Multi-Entity Wallets + Liquidity Curve */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
           <EntityWalletsCard
-            accounts={accounts}
-            totalAccountsBalance={totalAccountsBalance}
+            accounts={filteredAccounts}
+            totalAccountsBalance={activeContextBalance}
             formatBRL={formatBRL}
             setSettingsTab={setSettingsTab}
             setIsSettingsOpen={setIsSettingsOpen}
             setLedgerFilter={setLedgerFilter}
             setIsRunwayModalOpen={setIsRunwayModalOpen}
+            activeTab={activeTab}
+            setActiveTab={handleEntityTabChange}
           />
           <BentoLiquidityChart
             liquidityView={liquidityView}
@@ -533,19 +595,24 @@ export default function StitchExecutiveDashboard() {
             setSelectedMonthIdx={setSelectedMonthIdx}
             selectedYearIdx={selectedYearIdx}
             setSelectedYearIdx={setSelectedYearIdx}
+            historySummary={historySummary}
+            accounts={accounts}
+            totalAccountsBalance={totalAccountsBalance}
+            activeTab={activeTab}
           />
         </div>
 
         {/* 4. ROW 2: MEI Monitor + Dual Governance + Quick PIX */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
           <MeiCeilingTracker
+            activeTab={activeTab}
+            formatBRL={formatBRL}
             meiOsmarPct={meiOsmarPct}
-            meiOsmarIssued={meiOsmarIssued}
+            meiOsmarIssued={meiOsmarRealIssued}
             meiOsmarMargin={meiOsmarMargin}
             meiVeraPct={meiVeraPct}
-            meiVeraIssued={meiVeraIssued}
+            meiVeraIssued={meiVeraRealIssued}
             meiVeraMargin={meiVeraMargin}
-            formatBRL={formatBRL}
           />
           <ConjugalGovernanceCard
             conjugalApproved={conjugalApproved}
@@ -560,6 +627,7 @@ export default function StitchExecutiveDashboard() {
             setTransferAmount={setTransferAmount}
             handleQuickTransfer={handleQuickTransfer}
             transferFeedback={transferFeedback}
+            activeTab={activeTab}
           />
         </div>
 
@@ -629,7 +697,7 @@ export default function StitchExecutiveDashboard() {
       {/* Mobile Bottom Navigation */}
       <MobileNav
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleEntityTabChange}
         setIsStatementOpen={setIsStatementOpen}
         setIsAssistantOpen={setIsAssistantOpen}
         theme={theme}

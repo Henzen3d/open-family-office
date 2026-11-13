@@ -78,9 +78,19 @@ export default function ReceiptsPage() {
       setUploading(true);
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('entity', entityFilter === 'all' ? 'FIX_SERVICOS' : entityFilter.toUpperCase());
+      
+      let targetEntityCode = 'FIX_SERVICOS';
+      if (entityFilter === 'facilita') {
+        targetEntityCode = 'FACILITA_VISTORIAS';
+      } else if (entityFilter === 'pf') {
+        targetEntityCode = 'HOUSEHOLD_OSMAR';
+      } else {
+        targetEntityCode = 'FIX_SERVICOS';
+      }
+      formData.append('entity_code', targetEntityCode);
+      formData.append('entity', targetEntityCode);
 
-      const res = await fetch('/api/py/receipts/extract', {
+      const res = await fetch('/api/receipts/extract', {
         method: 'POST',
         body: formData,
       });

@@ -7,6 +7,7 @@ import {
   Camera,
   ChevronRight,
   Sparkles,
+  FileText,
 } from 'lucide-react';
 
 interface RecentTransactionsTableProps {
@@ -40,9 +41,11 @@ export default function RecentTransactionsTable({
 }: RecentTransactionsTableProps) {
   const filteredLedgerTxs = ledgerTransactions.filter((tx) => {
     if (ledgerFilter === 'all') return true;
-    if (ledgerFilter === 'inter') return tx.entity_code === 'FIX_SERVICOS' || (tx.account && tx.account.toLowerCase().includes('inter'));
-    if (ledgerFilter === 'caixa') return tx.entity_code === 'FACILITA_VISTORIAS' || (tx.account && tx.account.toLowerCase().includes('caixa'));
-    if (ledgerFilter === 'nubank') return tx.entity_code === 'HOUSEHOLD_OSMAR' || (tx.account && tx.account.toLowerCase().includes('nubank'));
+    const acct = (tx.account_name || tx.account || '').toLowerCase();
+    const code = (tx.entity_code || '').toUpperCase();
+    if (ledgerFilter === 'inter') return code === 'FIX_SERVICOS' || acct.includes('inter');
+    if (ledgerFilter === 'caixa') return code === 'FACILITA_VISTORIAS' || acct.includes('caixa');
+    if (ledgerFilter === 'nubank') return code === 'HOUSEHOLD_OSMAR' || acct.includes('nubank');
     return true;
   });
 
@@ -266,6 +269,14 @@ export default function RecentTransactionsTable({
                               </div>
                             </div>
                           </div>
+                        ) : tx.status === 'PROVISIONAL' || tx.reconciliation_status === 'PROVISIONAL' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs font-bold" title="Lançamento provisionado aguardando extrato bancário oficial">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" /> Provisão
+                          </span>
+                        ) : tx.reconciliation_status === 'CONJUGAL_APPROVED' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold" title="Acordo Conjugal homologado com dupla assinatura">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Homologado
+                          </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
@@ -275,87 +286,19 @@ export default function RecentTransactionsTable({
                     </tr>
                   ))
                 ) : (
-                  <>
-                    <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
-                      <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">2026-09-18</td>
-                      <td className="py-3">
-                        <span className="px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-500/30">
-                          Inter PJ
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <div className="text-slate-900 dark:text-white font-semibold">Recebimento Fix Serviços MEI 09/2026</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Faturamento Bruto Fix Serviços MEI (Osmar)</div>
-                      </td>
-                      <td className="py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">+R$ 9.987,00</td>
-                      <td className="py-3 font-mono text-xs text-slate-500 dark:text-slate-400">NFS-e #09/2026</td>
-                      <td className="py-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
-                        </span>
-                      </td>
-                    </tr>
-
-                    <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
-                      <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">2026-08-15</td>
-                      <td className="py-3">
-                        <span className="px-2 py-1 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-semibold text-xs border border-amber-200 dark:border-amber-500/30">
-                          Inter PJ
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <div className="text-slate-900 dark:text-white font-semibold">Recebimento Fix Serviços MEI 08/2026 (Pico)</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Faturamento Bruto Fix Serviços MEI</div>
-                      </td>
-                      <td className="py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">+R$ 14.551,55</td>
-                      <td className="py-3 font-mono text-xs text-slate-500 dark:text-slate-400">NFS-e #08/2026</td>
-                      <td className="py-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
-                        </span>
-                      </td>
-                    </tr>
-
-                    <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
-                      <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">2026-09-18</td>
-                      <td className="py-3">
-                        <span className="px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold text-xs border border-blue-200 dark:border-blue-500/30">
-                          Nubank PF
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <div className="text-slate-900 dark:text-white font-semibold">Distribuição de Lucros Isenta (Vera)</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Inter PJ → Nubank PF (Neutralizada)</div>
-                      </td>
-                      <td className="py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">+R$ 499,35</td>
-                      <td className="py-3 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-semibold">PJ ↔ PF Neutralizada</td>
-                      <td className="py-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
-                        </span>
-                      </td>
-                    </tr>
-
-                    <tr className="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition">
-                      <td className="py-3 pl-1 font-mono text-slate-500 dark:text-slate-400">2026-09-18</td>
-                      <td className="py-3">
-                        <span className="px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold text-xs border border-blue-200 dark:border-blue-500/30">
-                          Nubank PF
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        <div className="text-slate-900 dark:text-white font-semibold">Distribuição de Lucros Isenta (Osmar)</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">Inter PJ → Nubank PF (Neutralizada)</div>
-                      </td>
-                      <td className="py-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">+R$ 499,35</td>
-                      <td className="py-3 font-mono text-xs text-indigo-600 dark:text-indigo-400 font-semibold">PJ ↔ PF Neutralizada</td>
-                      <td className="py-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" /> OK
-                        </span>
-                      </td>
-                    </tr>
-                  </>
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center">
+                      <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
+                        <FileText className="w-8 h-8 mb-2 opacity-40 text-slate-400" />
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                          Nenhum lançamento encontrado
+                        </p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
+                          Não há transações para a conta ou filtro selecionado. Importe um extrato OFX/CSV ou escaneie um cupom fiscal.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

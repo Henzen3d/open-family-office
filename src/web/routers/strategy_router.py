@@ -83,16 +83,24 @@ async def get_strategy_opportunities():
     transactions = ledger_manager.load_transactions()
     tx_dicts = [t.model_dump() if hasattr(t, "model_dump") else (t.__dict__ if hasattr(t, "__dict__") else {}) for t in transactions]
 
-    # Calculate year-to-date MEI revenues
+    # Calculate year-to-date MEI revenues from actual transactions
+    from datetime import datetime, timezone
+    current_year = datetime.now(timezone.utc).year
     rev_fix = sum(
         float(t.amount)
         for t in transactions
-        if getattr(t, "entity_tag", "") in ["fix_servicos", "inter_cnpj"] and float(t.amount) > 0
+        if (getattr(t, "entity_code", "") or "").upper() == "FIX_SERVICOS"
+        and float(t.amount) > 0
+        and not getattr(t, "is_transfer", False)
+        and getattr(t.date, "year", current_year) == current_year
     )
     rev_facilita = sum(
         float(t.amount)
         for t in transactions
-        if getattr(t, "entity_tag", "") in ["facilita_vistorias", "caixa_pj"] and float(t.amount) > 0
+        if (getattr(t, "entity_code", "") or "").upper() == "FACILITA_VISTORIAS"
+        and float(t.amount) > 0
+        and not getattr(t, "is_transfer", False)
+        and getattr(t.date, "year", current_year) == current_year
     )
 
     # Sensible defaults if ledger is nascent

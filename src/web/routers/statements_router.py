@@ -272,19 +272,43 @@ async def list_transactions(
 @router.get("/api/statements/summary")
 @router.get("/statements/summary")
 async def get_statements_summary():
-    """Returns multi-year consolidated financial metrics from history_consolidation.json."""
+    """Returns multi-year consolidated financial metrics enriched with real per-entity liquidity."""
     consolidation_file = get_data_dir() / "ledger" / "history_consolidation.json"
+    result_data = {}
     if consolidation_file.exists():
         try:
             with open(consolidation_file, "r", encoding="utf-8") as f:
-                return json.load(f)
+                result_data = json.load(f)
         except Exception as e:
             logger.error(f"Failed to read consolidation file: {e}")
             raise HTTPException(status_code=500, detail="Failed to load historical consolidation summary.")
+
+    # Enrich with real-time per-entity liquidity totals
+    try:
+        from src.web.deps import get_reports_manager
+        rep_mgr = get_reports_manager()
+        liq = rep_mgr.get_liquidity_report()
+        result_data["by_entity"] = liq.get("by_entity", {})
+        result_data["entity_liquidity"] = liq
+    except Exception as e:
+        logger.warning(f"Could not enrich summary with dynamic entity liquidity: {e}")
+
+    if result_data:
+        return result_data
+
     return {
         "status": "empty",
         "message": "Nenhum histórico consolidado encontrado. Execute o script de ingestão.",
     }
+
+
+@router.get("/api/statements/mei-ceiling")
+@router.get("/statements/mei-ceiling")
+async def get_statements_mei_ceiling(year: int = 2026):
+    """Calculates actual revenue from transactions.csv for MEI entities against LC 123/2006 limits."""
+    from src.web.deps import get_reports_manager
+    rep_mgr = get_reports_manager()
+    return rep_mgr.calculate_mei_status(year=year)
 
 
 @router.get("/api/ledger/gaps/preview")

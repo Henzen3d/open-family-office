@@ -51,3 +51,4 @@ def test_portfolio_manager_lifecycle(tmp_path):
     assert summary.ptax_rate > 4.0
     assert "Avenue" in summary.broker_breakdown
     assert summary.cbe_required is False
+

@@ -40,6 +40,20 @@ async def get_portfolio_summary():
     return summary.to_dict()
 
 
+@router.get("/holdings")
+@router.get("/us-stocks/holdings")
+async def get_portfolio_holdings():
+    """Returns current US stock holdings/positions loaded directly from storage."""
+    mgr = PortfolioManager(str(get_data_dir()))
+    positions = mgr.load_positions()
+    pos_dicts = [p.to_dict() for p in positions]
+    return {
+        "holdings": pos_dicts,
+        "positions": pos_dicts,
+        "total_count": len(positions),
+    }
+
+
 @router.post("/us-stocks")
 async def upsert_position_endpoint(request: UpsertPositionRequest):
     """Adds or updates a single US stock position."""
@@ -94,3 +108,4 @@ async def nlp_sync_portfolio_endpoint(request: NlpPortfolioSyncRequest):
         "positions": [p.to_dict() for p in saved],
         "summary": summary.to_dict(),
     }
+

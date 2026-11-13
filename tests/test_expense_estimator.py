@@ -81,3 +81,4 @@ def test_expense_estimator_gap_identification(tmp_path):
         assert t.reconciliation_status == ReconciliationStatus.ESTIMATED
         assert t.amount < 0
         assert "Lançamento estimado" in t.notes or "Estimativa" in t.clean_description
+

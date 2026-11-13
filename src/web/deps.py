@@ -142,6 +142,12 @@ def get_smart_router() -> SmartRouter:
     )
 
 
+def get_reports_manager():
+    """Returns an active ReportsManager instance for financial analytics."""
+    from src.controller.reports_manager import ReportsManager
+    return ReportsManager(str(get_data_dir()))
+
+
 def mask_secret(secret: str) -> str:
     """Masks secret key to prevent egress leakage."""
     if not secret:

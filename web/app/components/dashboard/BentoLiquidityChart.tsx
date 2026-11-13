@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
+import { BankAccountItem } from '../SettingsModal';
 
 export const MONTHLY_LIQUIDITY_DATA = [
   { month: 'Jan', fullName: 'Janeiro', in2026: 14762.00, in2025: 12959.10, out2026: 1342.00, out2025: 1178.10, fixMei: 13562.00, rent: 1200.00, projected: false },
@@ -51,6 +52,10 @@ interface BentoLiquidityChartProps {
   setSelectedMonthIdx: (idx: number) => void;
   selectedYearIdx: number;
   setSelectedYearIdx: (idx: number) => void;
+  historySummary?: any;
+  accounts?: BankAccountItem[];
+  totalAccountsBalance?: number;
+  activeTab?: 'all' | 'fix' | 'facilita' | 'pf';
 }
 
 export default function BentoLiquidityChart({
@@ -60,15 +65,115 @@ export default function BentoLiquidityChart({
   setSelectedMonthIdx,
   selectedYearIdx,
   setSelectedYearIdx,
+  historySummary,
+  accounts,
+  totalAccountsBalance,
+  activeTab = 'all',
 }: BentoLiquidityChartProps) {
+  // Dynamically compute monthly data from historySummary (real data)
+  const monthlyData = useMemo(() => {
+    const raw2026 = historySummary?.by_year?.['2026'];
+    const raw2025 = historySummary?.by_year?.['2025'];
+    if (!raw2026 && !raw2025) return MONTHLY_LIQUIDITY_DATA;
+
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const fullNames = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto (Pico 2026)',
+      'Setembro (Mês Atual)',
+      'Outubro (Projeção)',
+      'Novembro (Projeção)',
+      'Dezembro (Projeção)',
+    ];
+
+    return monthNames.map((m, i) => {
+      const in2026 = raw2026?.monthly_revenue?.[i] ?? MONTHLY_LIQUIDITY_DATA[i]?.in2026 ?? 0;
+      const in2025 = raw2025?.monthly_revenue?.[i] ?? MONTHLY_LIQUIDITY_DATA[i]?.in2025 ?? 0;
+      const out2026 = raw2026?.monthly_expenses?.[i] ?? MONTHLY_LIQUIDITY_DATA[i]?.out2026 ?? 0;
+      const out2025 = raw2025?.monthly_expenses?.[i] ?? MONTHLY_LIQUIDITY_DATA[i]?.out2025 ?? 0;
+      const fixMei = raw2026?.monthly_fix_mei?.[i] ?? MONTHLY_LIQUIDITY_DATA[i]?.fixMei ?? 0;
+      const rent = in2026 > fixMei ? in2026 - fixMei : 1200;
+
+      return {
+        month: m,
+        fullName: fullNames[i],
+        in2026,
+        in2025,
+        out2026,
+        out2025,
+        fixMei,
+        rent,
+        projected: i >= 9,
+      };
+    });
+  }, [historySummary]);
+
+  // Dynamically compute historical 7 years bars from historySummary
+  const historical7Years = useMemo(() => {
+    if (!historySummary?.by_year) return HISTORICAL_7_YEARS;
+    const years = ['2020', '2021', '2022', '2023', '2024', '2025', '2026'];
+    const values = years.map((y) => {
+      const row = historySummary.by_year[y];
+      const gross = row?.total_revenue ?? 0;
+      return { y, gross, row };
+    });
+    const maxGross = Math.max(...values.map((v) => v.gross), 156199.75);
+
+    return values.map(({ y, gross, row }) => {
+      const fixMei = row?.fix_servicos_revenue ?? 0;
+      const rent = row?.aluguel_revenue ?? 0;
+      const pct = `${Math.min(100, Math.round((gross / maxGross) * 100))}%`;
+      const label = `R$ ${(gross / 1000).toFixed(1).replace('.', ',')}k`;
+      const peak = gross === maxGross;
+      const current = y === '2026';
+
+      return {
+        year: y,
+        gross,
+        fixMei,
+        rent,
+        label,
+        pct,
+        peak,
+        current,
+      };
+    });
+  }, [historySummary]);
+
+  const total7YearsRevenue = useMemo(() => {
+    return historical7Years.reduce((acc, curr) => acc + curr.gross, 0);
+  }, [historical7Years]);
+
+  // Real Net Worth & Runway
+  const currentNetWorth = totalAccountsBalance ?? historySummary?.net_profit ?? 508121.36;
+  const avgMonthlyOutflow = (historySummary?.by_year?.['2026']?.total_expenses ?? 10363.22) / 9;
+  const runwayMonths = avgMonthlyOutflow > 0 ? (currentNetWorth / avgMonthlyOutflow).toFixed(1) : '44,1';
+
   return (
     <div className="lg:col-span-8 bg-white dark:bg-[#161c28] rounded-3xl p-6 border border-slate-200/80 dark:border-white/10 shadow-card dark:shadow-card flex flex-col justify-between">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">Visão Geral de Liquidez & Reservas</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Visão Geral de Liquidez & Reservas</h2>
+            {activeTab !== 'all' && (
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
+                {activeTab === 'fix' ? 'Fix MEI' : activeTab === 'facilita' ? 'Facilita MEI' : 'Família PF'}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {liquidityView === 'compare' && 'Evolução do Fluxo de Caixa Consolidado: 2026 vs. Histórico de 2025'}
-            {liquidityView === 'history' && 'Série Histórica Consolidada (2020 - 2026): R$ 907.352,00 Faturamento Real'}
+            {liquidityView === 'compare' &&
+              (activeTab === 'fix'
+                ? 'Evolução de Entradas Fix Serviços MEI: 2026 vs. Histórico de 2025'
+                : 'Evolução do Fluxo de Caixa Consolidado: 2026 vs. Histórico de 2025')}
+            {liquidityView === 'history' &&
+              `Série Histórica Consolidada (2020 - 2026): R$ ${total7YearsRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} Faturamento Real`}
             {liquidityView === 'cumulative' && 'Evolução do Patrimônio Líquido Total e Reservas de Autonomia Familiar'}
           </p>
         </div>
@@ -111,11 +216,11 @@ export default function BentoLiquidityChart({
 
       {/* View 1: 2026 vs 2025 Month-by-Month Real Consolidated Cashflow */}
       {liquidityView === 'compare' && (() => {
-        const pts2026: [number, number][] = MONTHLY_LIQUIDITY_DATA.map((d, i) => [
+        const pts2026: [number, number][] = monthlyData.map((d, i) => [
           Number((35 + i * (630 / 11)).toFixed(1)),
           Number((150 - (d.in2026 / 22000) * 125).toFixed(1)),
         ]);
-        const pts2025: [number, number][] = MONTHLY_LIQUIDITY_DATA.map((d, i) => [
+        const pts2025: [number, number][] = monthlyData.map((d, i) => [
           Number((35 + i * (630 / 11)).toFixed(1)),
           Number((150 - (d.in2025 / 22000) * 125).toFixed(1)),
         ]);
@@ -125,12 +230,12 @@ export default function BentoLiquidityChart({
         const fill2026 = `${spline2026} L 665,155 L 35,155 Z`;
         const fill2025 = `${spline2025} L 665,155 L 35,155 Z`;
 
-        const currentMonth = MONTHLY_LIQUIDITY_DATA[selectedMonthIdx] ?? MONTHLY_LIQUIDITY_DATA[8];
+        const currentMonth = monthlyData[selectedMonthIdx] ?? monthlyData[8];
         const curX = pts2026[selectedMonthIdx]?.[0] ?? 493.2;
         const curY26 = pts2026[selectedMonthIdx]?.[1] ?? 87.6;
         const curY25 = pts2025[selectedMonthIdx]?.[1] ?? 88.3;
         const diff = currentMonth.in2026 - currentMonth.in2025;
-        const diffPct = (diff / currentMonth.in2025) * 100;
+        const diffPct = currentMonth.in2025 > 0 ? (diff / currentMonth.in2025) * 100 : 0;
 
         return (
           <div key="view-compare" className="animate-view-fade">
@@ -231,7 +336,7 @@ export default function BentoLiquidityChart({
                 <circle cx={curX} cy={curY26} fill="#6366f1" r="6.5" stroke="#ffffff" strokeWidth="2.5" />
 
                 {/* Column Hit Areas for Mouse Hover */}
-                {MONTHLY_LIQUIDITY_DATA.map((_, i) => {
+                {monthlyData.map((_, i) => {
                   const x = 35 + i * (630 / 11);
                   return (
                     <rect
@@ -252,7 +357,7 @@ export default function BentoLiquidityChart({
 
             {/* 12 Months Interactive Label Bar */}
             <div className="flex justify-between items-center text-xs mt-2 px-1">
-              {MONTHLY_LIQUIDITY_DATA.map((item, idx) => (
+              {monthlyData.map((item, idx) => (
                 <button
                   key={item.month}
                   onMouseEnter={() => setSelectedMonthIdx(idx)}
@@ -278,7 +383,7 @@ export default function BentoLiquidityChart({
 
       {/* View 2: 7 Anos Historical Evolution (2020-2026) */}
       {liquidityView === 'history' && (() => {
-        const activeYear = HISTORICAL_7_YEARS[selectedYearIdx] ?? HISTORICAL_7_YEARS[6];
+        const activeYear = historical7Years[selectedYearIdx] ?? historical7Years[6];
         return (
           <div key="view-history" className="animate-view-fade">
             <div className="relative w-full h-56 pt-2 flex items-end justify-between gap-3 px-2">
@@ -305,7 +410,7 @@ export default function BentoLiquidityChart({
                 </div>
               </div>
 
-              {HISTORICAL_7_YEARS.map((bar, idx) => (
+              {historical7Years.map((bar, idx) => (
                 <div
                   key={bar.year}
                   onMouseEnter={() => setSelectedYearIdx(idx)}
@@ -330,7 +435,7 @@ export default function BentoLiquidityChart({
             </div>
 
             <div className="flex justify-between items-center text-xs font-semibold text-slate-500 dark:text-slate-400 mt-2 px-2">
-              {HISTORICAL_7_YEARS.map((bar, idx) => (
+              {historical7Years.map((bar, idx) => (
                 <button
                   key={bar.year}
                   onClick={() => setSelectedYearIdx(idx)}
@@ -358,11 +463,13 @@ export default function BentoLiquidityChart({
             <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-[#1a2232]/95 backdrop-blur-md shadow-xl border border-slate-200 dark:border-white/15 rounded-2xl p-2.5 z-20 flex gap-4 text-xs pointer-events-none text-slate-900 dark:text-white">
               <div>
                 <span className="text-xs text-slate-600 dark:text-slate-300 block font-medium">Patrimônio Líquido Acumulado</span>
-                <strong className="font-mono text-emerald-700 dark:text-emerald-400 text-sm">R$ 508.121,36</strong>
+                <strong className="font-mono text-emerald-700 dark:text-emerald-400 text-sm">
+                  R$ {currentNetWorth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </strong>
               </div>
               <div className="border-l border-slate-200 dark:border-white/10 pl-3">
                 <span className="text-xs text-slate-600 dark:text-slate-300 block font-medium">Autonomia Familiar</span>
-                <strong className="font-mono text-indigo-700 dark:text-indigo-400 text-sm">44,1 Meses</strong>
+                <strong className="font-mono text-indigo-700 dark:text-indigo-400 text-sm">{runwayMonths} Meses</strong>
               </div>
             </div>
 
@@ -397,7 +504,7 @@ export default function BentoLiquidityChart({
             <span>2022: R$ 168,5k</span>
             <span>2024: R$ 342,0k</span>
             <span className="text-emerald-600 dark:text-emerald-400 font-extrabold underline underline-offset-4">
-              Hoje: R$ 508.121,36 (Protegido)
+              Hoje: R$ {currentNetWorth.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (Protegido e Conciliado)
             </span>
           </div>
         </div>
@@ -405,4 +512,3 @@ export default function BentoLiquidityChart({
     </div>
   );
 }
-

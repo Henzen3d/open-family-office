@@ -130,6 +130,47 @@ class LedgerManager:
                     tx.notes,
                 ])
 
+    @staticmethod
+    def compute_fingerprint(entity_code: str, tx_date: Any, amount: Any, description: str) -> str:
+        """Computes a normalized business idempotency fingerprint: (entity_code, date, amount_cents, description)."""
+        d_str = tx_date.isoformat() if hasattr(tx_date, "isoformat") else str(tx_date).strip()
+        amt_str = str(amount).replace(",", ".").strip()
+        try:
+            amt_cents = int(round(Decimal(amt_str) * 100))
+        except Exception:
+            amt_cents = 0
+        desc_norm = (description or "").strip().lower()
+        ent_norm = (entity_code or "").strip().upper()
+        return f"{ent_norm}|{d_str}|{amt_cents}|{desc_norm}"
+
+    def get_transaction_fingerprint(self, tx: Transaction) -> str:
+        """Returns the business fingerprint for a given Transaction."""
+        desc = tx.clean_description or tx.raw_description or ""
+        return self.compute_fingerprint(tx.entity_code, tx.date, tx.amount, desc)
+
+    def deduplicate_ledger(self) -> int:
+        """Purges duplicate rows from the active ledger CSV based on ID and business fingerprint.
+        Returns the number of duplicate transactions removed.
+        """
+        existing = self.load_transactions()
+        seen_ids = set()
+        seen_fps = set()
+        unique_txs: List[Transaction] = []
+        removed = 0
+
+        for tx in existing:
+            fp = self.get_transaction_fingerprint(tx)
+            if tx.id in seen_ids or fp in seen_fps:
+                removed += 1
+                continue
+            seen_ids.add(tx.id)
+            seen_fps.add(fp)
+            unique_txs.append(tx)
+
+        if removed > 0:
+            self.save_transactions(unique_txs)
+        return removed
+
     def merge_statement(
         self,
         statement: ParsedStatement,
@@ -141,10 +182,7 @@ class LedgerManager:
         """
         existing = self.load_transactions()
         existing_ids = {t.id for t in existing}
-        existing_fingerprints = {
-            (t.entity_code, t.date.isoformat(), str(t.amount), t.clean_description.strip().lower())
-            for t in existing
-        }
+        existing_fingerprints = {self.get_transaction_fingerprint(t) for t in existing}
 
         new_txs: List[Transaction] = []
         duplicates_skipped = 0
@@ -155,8 +193,9 @@ class LedgerManager:
                 duplicates_skipped += 1
                 continue
 
-            # Check duplicate by exact date, amount, entity, description
-            fp = (pt.entity_code, pt.date.isoformat(), str(pt.amount), pt.clean_description.strip().lower())
+            # Check duplicate by business fingerprint
+            pt_desc = pt.clean_description or pt.raw_description or ""
+            fp = self.compute_fingerprint(pt.entity_code, pt.date, pt.amount, pt_desc)
             if fp in existing_fingerprints:
                 duplicates_skipped += 1
                 continue
@@ -203,10 +242,15 @@ class LedgerManager:
         return combined, len(new_txs), duplicates_skipped, len(paired_transfers)
 
     def add_single_transaction(self, tx: Transaction) -> bool:
-        """Appends a single verified transaction to the ledger."""
+        """Appends a single verified transaction to the ledger, enforcing idempotency."""
         existing = self.load_transactions()
         if any(t.id == tx.id for t in existing):
             return False
+
+        tx_fp = self.get_transaction_fingerprint(tx)
+        if any(self.get_transaction_fingerprint(t) == tx_fp for t in existing):
+            return False
+
         existing.append(tx)
         existing, _ = self.transfer_neutralizer.match_transfers(existing)
         self.save_transactions(existing)

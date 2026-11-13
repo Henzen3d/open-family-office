@@ -8,6 +8,35 @@ from src.models.transactions import Transaction, TransferPair
 from src.models.enums import TransferType
 
 
+TRANSFER_KEYWORDS = (
+    "pix transf",
+    "ted",
+    "doc",
+    "tef",
+    "transferencia",
+    "transferência",
+    "transf",
+    "entre contas",
+    "mesma titularidade",
+    "pro-labore",
+    "pro labore",
+    "aporte",
+    "retirada",
+    "internal transfer",
+    "pix enviado",
+    "pix recebido fix",
+    "pix recebido osmar",
+    "pix recebido vera",
+    "pix recebido facilita",
+)
+
+
+def has_transfer_semantics(tx: Transaction) -> bool:
+    """Checks whether a transaction's descriptions carry internal transfer keywords."""
+    combined = f"{tx.raw_description} {tx.clean_description} {tx.notes} {tx.counterparty}".lower()
+    return any(kw in combined for kw in TRANSFER_KEYWORDS)
+
+
 class TransferNeutralizer:
     """Detects and pairs complementary debit/credit transactions between accounts to eliminate artificial revenue/expense duplication."""
 
@@ -16,11 +45,12 @@ class TransferNeutralizer:
 
     def match_transfers(self, transactions: List[Transaction]) -> Tuple[List[Transaction], List[TransferPair]]:
         """Scans transactions and pairs matching debit and credit entries.
+        Requires transfer semantic keywords on transactions so customer revenues and normal expenses are never erased.
         Returns the updated transaction list and newly generated TransferPair objects.
         """
-        # Separate un-paired negative and positive transactions
-        debits = [t for t in transactions if t.amount < 0 and not t.is_transfer]
-        credits = [t for t in transactions if t.amount > 0 and not t.is_transfer]
+        # Separate un-paired negative and positive transactions that possess transfer semantics
+        debits = [t for t in transactions if t.amount < 0 and not t.is_transfer and has_transfer_semantics(t)]
+        credits = [t for t in transactions if t.amount > 0 and not t.is_transfer and has_transfer_semantics(t)]
         
         pairs: List[TransferPair] = []
         matched_tx_ids = set()

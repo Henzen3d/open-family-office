@@ -165,3 +165,4 @@ class PortfolioManager:
             cbe_required=cbe_required,
             cbe_status=cbe_status,
         )
+
