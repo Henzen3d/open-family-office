@@ -4,7 +4,7 @@ from datetime import datetime, date
 from decimal import Decimal
 import os
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from src.models.transactions import Transaction
 from src.models.enums import ReconciliationStatus
