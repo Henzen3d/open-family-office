@@ -148,6 +148,22 @@ def get_reports_manager():
     return ReportsManager(str(get_data_dir()))
 
 
+def get_spend_compliance_engine():
+    from src.engine.spend_compliance import SpendComplianceEngine
+    return SpendComplianceEngine()
+
+
+def get_monthly_closing_auditor():
+    from src.controller.monthly_closing import MonthlyClosingAuditor
+    return MonthlyClosingAuditor(compliance_engine=get_spend_compliance_engine())
+
+
+def get_mileage_tracker():
+    from src.controller.mileage_tracker import MileageTracker
+    mileage_file = get_data_dir() / "ledger" / "mileage_trips.json"
+    return MileageTracker(data_file=mileage_file)
+
+
 def mask_secret(secret: str) -> str:
     """Masks secret key to prevent egress leakage."""
     if not secret:

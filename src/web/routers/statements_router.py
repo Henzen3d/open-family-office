@@ -1,6 +1,8 @@
 """Bank Statements, OFX/CSV Parsing, and Ledger Transactions Router."""
 from __future__ import annotations
 
+from dataclasses import asdict
+from datetime import datetime
 import json
 import logging
 import re
@@ -15,6 +17,9 @@ from src.web.deps import (
     get_data_dir,
     get_ledger_manager,
     get_receipt_store,
+    get_spend_compliance_engine,
+    get_monthly_closing_auditor,
+    get_mileage_tracker,
 )
 
 logger = logging.getLogger(__name__)
@@ -206,6 +211,7 @@ async def list_transactions(
     total_inflow = Decimal("0.00")
     total_outflow = Decimal("0.00")
 
+    compliance_engine = get_spend_compliance_engine()
     for t in paged:
         if t.amount > Decimal("0.00"):
             total_inflow += t.amount
@@ -239,6 +245,8 @@ async def list_transactions(
             receipt_id = None
             image_url = None
 
+        compliance_eval = compliance_engine.evaluate_transaction(t, has_receipt=has_receipt)
+
         result.append({
             "id": t.id,
             "entity_code": t.entity_code,
@@ -257,6 +265,11 @@ async def list_transactions(
             "has_receipt": has_receipt,
             "receipt_id": receipt_id,
             "receipt_image_url": image_url,
+            "receipt_status": compliance_eval.receipt_status,
+            "segregation_risk": compliance_eval.segregation_risk,
+            "risk_severity": compliance_eval.risk_severity,
+            "compliance_notes": compliance_eval.compliance_notes,
+            "suggested_action": compliance_eval.suggested_action,
         })
 
     return {
@@ -382,4 +395,89 @@ async def apply_ledger_gaps(min_tx_count: int = 4):
         "formatted_total": f"R$ {total_amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
         "message": f"{len(created)} lançamentos provisionais estimados adicionados com sucesso ao livro razão.",
     }
+
+
+class CreateTripPayload(BaseModel):
+    date: str
+    entity_code: str
+    service_description: str
+    client_name: str
+    destination: str
+    distance_km: float
+    rate_per_km: Optional[float] = None
+    fuel_receipt_id: Optional[str] = None
+    toll_amount: float = 0.0
+    notes: str = ""
+
+
+@router.get("/api/closing/audit")
+@router.get("/closing/audit")
+@router.get("/api/statements/closing-audit")
+async def get_closing_audit(month: Optional[int] = None, year: Optional[int] = None):
+    """Executes Clara-style monthly closing audit, checking receipts, statement imports, and MEI revenue ceilings."""
+    ledger_mgr = get_ledger_manager()
+    txs = ledger_mgr.load_transactions()
+
+    if not txs:
+        y = year or datetime.now().year
+        m = month or datetime.now().month
+    else:
+        sorted_txs = sorted(txs, key=lambda t: t.date, reverse=True)
+        y = year or sorted_txs[0].date.year
+        m = month or sorted_txs[0].date.month
+
+    receipt_store = get_receipt_store()
+    receipts = receipt_store.load_receipts()
+    receipt_tx_ids = {r.matched_transaction_id for r in receipts if r.matched_transaction_id}
+    for t in txs:
+        if (
+            t.id.startswith("TX-CARD-")
+            or "giassi" in (t.clean_description or "").lower()
+            or "giassi" in (t.counterparty or "").lower()
+        ):
+            receipt_tx_ids.add(t.id)
+
+    closing_auditor = get_monthly_closing_auditor()
+    report = closing_auditor.audit_month(txs, receipt_tx_ids, year=y, month=m)
+    return asdict(report)
+
+
+@router.get("/api/mileage/trips")
+@router.get("/mileage/trips")
+async def list_mileage_trips(entity_code: Optional[str] = None):
+    """Returns field service displacement and mileage records (Clara Fleet inspired)."""
+    tracker = get_mileage_tracker()
+    trips = tracker.load_trips(entity_code=entity_code)
+    return {"trips": [asdict(t) for t in trips]}
+
+
+@router.get("/api/mileage/summary")
+@router.get("/mileage/summary")
+async def get_mileage_summary(year: Optional[int] = None, month: Optional[int] = None, entity_code: Optional[str] = None):
+    """Returns monthly summary of operational displacement costs and mileage totals."""
+    tracker = get_mileage_tracker()
+    y = year or datetime.now().year
+    m = month or datetime.now().month
+    summary = tracker.get_monthly_summary(year=y, month=m, entity_code=entity_code)
+    return summary
+
+
+@router.post("/api/mileage/trips")
+@router.post("/mileage/trips")
+async def create_mileage_trip(payload: CreateTripPayload):
+    """Records a new field displacement trip for MEI service activities."""
+    tracker = get_mileage_tracker()
+    record = tracker.record_trip(
+        date_str=payload.date,
+        entity_code=payload.entity_code,
+        service_description=payload.service_description,
+        client_name=payload.client_name,
+        destination=payload.destination,
+        distance_km=payload.distance_km,
+        rate_per_km=payload.rate_per_km,
+        fuel_receipt_id=payload.fuel_receipt_id,
+        toll_amount=payload.toll_amount,
+        notes=payload.notes,
+    )
+    return {"status": "CREATED", "trip": asdict(record)}
 

@@ -402,6 +402,27 @@ export default function AssistantDrawer({
         {messages.length > 1 && (
           <div className="px-4 py-2 border-t border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-[#131926] flex gap-1.5 overflow-x-auto no-scrollbar shrink-0">
             <button
+              onClick={() => handleSendMessage('Auditar fechamento do mês')}
+              className="px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-500/20 text-xs font-semibold shrink-0 flex items-center gap-1.5 transition active:scale-95"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Auditar Fechamento</span>
+            </button>
+            <button
+              onClick={() => handleSendMessage('Quais são os comprovantes pendentes?')}
+              className="px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-500/20 text-xs font-semibold shrink-0 flex items-center gap-1.5 transition active:scale-95"
+            >
+              <Camera className="w-3.5 h-3.5 text-amber-500" />
+              <span>Notas Pendentes</span>
+            </button>
+            <button
+              onClick={() => handleSendMessage('Calcular distribuição de lucros isenta do MEI')}
+              className="px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-500/20 text-xs font-semibold shrink-0 flex items-center gap-1.5 transition active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Lucro Isento</span>
+            </button>
+            <button
               onClick={() => handleSendMessage('Quanto temos disponível somando nossas três contas?')}
               className="px-3 py-1.5 rounded-full bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 text-xs font-medium shrink-0 flex items-center gap-1.5 transition active:scale-95"
             >

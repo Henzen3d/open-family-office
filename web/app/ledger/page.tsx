@@ -20,12 +20,16 @@ import {
   Layers,
   ArrowUpRight,
   ArrowDownLeft,
+  FileCheck2,
+  AlertTriangle,
+  ShieldCheck,
 } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { BankAccountItem } from '../components/SettingsModal';
 
 const ReceiptViewerModal = dynamic(() => import('../components/ReceiptViewerModal'), { ssr: false });
 const StatementModal = dynamic(() => import('../components/StatementModal'), { ssr: false });
+const MonthlyClosingModal = dynamic(() => import('../components/MonthlyClosingModal'), { ssr: false });
 
 export interface LedgerTransaction {
   id: string;
@@ -47,6 +51,11 @@ export interface LedgerTransaction {
   receipt_date?: string;
   receipt_image_url?: string;
   reconciliation_status?: string;
+  receipt_status?: string;
+  segregation_risk?: string;
+  risk_severity?: string;
+  compliance_notes?: string;
+  suggested_action?: string;
 }
 
 export default function LedgerPage() {
@@ -57,7 +66,7 @@ export default function LedgerPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [accountFilter, setAccountFilter] = useState<'all' | 'inter' | 'caixa' | 'nubank'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'inflows' | 'outflows' | 'transfers' | 'receipts' | 'estimated'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'inflows' | 'outflows' | 'transfers' | 'receipts' | 'estimated' | 'pending_receipts' | 'segregation_risk'>('all');
   const [dateRangeFilter, setDateRangeFilter] = useState<'all' | '2026' | '2025' | 'recent_90'>('all');
 
   // Pagination
@@ -66,6 +75,7 @@ export default function LedgerPage() {
 
   // Modals
   const [isStatementOpen, setIsStatementOpen] = useState(false);
+  const [isClosingModalOpen, setIsClosingModalOpen] = useState(false);
   const [viewingReceiptId, setViewingReceiptId] = useState<string | null>(null);
   const [viewingTxId, setViewingTxId] = useState<string | null>(null);
   const [viewingInitialData, setViewingInitialData] = useState<any>(null);
@@ -139,6 +149,11 @@ export default function LedgerPage() {
       if (typeFilter === 'transfers' && !tx.is_transfer) return false;
       if (typeFilter === 'receipts' && !tx.has_receipt) return false;
       if (typeFilter === 'estimated' && tx.reconciliation_status !== 'ESTIMATED') return false;
+      if (typeFilter === 'pending_receipts') {
+        const isExempt = tx.receipt_status === 'EXEMPT' || tx.is_transfer || tx.amount >= 0;
+        if (tx.has_receipt || isExempt) return false;
+      }
+      if (typeFilter === 'segregation_risk' && tx.segregation_risk !== 'SUSPECTED_PERSONAL_ON_MEI') return false;
 
       // Date Range filter
       if (dateRangeFilter === '2026' && !tx.date.startsWith('2026')) return false;
@@ -167,6 +182,14 @@ export default function LedgerPage() {
     let inflow = 0;
     let outflow = 0;
     let receiptsCount = 0;
+    let pendingCount = 0;
+    let segregationCount = 0;
+
+    transactions.forEach((tx) => {
+      const isExempt = tx.receipt_status === 'EXEMPT' || tx.is_transfer || tx.amount >= 0;
+      if (!tx.has_receipt && !isExempt) pendingCount++;
+      if (tx.segregation_risk === 'SUSPECTED_PERSONAL_ON_MEI') segregationCount++;
+    });
 
     filteredTransactions.forEach((tx) => {
       if (tx.amount > 0) inflow += tx.amount;
@@ -180,8 +203,10 @@ export default function LedgerPage() {
       totalOutflow: outflow,
       net: inflow - outflow,
       receiptsCoverage: filteredTransactions.length > 0 ? (receiptsCount / filteredTransactions.length) * 100 : 0,
+      pendingCount,
+      segregationCount,
     };
-  }, [filteredTransactions]);
+  }, [filteredTransactions, transactions]);
 
   // Paginated slice
   const paginatedTransactions = useMemo(() => {
@@ -251,6 +276,14 @@ export default function LedgerPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setIsClosingModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-bold shadow-pill transition active:scale-95"
+              title="Abre o painel de fechamento contábil mensal e apuração de lucros isentos MEI (Clara Zero-Retrabalho)"
+            >
+              <FileCheck2 className="w-4 h-4" />
+              <span>Fechamento do Mês</span>
+            </button>
             <button
               onClick={handleApplyEstimates}
               disabled={estimating}
@@ -428,6 +461,35 @@ export default function LedgerPage() {
               <span>Com Cupom</span>
             </button>
             <button
+              onClick={() => { setTypeFilter('pending_receipts'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 rounded-xl font-semibold transition whitespace-nowrap flex items-center gap-1.5 ${
+                typeFilter === 'pending_receipts'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Receipt className="w-3.5 h-3.5" />
+              <span>Sem Cupom</span>
+              {metrics.pendingCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-300">
+                  {metrics.pendingCount}
+                </span>
+              )}
+            </button>
+            {metrics.segregationCount > 0 && (
+              <button
+                onClick={() => { setTypeFilter('segregation_risk'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-xl font-semibold transition whitespace-nowrap flex items-center gap-1.5 ${
+                  typeFilter === 'segregation_risk'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'text-rose-600 dark:text-rose-400 hover:text-rose-700'
+                }`}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Risco PF/PJ ({metrics.segregationCount})</span>
+              </button>
+            )}
+            <button
               onClick={() => { setTypeFilter('estimated'); setCurrentPage(1); }}
               className={`px-3 py-1.5 rounded-xl font-semibold transition whitespace-nowrap flex items-center gap-1 ${
                 typeFilter === 'estimated'
@@ -511,13 +573,32 @@ export default function LedgerPage() {
                         {tx.has_receipt ? (
                           <button
                             onClick={() => handleOpenReceipt(tx.receipt_id || tx.id, tx.id, tx)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 text-xs font-bold transition shadow-xs active:scale-95"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-xs font-bold transition shadow-xs active:scale-95"
                           >
-                            <Camera className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                            <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                             <span>Ver Cupom</span>
                           </button>
+                        ) : tx.receipt_status === 'EXEMPT' || tx.is_transfer || tx.amount >= 0 ? (
+                          <span
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10"
+                            title="Isento de cupom (transferência interna, tributo DAS ou receita)"
+                          >
+                            Isento
+                          </span>
                         ) : (
-                          <span className="text-slate-400 text-xs">—</span>
+                          <div className="inline-flex items-center gap-1.5 justify-center">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30">
+                              Sem Nota
+                            </span>
+                            {tx.segregation_risk === 'SUSPECTED_PERSONAL_ON_MEI' && (
+                              <span
+                                className="inline-flex items-center p-1 rounded-full bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400"
+                                title={tx.compliance_notes || 'Alerta: Possível despesa pessoal debitada em conta MEI.'}
+                              >
+                                <AlertTriangle className="w-3 h-3" />
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -580,6 +661,10 @@ export default function LedgerPage() {
         isOpen={isStatementOpen}
         onClose={() => setIsStatementOpen(false)}
         onSuccess={() => loadTransactions()}
+      />
+      <MonthlyClosingModal
+        isOpen={isClosingModalOpen}
+        onClose={() => setIsClosingModalOpen(false)}
       />
     </div>
   );

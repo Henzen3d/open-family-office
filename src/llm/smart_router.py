@@ -34,6 +34,9 @@ from src.intelligence.assistant_tools import (
     query_transactions,
     extract_expense_proposal,
     extract_correction_proposal,
+    audit_monthly_closing_tool,
+    audit_spend_compliance_tool,
+    calculate_mei_profit_distribution_tool,
 )
 from src.intelligence.nlp_transaction_parser import (
     parse_natural_transaction,
@@ -459,6 +462,97 @@ class SmartRouter:
                 "intent": "financial_ops",
                 "provider": "Motor Estatístico de Estimativas",
                 "model": "ExpenseEstimator-ASD",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
+
+        # Clara Intelligence Feature 1: Monthly Closing Audit
+        low_msg = user_message.lower().strip()
+        if any(k in low_msg for k in ["auditar fechamento", "fechamento do mes", "fechamento de mes", "fechar o mes", "status de fechamento", "auditoria de fechamento"]):
+            audit_data = audit_monthly_closing_tool()
+            pl = audit_data.get("period_label", "Mês Atual")
+            rate = audit_data.get("documentation_rate", 0.0)
+            missing_cnt = audit_data.get("missing_receipts_count", 0)
+            missing_amt = audit_data.get("missing_receipts_amount", 0.0)
+            inflows = audit_data.get("total_inflows", 0.0)
+            outflows = audit_data.get("total_outflows", 0.0)
+            status_text = "Pronto para Fechamento" if audit_data.get("closing_status") == "READY_TO_CLOSE" else "Pendências a Regularizar"
+
+            lines = [
+                f"Auditoria de Fechamento Contábil — {pl}:",
+                f"- Status Geral: {status_text}",
+                f"- Entradas no período: R$ {inflows:,.2f} | Saídas: R$ {outflows:,.2f}",
+                f"- Cobertura de Comprovantes: {rate}% ({missing_cnt} comprovantes pendentes, somando R$ {missing_amt:,.2f})",
+            ]
+            mei_sums = audit_data.get("mei_summaries", {})
+            for code, s in mei_sums.items():
+                lines.append(f"- {s['entity_name']}: Faturamento mês R$ {s['gross_revenue_month']:,.2f} | Lucro isento distribuível: R$ {s['exempt_profit_distribution']:,.2f} (Teto YTD: {s['ceiling_used_percent']}%)")
+
+            chk = audit_data.get("checklist", {})
+            lines.append("Checklist:")
+            lines.append(f"  * Extratos importados: {'[OK]' if chk.get('statements_imported') else '[Pendente]'}")
+            lines.append(f"  * Transferências neutralizadas: {'[OK]' if chk.get('transfers_neutralized') else '[Pendente]'}")
+            lines.append(f"  * Segregação PF/PJ sem mistura: {'[OK]' if chk.get('segregation_clean') else '[Alerta]'}")
+            lines.append(f"  * Comprovantes suficientes: {'[OK]' if chk.get('receipts_fully_documented') else '[Pendente]'}")
+
+            return {
+                "reply": "\n".join(lines),
+                "intent": "financial_ops",
+                "provider": "Clara Intelligence — Fechamento Contábil",
+                "model": "MonthlyClosing-ASD",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
+
+        # Clara Intelligence Feature 2: Missing Receipts / Spend Compliance
+        if any(k in low_msg for k in ["comprovantes pendentes", "despesas sem nota", "compras sem comprovante", "quais notas faltam"]):
+            comp_data = audit_spend_compliance_tool()
+            pend = comp_data.get("pending_receipts", {})
+            rate = comp_data.get("documentation_rate", 100.0)
+            seg = comp_data.get("segregation_alerts", {})
+            lines = [
+                "Diagnóstico de Comprovantes e Conformidade Fiscal (Spend Management):",
+                f"- Taxa de Cobertura Documental: {rate}% das despesas comprovadas.",
+                f"- Despesas comerciais aguardando comprovante: {pend.get('count', 0)} lançamentos (Total: R$ {pend.get('total_amount', 0.0):,.2f}).",
+            ]
+            if seg.get("personal_on_mei_count", 0) > 0:
+                lines.append(f"⚠️ Alerta de Segregação: {seg['personal_on_mei_count']} despesas pessoais detectadas em conta MEI.")
+            lines.append("Acesse a aba 'Comprovantes' ou o 'Livro Razão' para fotografar ou vincular os cupons pendentes.")
+            return {
+                "reply": "\n".join(lines),
+                "intent": "financial_ops",
+                "provider": "Clara Intelligence — Spend Compliance",
+                "model": "SpendCompliance-ASD",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
+
+        # Clara Intelligence Feature 3: Tax-Free Profit Distribution under LC 123/2006
+        if any(k in low_msg for k in ["distribuicao de lucros", "distribuição de lucros", "lucro isento", "quanto posso transferir"]):
+            target_ent = "FACILITA_VISTORIAS" if "facilita" in low_msg or "vera" in low_msg else "FIX_SERVICOS"
+            dist_data = calculate_mei_profit_distribution_tool(target_ent)
+            ent_name = dist_data.get("entity_name", target_ent)
+            gross = dist_data.get("gross_revenue_month", 0.0)
+            exp = dist_data.get("documented_expenses_month", 0.0)
+            net = dist_data.get("net_operating_profit_month", 0.0)
+            exempt = dist_data.get("exempt_profit_distribution", 0.0)
+
+            lines = [
+                f"Apuração de Distribuição de Lucros Isenta — {ent_name}:",
+                f"- Receita Bruta apurada no mês: R$ {gross:,.2f}",
+                f"- Despesas operacionais comprovadas: R$ {exp:,.2f}",
+                f"- Lucro Líquido operacional: R$ {net:,.2f}",
+                f"- Valor Isento de IRPF para transferência (LC 123/2006): R$ {exempt:,.2f}",
+                "Base legal: Art. 14 da LC 123/2006. Com escrituração comprovada pelo OpenFamilyOffice, o lucro distribuível fica 100% isento de imposto de renda na declaração de Osmar e Vera.",
+            ]
+            return {
+                "reply": "\n".join(lines),
+                "intent": "financial_ops",
+                "provider": "Clara Intelligence — Gestor Tributário MEI",
+                "model": "TaxProfitDistribution-ASD",
                 "latency_ms": int((time.time() - t0) * 1000),
                 "sanitized": True,
                 "asd_mode": effective_asd,

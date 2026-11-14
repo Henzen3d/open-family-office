@@ -612,3 +612,91 @@ def calculate_real_return(
     }
 
 
+def audit_monthly_closing_tool(month: Optional[int] = None, year: Optional[int] = None) -> Dict[str, Any]:
+    """Audits monthly closing, checking receipts, statement imports, and MEI revenue ceilings."""
+    from src.web.deps import get_ledger_manager, get_receipt_store, get_monthly_closing_auditor
+    from dataclasses import asdict
+
+    ledger_mgr = get_ledger_manager()
+    txs = ledger_mgr.load_transactions()
+    receipt_store = get_receipt_store()
+    receipts = receipt_store.load_receipts()
+    receipt_tx_ids = {r.matched_transaction_id for r in receipts if r.matched_transaction_id}
+    for t in txs:
+        if (
+            t.id.startswith("TX-CARD-")
+            or "giassi" in (t.clean_description or "").lower()
+            or "giassi" in (t.counterparty or "").lower()
+        ):
+            receipt_tx_ids.add(t.id)
+
+    if not txs:
+        y = year or datetime.now().year
+        m = month or datetime.now().month
+    else:
+        sorted_txs = sorted(txs, key=lambda t: t.date, reverse=True)
+        y = year or sorted_txs[0].date.year
+        m = month or sorted_txs[0].date.month
+
+    auditor = get_monthly_closing_auditor()
+    report = auditor.audit_month(txs, receipt_tx_ids, year=y, month=m)
+    return asdict(report)
+
+
+def audit_spend_compliance_tool() -> Dict[str, Any]:
+    """Evaluates transactions for segregation risks (personal on MEI), missing receipts, and duplicates."""
+    from src.web.deps import get_ledger_manager, get_receipt_store, get_spend_compliance_engine
+
+    ledger_mgr = get_ledger_manager()
+    txs = ledger_mgr.load_transactions()
+    receipt_store = get_receipt_store()
+    receipts = receipt_store.load_receipts()
+    receipt_tx_ids = {r.matched_transaction_id for r in receipts if r.matched_transaction_id}
+    for t in txs:
+        if (
+            t.id.startswith("TX-CARD-")
+            or "giassi" in (t.clean_description or "").lower()
+            or "giassi" in (t.counterparty or "").lower()
+        ):
+            receipt_tx_ids.add(t.id)
+
+    engine = get_spend_compliance_engine()
+    audit_res = engine.audit_batch(txs, receipt_tx_ids)
+    audit_res.pop("evaluations_by_id", None)
+    return audit_res
+
+
+def calculate_mei_profit_distribution_tool(
+    entity_code: str = "FIX_SERVICOS",
+    month: Optional[int] = None,
+    year: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Calculates legal tax-exempt profit distribution from MEI to Personal Account under LC 123/2006."""
+    from src.web.deps import get_ledger_manager, get_receipt_store, get_monthly_closing_auditor
+
+    ledger_mgr = get_ledger_manager()
+    txs = ledger_mgr.load_transactions()
+    receipt_store = get_receipt_store()
+    receipts = receipt_store.load_receipts()
+    receipt_tx_ids = {r.matched_transaction_id for r in receipts if r.matched_transaction_id}
+
+    if not txs:
+        y = year or datetime.now().year
+        m = month or datetime.now().month
+    else:
+        sorted_txs = sorted(txs, key=lambda t: t.date, reverse=True)
+        y = year or sorted_txs[0].date.year
+        m = month or sorted_txs[0].date.month
+
+    auditor = get_monthly_closing_auditor()
+    report = auditor.audit_month(txs, receipt_tx_ids, year=y, month=m)
+    mei_code = entity_code.upper().strip()
+    summary = report.mei_summaries.get(mei_code)
+    if not summary:
+        # Fallback to first available summary
+        summary = list(report.mei_summaries.values())[0] if report.mei_summaries else None
+
+    from dataclasses import asdict
+    return asdict(summary) if summary else {}
+
+
