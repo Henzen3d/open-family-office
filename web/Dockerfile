@@ -13,6 +13,10 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Baked into standalone server.js rewrites at build time; the runtime
+# BACKEND_INTERNAL_URL env is NOT consulted for the production proxy.
+ARG BACKEND_INTERNAL_URL=http://ofo-api:8000
+ENV BACKEND_INTERNAL_URL=$BACKEND_INTERNAL_URL
 RUN npm run build
 
 # Production runtime stage
