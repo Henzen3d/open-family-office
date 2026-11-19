@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   Calendar,
@@ -41,26 +42,37 @@ export default function DashboardHeader({
   setIsCobrançaOpen,
   setIsDasModalOpen,
 }: DashboardHeaderProps) {
+  const router = useRouter();
+  const [searchValue, setSearchValue] = useState('');
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchValue.trim()) {
+      router.push(`/ledger?search=${encodeURIComponent(searchValue.trim())}`);
+    }
+  };
   return (
     <>
       {/* Top Header Bar */}
       <header className="w-full flex flex-col xl:flex-row items-center justify-between gap-4 mb-6">
-        {/* Search Input with ⌘K */}
-        <div className="w-full xl:w-80 relative shrink-0">
+        {/* Search Input with ⌘K - Submits to /ledger */}
+        <form onSubmit={handleSearchSubmit} className="w-full xl:w-80 relative shrink-0">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
             <Search className="w-4 h-4" />
           </div>
           <input
             type="text"
-            placeholder="Pesquisar lançamentos, guias DAS, CNPJ..."
-            className="w-full pl-10 pr-12 py-2.5 bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-2xl text-xs placeholder-slate-400 text-slate-900 dark:text-slate-200 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/60 transition"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            placeholder="Pesquisar no Livro Razão..."
+            className="w-full pl-10 pr-12 py-2.5 min-h-[44px] bg-white dark:bg-[#161c28] border border-slate-200 dark:border-white/10 rounded-2xl text-xs placeholder-slate-400 text-slate-900 dark:text-slate-200 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500/60 transition"
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <kbd className="px-2 py-1 text-xs font-mono font-semibold bg-slate-100 dark:bg-[#212a3d] text-slate-500 dark:text-slate-400 rounded-md border border-slate-200 dark:border-white/10">
-              ⌘K
+              ↵
             </kbd>
           </div>
-        </div>
+        </form>
 
         {/* Quick Entity Filter Pill Switches - Visible & Responsive on Mobile, Tablet & Desktop */}
         <div className="w-full xl:w-auto overflow-x-auto no-scrollbar py-1">
@@ -237,7 +249,7 @@ export default function DashboardHeader({
             className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] bg-white dark:bg-[#161c28] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 rounded-2xl font-semibold shadow-sm hover:border-slate-300 dark:hover:border-white/20 hover:bg-slate-50 dark:hover:bg-[#1f2738] transition whitespace-nowrap active:scale-95"
           >
             <Send className="w-4 h-4 text-slate-400" />
-            <span>Enviar PIX</span>
+            <span>Provisão de PIX</span>
           </button>
           <button
             onClick={() => setIsCobrançaOpen(true)}

@@ -48,9 +48,9 @@ export default function QuickPixCard({
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Transferência Rápida (PIX)</h2>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Provisão de PIX</h2>
             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30">
-              Provisão
+              Prévia Local
             </span>
           </div>
           <button
@@ -164,7 +164,7 @@ export default function QuickPixCard({
             onClick={handleOpenConfirm}
             className="min-h-[44px] px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-sm hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <span>Pré-autorizar PIX</span>
+            <span>Provisão de PIX</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>

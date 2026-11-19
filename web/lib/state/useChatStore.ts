@@ -23,6 +23,13 @@ export interface ConfirmationCardData {
   is_revenue?: boolean;
 }
 
+export interface ClarificationQuestion {
+  id?: string;
+  question: string;
+  options: string[];
+  selectedOption?: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'user' | 'assistant';
@@ -34,13 +41,18 @@ export interface ChatMessage {
   latencyMs?: number;
   confirmationCard?: ConfirmationCardData;
   artifact?: any;
+  clarification?: ClarificationQuestion;
+  suggestions?: string[];
+  isStreaming?: boolean;
+  progressStep?: string;
+  isError?: boolean;
 }
 
 export function useChatState() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [asdMode, setAsdMode] = useState<'none' | 'asd_80' | 'asd_strict'>('asd_80');
+  const [asdMode, setAsdMode] = useState<'none' | 'asd_80' | 'asd_strict'>('none');
 
   const addMessage = useCallback((msg: ChatMessage) => {
     setMessages((prev) => [...prev, msg]);
@@ -63,4 +75,3 @@ export function useChatState() {
     setAsdMode,
   };
 }
-

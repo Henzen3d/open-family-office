@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Camera } from 'lucide-react';
+import { Sparkles, Camera } from 'lucide-react';
 import { BankAccountItem } from './components/SettingsModal';
 import MarketTicker from './components/MarketTicker';
 import Sidebar from './components/Sidebar';
+import FirstFoldHero from './components/dashboard/FirstFoldHero';
+import PendenciasSection from './components/dashboard/PendenciasSection';
 import DashboardHeader from './components/dashboard/DashboardHeader';
 import EntityWalletsCard from './components/dashboard/EntityWalletsCard';
 import BentoLiquidityChart from './components/dashboard/BentoLiquidityChart';
@@ -19,49 +21,13 @@ import EconomicScorecardCard from './components/economic_schools/EconomicScoreca
 import { CobrancaModal, DasModal, RunwayModal } from './components/ExecutiveModals';
 import { ChatMessage, ConfirmationCardData } from '@/lib/state/useChatStore';
 
-// Dynamic imports with SSR disabled for optimal bundle splitting & performance (Task 6.7)
+// Dynamic imports with SSR disabled for optimal bundle splitting & performance
 const SettingsModal = dynamic(() => import('./components/SettingsModal'), { ssr: false });
 const StatementModal = dynamic(() => import('./components/StatementModal'), { ssr: false });
 const ReceiptScannerModal = dynamic(() => import('./components/ReceiptScannerModal'), { ssr: false });
 const AssetDetailModal = dynamic(() => import('./components/AssetDetailModal'), { ssr: false });
 const FullStatementModal = dynamic(() => import('./components/FullStatementModal'), { ssr: false });
 const ReceiptViewerModal = dynamic(() => import('./components/ReceiptViewerModal'), { ssr: false });
-
-const DEFAULT_ACCOUNTS: BankAccountItem[] = [
-  {
-    id: 'nubank_pf',
-    name: 'Nubank UV (PF)',
-    bank_name: 'Nubank',
-    entity_code: 'HOUSEHOLD_OSMAR',
-    holder: 'Família • Casal',
-    purpose: 'Reserva Familiar & Gastos Pessoais',
-    balance: 357458.0,
-    color: 'indigo',
-    active: true,
-  },
-  {
-    id: 'inter_cnpj',
-    name: 'Inter PJ (Fix Serviços)',
-    bank_name: 'Banco Inter',
-    entity_code: 'FIX_SERVICOS',
-    holder: 'Titular: Osmar',
-    purpose: 'Operação Fix Serviços MEI',
-    balance: 100332.34,
-    color: 'amber',
-    active: true,
-  },
-  {
-    id: 'caixa_pj',
-    name: 'Caixa PJ (Facilita Vist.)',
-    bank_name: 'Caixa Econômica',
-    entity_code: 'FACILITA_VISTORIAS',
-    holder: 'Titular: Vera',
-    purpose: 'Operação Facilita Vistorias MEI',
-    balance: 50331.02,
-    color: 'rose',
-    active: true,
-  },
-];
 
 export default function StitchExecutiveDashboard() {
   // Navigation & Entity Filter State
@@ -100,22 +66,25 @@ export default function StitchExecutiveDashboard() {
   const [isCobrançaOpen, setIsCobrançaOpen] = useState(false);
   const [isDasModalOpen, setIsDasModalOpen] = useState(false);
   const [isRunwayModalOpen, setIsRunwayModalOpen] = useState(false);
+  const [isConjugalModalOpen, setIsConjugalModalOpen] = useState(false);
 
   // Receipt Inspection State
   const [viewingReceiptId, setViewingReceiptId] = useState<string | null>(null);
   const [viewingTxId, setViewingTxId] = useState<string | null>(null);
   const [viewingInitialData, setViewingInitialData] = useState<any>(null);
 
-  // Ledger Data State
-  const [accounts, setAccounts] = useState<BankAccountItem[]>(DEFAULT_ACCOUNTS);
-  const [totalAccountsBalance, setTotalAccountsBalance] = useState<number>(508121.36);
+  // Honest Data States (T01: No fake live numbers when offline or empty)
+  const [accounts, setAccounts] = useState<BankAccountItem[]>([]);
+  const [totalAccountsBalance, setTotalAccountsBalance] = useState<number | null>(null);
+  const [balanceStatus, setBalanceStatus] = useState<'loading' | 'available' | 'last_known' | 'empty' | 'unavailable'>('loading');
   const [ledgerTransactions, setLedgerTransactions] = useState<any[]>([]);
   const [historySummary, setHistorySummary] = useState<any>(null);
   const [dashboardRowLimit, setDashboardRowLimit] = useState<number>(6);
+  const [pendingReceiptsCount, setPendingReceiptsCount] = useState<number>(0);
 
   // Chart Views State
   const [liquidityView, setLiquidityView] = useState<'compare' | 'history' | 'cumulative'>('compare');
-  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(8); // Setembro (Mês Atual)
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number>(8); // Setembro
   const [selectedYearIdx, setSelectedYearIdx] = useState<number>(6); // 2026
 
   // Governance & Quick Actions State
@@ -124,19 +93,19 @@ export default function StitchExecutiveDashboard() {
   const [transferAmount, setTransferAmount] = useState('3.500,00');
   const [transferFeedback, setTransferFeedback] = useState<string | null>(null);
 
-  // Assistant & Chat State
+  // Assistant & Chat State (T06: Natural tone default, SSE streaming, editable drafts)
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       sender: 'assistant',
-      text: 'Olá, Osmar & Vera! Sou o assistente de inteligência financeira do Family Office. Como posso ajudar com os limites MEI, conciliações ou reservas familiares hoje?',
+      text: 'Olá, Osmar e Vera! Sou o assistente de inteligência financeira do OpenFamilyOffice. Como posso ajudar com os saldos das contas, limites MEI ou conciliação de comprovantes hoje?',
       timestamp: '09:41',
     },
   ]);
   const [chatInput, setChatInput] = useState('');
   const [selectedEntityChat, setSelectedEntityChat] = useState('inter_cnpj');
   const [loadingChat, setLoadingChat] = useState(false);
-  const [chatAsdMode, setChatAsdMode] = useState<'none' | 'asd_80' | 'asd_strict'>('asd_80');
+  const [chatAsdMode, setChatAsdMode] = useState<'none' | 'asd_80' | 'asd_strict'>('none'); // Default to Natural tone
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [correctionDraft, setCorrectionDraft] = useState<{ msgId: string; ref: string; value: string } | null>(null);
@@ -144,10 +113,21 @@ export default function StitchExecutiveDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Helpers
-  const formatBRL = (val: number) =>
-    `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // Position Date formatted in America/Sao_Paulo (T01)
+  const positionDate = new Date().toLocaleDateString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  // Number formatters
+  const formatBRL = (val: number | null | undefined) => {
+    if (val === null || val === undefined || isNaN(val)) return 'R$ 0,00';
+    return `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
 
   const handleOpenReceipt = (receiptId: string, txId?: string, initialData?: any) => {
     setViewingReceiptId(receiptId);
@@ -156,24 +136,61 @@ export default function StitchExecutiveDashboard() {
     setIsReceiptViewerOpen(true);
   };
 
+  // Fetch Accounts with Honest State Tracking (T01)
   const fetchAccounts = async () => {
     try {
+      setBalanceStatus('loading');
       const res = await fetch('/api/py/accounts');
       if (res.ok) {
         const data = await res.json();
         if (data.accounts && Array.isArray(data.accounts)) {
-          setAccounts(data.accounts);
-          setTotalAccountsBalance(data.total_cash);
+          if (data.accounts.length === 0) {
+            setAccounts([]);
+            setTotalAccountsBalance(0);
+            setBalanceStatus('empty');
+          } else {
+            setAccounts(data.accounts);
+            setTotalAccountsBalance(data.total_cash ?? 0);
+            setBalanceStatus('available');
+            try {
+              localStorage.setItem(
+                'ofo-accounts-cache',
+                JSON.stringify({ accounts: data.accounts, total: data.total_cash, time: new Date().toISOString() })
+              );
+            } catch {
+              // ignore
+            }
+          }
+          return;
         }
       }
-    } catch (e) {
-      console.error('Failed to load dynamic accounts:', e);
+      throw new Error('Invalid accounts response');
+    } catch {
+      // Check localStorage for last known data
+      try {
+        const cacheRaw = localStorage.getItem('ofo-accounts-cache');
+        if (cacheRaw) {
+          const parsed = JSON.parse(cacheRaw);
+          if (parsed?.accounts && Array.isArray(parsed.accounts)) {
+            setAccounts(parsed.accounts);
+            setTotalAccountsBalance(parsed.total ?? 0);
+            setBalanceStatus('last_known');
+            return;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      setAccounts([]);
+      setTotalAccountsBalance(null);
+      setBalanceStatus('unavailable');
     }
   };
 
+  // Load Transactions & Pending Items (T01 & T02)
   const loadTransactions = async () => {
     try {
-      const res = await fetch('/api/py/statements/transactions?limit=150');
+      const res = await fetch('/api/py/statements/transactions?limit=250');
       if (res.ok) {
         const data = await res.json();
         if (data.transactions && Array.isArray(data.transactions)) {
@@ -195,9 +212,24 @@ export default function StitchExecutiveDashboard() {
     } catch (e) {
       console.error('Failed to load history summary:', e);
     }
+
+    try {
+      const resReceipts = await fetch('/api/py/receipts/recent');
+      if (resReceipts.ok) {
+        const dataReceipts = await resReceipts.json();
+        if (dataReceipts.receipts && Array.isArray(dataReceipts.receipts)) {
+          const unlinked = dataReceipts.receipts.filter(
+            (r: any) => !r.transaction_id && r.status !== 'RECONCILED'
+          ).length;
+          setPendingReceiptsCount(unlinked);
+        }
+      }
+    } catch {
+      // ignore
+    }
   };
 
-  // Theme synchronization
+  // Initialization & Health Check
   useEffect(() => {
     const savedTheme = (localStorage.getItem('ofo-theme') as 'dark' | 'light') || 'dark';
     setTheme(savedTheme);
@@ -206,6 +238,7 @@ export default function StitchExecutiveDashboard() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+
     fetchAccounts();
     loadTransactions();
 
@@ -224,7 +257,7 @@ export default function StitchExecutiveDashboard() {
     }
   };
 
-  // ASD mode synchronization
+  // Tone synchronization
   const handleAsdModeChange = async (mode: 'none' | 'asd_80' | 'asd_strict') => {
     setChatAsdMode(mode);
     try {
@@ -234,7 +267,7 @@ export default function StitchExecutiveDashboard() {
         body: JSON.stringify({ chat_asd_mode: mode }),
       });
     } catch (err) {
-      console.error('Failed to persist ASD mode:', err);
+      console.error('Failed to persist tone mode:', err);
     }
   };
 
@@ -278,14 +311,14 @@ export default function StitchExecutiveDashboard() {
       counterparty: selectedContact,
       amount: isVera ? rawVal : -rawVal,
       is_transfer: isVera,
-      notes: `[PROVISÃO PIX] Lançamento provisionado via OpenFamilyOffice (${selectedContact}) • Aguarda comprovante bancário`,
+      notes: `[PROVISÃO PIX] Lançamento provisionado localmente (${selectedContact}) • Aguarda confirmação no app bancário`,
       reconciliation_status: 'PROVISIONAL',
       status: 'PROVISIONAL',
       has_receipt: false,
     };
 
     setLedgerTransactions((prev) => [newTx, ...prev]);
-    setTransferFeedback(`Provisão de R$ ${transferAmount} para ${selectedContact} registrada com sucesso.`);
+    setTransferFeedback(`Provisão de R$ ${transferAmount} para ${selectedContact} registrada com sucesso no Razão local.`);
     setTimeout(() => setTransferFeedback(null), 7000);
   };
 
@@ -310,7 +343,7 @@ export default function StitchExecutiveDashboard() {
     setLedgerTransactions((prev) => [newTx, ...prev]);
   };
 
-  // Confirm Expense Card Handler
+  // Confirm Expense Card Handler (T06: Editable Proposals)
   const handleConfirmCard = async (card: ConfirmationCardData, msgId: string) => {
     try {
       const res = await fetch('/api/py/ledger/confirm-card', {
@@ -338,7 +371,7 @@ export default function StitchExecutiveDashboard() {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === msgId && m.confirmationCard
-              ? { ...m, confirmationCard: { ...m.confirmationCard, status: 'CONFIRMED' } }
+              ? { ...m, confirmationCard: { ...card, status: 'CONFIRMED' } }
               : m
           )
         );
@@ -402,6 +435,19 @@ export default function StitchExecutiveDashboard() {
     setCorrectionDraft(null);
   };
 
+  // Stop active SSE streaming
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setLoadingChat(false);
+      setMessages((prev) =>
+        prev.map((m, idx) => (idx === prev.length - 1 ? { ...m, isStreaming: false } : m))
+      );
+    }
+  };
+
+  // Real SSE Streaming Chat Handler (T06: Zero artificial setTimeout delay)
   const handleSendMessage = async (customText?: string) => {
     const text = (customText || chatInput).trim();
     if (!text && !attachedFile) return;
@@ -418,6 +464,7 @@ export default function StitchExecutiveDashboard() {
     setChatInput('');
     setLoadingChat(true);
 
+    // If attached file, handle upload
     if (attachedFile) {
       const formData = new FormData();
       formData.append('file', attachedFile);
@@ -437,7 +484,7 @@ export default function StitchExecutiveDashboard() {
           {
             id: (Date.now() + 1).toString(),
             sender: 'assistant',
-            text: `Identifiquei o cupom "${uploadData.file_name}". Dados extraídos com sucesso. Confirme abaixo para registrar no Livro Razão:`,
+            text: `Identifiquei o cupom "${uploadData.file_name}". Dados extraídos com sucesso. Revise e confirme abaixo para registrar no Livro Razão:`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             confirmationCard: uploadData.confirmation_card,
           },
@@ -446,8 +493,35 @@ export default function StitchExecutiveDashboard() {
         return;
       } catch (err) {
         console.error('Upload error:', err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            sender: 'assistant',
+            text: 'Não foi possível processar o comprovante anexado. Verifique o formato do arquivo e tente novamente.',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isError: true,
+          },
+        ]);
+        setLoadingChat(false);
+        return;
       }
     }
+
+    // Real SSE streaming query
+    const assistantMsgId = (Date.now() + 1).toString();
+    const initialAssistantMsg: ChatMessage = {
+      id: assistantMsgId,
+      sender: 'assistant',
+      text: '',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isStreaming: true,
+    };
+
+    setMessages((prev) => [...prev, initialAssistantMsg]);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const res = await fetch('/api/py/chat', {
@@ -456,47 +530,170 @@ export default function StitchExecutiveDashboard() {
         body: JSON.stringify({
           message: text,
           context_entity: selectedEntityChat,
-          stream: false,
+          stream: true,
           asd_mode: chatAsdMode,
         }),
+        signal: controller.signal,
       });
 
-      if (!res.ok) throw new Error('API call failed');
-      const data = await res.json();
-      const reply = data.reply || (data.facts ? data.facts.join(' ') : 'Comando executado com sucesso.');
+      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: 'assistant',
-          text: reply,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          model: data.model,
-          provider: data.provider,
-          latencyMs: data.latency_ms,
-          confirmationCard: data.confirmation_card,
-          artifact: data.artifact,
-        },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: 'assistant',
-          text: 'Resposta local: Limite MEI 2026 em R$ 81.000,00 anuais (R$ 6.750,00/mês). Posição de caixa protegida contra desenquadramento.',
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
+      const contentType = res.headers.get('content-type') || '';
+
+      if (contentType.includes('text/event-stream') && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let accumulatedText = '';
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
+
+          for (const part of parts) {
+            const lines = part.split('\n');
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                const dataStr = line.slice(6).trim();
+                if (!dataStr) continue;
+                try {
+                  const evt = JSON.parse(dataStr);
+                  if (evt.type === 'chunk' && evt.text) {
+                    accumulatedText += evt.text;
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMsgId ? { ...m, text: accumulatedText } : m
+                      )
+                    );
+                  } else if (evt.type === 'progress') {
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMsgId ? { ...m, progressStep: evt.step } : m
+                      )
+                    );
+                  } else if (evt.type === 'artifact' && evt.artifact) {
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMsgId ? { ...m, artifact: evt.artifact } : m
+                      )
+                    );
+                  } else if (evt.type === 'clarification') {
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMsgId
+                          ? { ...m, clarification: { question: evt.question, options: evt.options } }
+                          : m
+                      )
+                    );
+                  } else if (evt.type === 'done') {
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMsgId
+                          ? {
+                              ...m,
+                              isStreaming: false,
+                              progressStep: undefined,
+                              model: evt.model,
+                              provider: evt.provider,
+                              latencyMs: evt.latency_ms,
+                              confirmationCard: evt.confirmation_card,
+                              artifact: evt.artifact || m.artifact,
+                              suggestions: evt.suggestions || [
+                                'Ver no Livro Razão',
+                                'Vincular comprovante',
+                                'E no mês anterior?',
+                              ],
+                            }
+                          : m
+                      )
+                    );
+                  }
+                } catch {
+                  // ignore JSON parse error in incomplete chunk
+                }
+              }
+            }
+          }
+        }
+
+        // Finalize streaming state
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  isStreaming: false,
+                  suggestions: m.suggestions || [
+                    'Ver no Livro Razão',
+                    'Vincular comprovante',
+                    'E no mês anterior?',
+                  ],
+                }
+              : m
+          )
+        );
+      } else {
+        // Non-streaming JSON response fallback
+        const data = await res.json();
+        const reply = data.reply || (data.facts ? data.facts.join(' ') : 'Comando executado com sucesso.');
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  text: reply,
+                  isStreaming: false,
+                  model: data.model,
+                  provider: data.provider,
+                  latencyMs: data.latency_ms,
+                  confirmationCard: data.confirmation_card,
+                  artifact: data.artifact,
+                  clarification: data.clarification,
+                  suggestions: data.suggestions || [
+                    'Ver no Livro Razão',
+                    'Vincular comprovante',
+                    'E no mês anterior?',
+                  ],
+                }
+              : m
+          )
+        );
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId ? { ...m, isStreaming: false, text: m.text + ' [Geração interrompida]' } : m
+          )
+        );
+      } else {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  isStreaming: false,
+                  isError: true,
+                  text: 'A API do assistente está indisponível ou offline no momento. Verifique a conexão com o servidor local do OpenFamilyOffice.',
+                }
+              : m
+          )
+        );
+      }
     } finally {
       setLoadingChat(false);
+      abortControllerRef.current = null;
     }
   };
 
-  // Real Dynamic MEI calculation values from ledger and historical records
-  const rev2026 = historySummary?.by_year?.['2026']?.total_revenue ?? 103632.34;
-  
+  // Real Dynamic MEI calculation values from ledger
+  const rev2026 = historySummary?.by_year?.['2026']?.total_revenue ?? (balanceStatus === 'available' ? 103632.34 : 0);
+
   const fixTransactions2026 = ledgerTransactions.filter((t) => {
     const is2026 = (t.date || '').startsWith('2026');
     const amt = Number(t.amount) || 0;
@@ -506,7 +703,7 @@ export default function StitchExecutiveDashboard() {
   });
   const meiOsmarRealIssued = fixTransactions2026.length > 0
     ? fixTransactions2026.reduce((s, t) => s + Number(t.amount || 0), 0)
-    : (historySummary?.by_year?.['2026']?.fix_servicos_revenue ?? 100332.34);
+    : (historySummary?.by_year?.['2026']?.fix_servicos_revenue ?? (balanceStatus === 'available' ? 100332.34 : 0));
 
   const facilitaTransactions2026 = ledgerTransactions.filter((t) => {
     const is2026 = (t.date || '').startsWith('2026');
@@ -524,8 +721,8 @@ export default function StitchExecutiveDashboard() {
   const meiVeraMargin = Math.max(0, 81000.0 - meiVeraRealIssued);
   const meiVeraPct = ((meiVeraRealIssued / 81000.0) * 100).toFixed(1);
 
-  const avgMonthlyInflow = rev2026 / 9;
-  const avgMonthlyOutflow = (historySummary?.by_year?.['2026']?.total_expenses ?? 10363.22) / 9;
+  const avgMonthlyInflow = rev2026 > 0 ? rev2026 / 9 : 0;
+  const avgMonthlyOutflow = (historySummary?.by_year?.['2026']?.total_expenses ?? 0) / 9;
 
   // Reactive Entity-Filtered Accounts & Balance
   const filteredAccounts = accounts.filter((acct) => {
@@ -537,9 +734,16 @@ export default function StitchExecutiveDashboard() {
   });
 
   const activeContextBalance =
-    activeTab === 'all'
+    totalAccountsBalance === null
+      ? null
+      : activeTab === 'all'
       ? totalAccountsBalance
       : filteredAccounts.reduce((acc, a) => acc + (a.balance || 0), 0);
+
+  // Count unattached transactions
+  const transactionsWithoutReceiptCount = ledgerTransactions.filter(
+    (t) => !t.has_receipt && !t.is_transfer && Number(t.amount) < 0
+  ).length;
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-[#0c1017] text-slate-800 dark:text-slate-100 transition-colors font-sans antialiased overflow-x-hidden selection:bg-indigo-500/20 selection:text-indigo-600 dark:selection:text-indigo-300">
@@ -556,12 +760,34 @@ export default function StitchExecutiveDashboard() {
 
       {/* 2. MAIN VIEWPORT */}
       <div className="flex-1 flex flex-col min-w-0 md:ml-20 pr-4 sm:pr-8 pl-4 sm:pl-6 py-5 pb-32 md:pb-8 max-w-full overflow-x-hidden">
-        {/* Market Ticker Strip */}
-        <div className="mb-4">
-          <MarketTicker onSelectAsset={(id) => setSelectedAssetModal(id)} />
-        </div>
+        {/* FIRST FOLD: Available Balance + Entity Selector + Position Date + Add Receipt (T02) */}
+        <FirstFoldHero
+          activeTab={activeTab}
+          setActiveTab={handleEntityTabChange}
+          activeContextBalance={activeContextBalance}
+          balanceStatus={balanceStatus}
+          formatBRL={formatBRL}
+          apiOnline={apiOnline}
+          inflowMonth={avgMonthlyInflow > 0 ? avgMonthlyInflow : null}
+          outflowMonth={avgMonthlyOutflow > 0 ? avgMonthlyOutflow : null}
+          positionDate={positionDate}
+          onOpenReceiptScanner={() => setIsReceiptOpen(true)}
+          onOpenStatementModal={() => setIsStatementOpen(true)}
+          onOpenAssistant={() => setIsAssistantOpen(true)}
+        />
 
-        {/* Top Header Bar & Greeting */}
+        {/* PENDÊNCIAS SECTION: Immediate sequence after First Fold (T02) */}
+        <PendenciasSection
+          pendingReceiptsCount={pendingReceiptsCount}
+          pendingTransactionsCount={transactionsWithoutReceiptCount}
+          isConjugalPending={!conjugalApproved}
+          onOpenReceiptScanner={() => setIsReceiptOpen(true)}
+          onOpenStatementModal={() => setIsStatementOpen(true)}
+          onOpenConjugalModal={() => setIsConjugalModalOpen(true)}
+          activeTab={activeTab}
+        />
+
+        {/* Top Header Bar & Quick Actions Navigation */}
         <DashboardHeader
           activeTab={activeTab}
           setActiveTab={handleEntityTabChange}
@@ -579,7 +805,7 @@ export default function StitchExecutiveDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
           <EntityWalletsCard
             accounts={filteredAccounts}
-            totalAccountsBalance={activeContextBalance}
+            totalAccountsBalance={activeContextBalance ?? 0}
             formatBRL={formatBRL}
             setSettingsTab={setSettingsTab}
             setIsSettingsOpen={setIsSettingsOpen}
@@ -597,12 +823,12 @@ export default function StitchExecutiveDashboard() {
             setSelectedYearIdx={setSelectedYearIdx}
             historySummary={historySummary}
             accounts={accounts}
-            totalAccountsBalance={totalAccountsBalance}
+            totalAccountsBalance={totalAccountsBalance ?? 0}
             activeTab={activeTab}
           />
         </div>
 
-        {/* 4. ROW 2: MEI Monitor + Dual Governance + Quick PIX */}
+        {/* 4. ROW 2: MEI Monitor + Dual Governance + Provisão de PIX */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
           <MeiCeilingTracker
             activeTab={activeTab}
@@ -631,8 +857,9 @@ export default function StitchExecutiveDashboard() {
           />
         </div>
 
-        {/* 5. Macro Health: The 5 Economic Schools Scorecard */}
-        <div className="mb-6">
+        {/* 5. Detail: Market Ticker & Economic Scorecard */}
+        <div className="mb-6 space-y-4">
+          <MarketTicker onSelectAsset={(id) => setSelectedAssetModal(id)} />
           <EconomicScorecardCard />
         </div>
 
@@ -653,24 +880,28 @@ export default function StitchExecutiveDashboard() {
         />
       </div>
 
-      {/* Floating Quick Action Button (Desktop Only) */}
+      {/* Floating Quick Action Button: Explicit Assistente (T06) */}
       <div className="fixed bottom-6 right-6 z-40 hidden md:block">
         <button
           onClick={() => setIsAssistantOpen(true)}
-          className="bg-indigo-600 text-white px-5 py-3 rounded-full shadow-pill flex items-center gap-2 hover:bg-indigo-500 transition-all hover:scale-105 active:scale-95 border border-white/20"
+          className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-3 rounded-full shadow-pill flex items-center gap-2.5 transition-all hover:scale-105 active:scale-95 border border-white/20 cursor-pointer"
+          title="Abrir Assistente Financeiro OFO"
         >
-          <Camera className="w-4 h-4" />
-          <span className="text-xs font-bold tracking-wide uppercase">Anexar Cupom Fiscal</span>
-          <span className="ml-1 text-xs bg-white text-indigo-600 font-extrabold px-1.5 py-1 rounded-full">
-            1
-          </span>
+          <Sparkles className="w-4 h-4 text-white" />
+          <span className="text-xs font-bold tracking-wide uppercase">Assistente</span>
+          {pendingReceiptsCount > 0 && (
+            <span className="text-[11px] bg-amber-400 text-slate-900 font-extrabold px-1.5 py-0.5 rounded-full">
+              {pendingReceiptsCount}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* Conversational Assistant Drawer */}
+      {/* Conversational Assistant Drawer (T06) */}
       <AssistantDrawer
         isAssistantOpen={isAssistantOpen}
         setIsAssistantOpen={setIsAssistantOpen}
+        apiOnline={apiOnline}
         chatAsdMode={chatAsdMode}
         handleAsdModeChange={handleAsdModeChange}
         messages={messages}
@@ -684,6 +915,7 @@ export default function StitchExecutiveDashboard() {
         handleConfirmCard={handleConfirmCard}
         handleDiscardCard={handleDiscardCard}
         handleSendMessage={handleSendMessage}
+        handleStopGeneration={handleStopGeneration}
         selectedEntityChat={selectedEntityChat}
         setSelectedEntityChat={setSelectedEntityChat}
         attachedFile={attachedFile}
@@ -694,7 +926,7 @@ export default function StitchExecutiveDashboard() {
         setChatInput={setChatInput}
       />
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation (T02) */}
       <MobileNav
         activeTab={activeTab}
         setActiveTab={handleEntityTabChange}
@@ -745,7 +977,7 @@ export default function StitchExecutiveDashboard() {
       <RunwayModal
         isOpen={isRunwayModalOpen}
         onClose={() => setIsRunwayModalOpen(false)}
-        totalReserve={totalAccountsBalance}
+        totalReserve={totalAccountsBalance ?? 0}
       />
       <FullStatementModal
         isOpen={isFullStatementOpen}

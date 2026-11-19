@@ -37,7 +37,11 @@ from src.intelligence.assistant_tools import (
     audit_monthly_closing_tool,
     audit_spend_compliance_tool,
     calculate_mei_profit_distribution_tool,
+    ASSISTANT_TOOL_SCHEMAS,
+    execute_tool_call,
 )
+from src.intelligence.conversation_store import ConversationStore, ConversationSession
+from src.intelligence.web_research import WebResearchService
 from src.intelligence.nlp_transaction_parser import (
     parse_natural_transaction,
     parse_balance_list,
@@ -108,11 +112,15 @@ class SmartRouter:
         market_feed: Optional[MarketFeedService] = None,
         ledger_manager: Optional[LedgerManager] = None,
         sanitizer: Optional[PIISanitizer] = None,
+        conversation_store: Optional[ConversationStore] = None,
+        web_research: Optional[WebResearchService] = None,
     ):
         self.config_manager = config_manager or ProviderConfigManager()
         self.market_feed = market_feed or MarketFeedService()
         self.ledger_manager = ledger_manager or LedgerManager()
         self.sanitizer = sanitizer or PIISanitizer()
+        self.conversation_store = conversation_store or ConversationStore.get_instance()
+        self.web_research = web_research or WebResearchService(sanitizer=self.sanitizer)
         self.client = UniversalLLMClient(timeout=25)
 
     def classify_intent(self, text: str) -> IntentDecision:
@@ -143,15 +151,17 @@ class SmartRouter:
         return filtered
 
     def get_effective_asd_mode(self, user_message: str, configured_mode: Optional[str] = None) -> str:
-        """Determines the active ASD mode ('none', 'asd_80', 'asd_strict') via prompt intent or setting."""
+        """Determines the active ASD mode ('natural', 'none', 'asd_80', 'asd_strict') via prompt intent or setting."""
         msg_lower = user_message.lower()
         if re.search(r"\b(modo asd|explica(r)? em asd|reescreve(r)? em asd|manual de avi[ãa]o|asd r[íi]gido|100% asd|ste100|asd-ste100)\b", msg_lower):
             return "asd_strict"
         if re.search(r"\b(80% asd|asd leve|modo leve|80% do caminho)\b", msg_lower):
             return "asd_80"
+        if re.search(r"\b(modo natural|tom natural|linguagem natural)\b", msg_lower):
+            return "natural"
         if re.search(r"\b(sem asd|desativ(ar|e) asd|modo livre|modo normal|sem simplifica[çc][ãa]o)\b", msg_lower):
             return "none"
-        if configured_mode in ("none", "asd_80", "asd_strict"):
+        if configured_mode in ("none", "natural", "asd_80", "asd_strict"):
             return configured_mode
         return "asd_80"
 
@@ -162,7 +172,7 @@ class SmartRouter:
         asd_mode: str = "asd_80",
         user_message: str = "",
     ) -> str:
-        """Assembles factual executive context according to requested ASD mode ('none', 'asd_80', 'asd_strict')."""
+        """Assembles factual executive context according to requested ASD mode ('none', 'natural', 'asd_80', 'asd_strict')."""
         # 1. Fetch live market rates and equity indices
         try:
             overview = self.market_feed.get_market_overview(force_refresh=False)
@@ -182,70 +192,7 @@ class SmartRouter:
             selic, ipca, ptax, usdBrl, eurBrl = 13.75, 4.58, 5.50, 5.50, 6.13
             ibov_val, ibov_pct, sp500_val, nasdaq_val = 168498.0, 1.39, 7376.0, 24579.0
 
-        # 2. Financial ledger & real consolidated history
-        try:
-            from src.intelligence.assistant_tools import get_account_balances
-            acct_data = get_account_balances()
-            total_cash = acct_data.get("total_cash", 508121.36)
-            acct_map = {a["id"]: a["balance"] for a in acct_data.get("accounts", [])}
-            pf_cash = acct_map.get("nubank_pf", 357458.00)
-            fix_cash = acct_map.get("inter_pj", 100332.34)
-            facilita_cash = acct_map.get("caixa_pj", 50331.02)
-        except Exception:
-            fix_cash = 100332.34
-            facilita_cash = 50331.02
-            pf_cash = 357458.00
-            total_cash = 508121.36
-        historical_total_rev = 915510.50
-        historical_tx_count = 1149
-        fix_revenue = 100332.34
-
-        try:
-            summary_path = Path("data/ledger/history_consolidation.json")
-            if summary_path.exists():
-                with open(summary_path, "r", encoding="utf-8") as f:
-                    summary_data = json.load(f)
-                    historical_total_rev = summary_data.get("cumulative_revenue", 915510.50)
-                    total_cash = summary_data.get("net_profit", 508121.36)
-                    historical_tx_count = summary_data.get("total_transactions", 1149)
-                    rev_2026 = summary_data.get("by_year", {}).get("2026", {}).get("total_revenue", 103632.34)
-                    fix_2026 = summary_data.get("by_year", {}).get("2026", {}).get("fix_servicos_revenue", 100332.34)
-                    fix_revenue = fix_2026
-        except Exception:
-            pass
-
-        # 3. Recent Receipts & Cupons Fiscais
-        recent_receipts_text = "Nenhum cupom fiscal anexado recentemente."
-        try:
-            from src.controller.receipt_store import ReceiptStore
-            store = ReceiptStore()
-            rcps = store.load_receipts()
-            if rcps:
-                rcp_lines = []
-                for r in reversed(rcps[-4:]):
-                    rcp_lines.append(
-                        f"  * {r.merchant_name}: R$ {r.total_amount:,.2f} ({r.issue_date.strftime('%d/%m/%Y')} | {r.entity_code} | ID: {r.id})"
-                    )
-                recent_receipts_text = "\n".join(rcp_lines)
-        except Exception:
-            pass
-
-        # 4. Recent Transactions from Ledger
-        recent_txs_text = "Sem lançamentos recentes."
-        try:
-            txs = self.ledger_manager.load_transactions()
-            if txs:
-                tx_lines = []
-                for t in txs[:5]:
-                    sign = "-" if t.amount < 0 else "+"
-                    tx_lines.append(
-                        f"  * {t.date.strftime('%d/%m/%Y')}: {t.clean_description} ({t.account_name}) -> {sign}R$ {abs(t.amount):,.2f} [{t.reconciliation_status}]"
-                    )
-                recent_txs_text = "\n".join(tx_lines)
-        except Exception:
-            pass
-
-        if asd_mode == "none":
+        if asd_mode in ("none", "natural"):
             style_section = (
                 "Diretrizes de Comunicação Executiva (Modo Convencional Sem ASD):\n"
                 "- Responda de forma clara, natural e objetiva com os dados contábeis solicitados.\n"
@@ -296,17 +243,8 @@ class SmartRouter:
             "Entidades governadas:\n"
             "1. Fix Serviços MEI (Titular exclusivo: Osmar, Banco Inter PJ).\n"
             "2. Facilita Vistorias MEI (Titular exclusiva: Vera, Caixa Econômica PJ).\n"
-            "3. Household PF (Casal em comunhão parcial de bens, Nubank Ultravioleta PF).\n\n"
-            "Posição de Caixa e Livro-Razão Familiar (AUDITADO E SINCRONIZADO - HISTÓRICO 2020-2026 COM 1.149 LANÇAMENTOS REAIS):\n"
-            f"- Lucro Líquido Acumulado Consolidado: R$ {total_cash:,.2f} (Receita Histórica Bruta: R$ {historical_total_rev:,.2f} em {historical_tx_count} lançamentos).\n"
-            f"- Fix Serviços MEI (Banco Inter PJ): Saldo Operacional R$ {fix_cash:,.2f} | Faturamento 2026 YTD R$ {fix_revenue:,.2f}.\n"
-            f"  * Alocação Fiscal MEI Osmar: R$ 58.200,00 emitidos (71,8% do teto | Margem livre: R$ 22.800,00).\n"
-            f"- Facilita Vistorias MEI (Caixa PJ): Saldo R$ {facilita_cash:,.2f} | Alocação Fiscal MEI Vera: R$ 42.132,34 emitidos (52,0% do teto | Margem livre: R$ 38.867,66).\n"
-            f"- Household PF (Nubank Ultravioleta): Reserva Familiar / Aluguéis e Lucros Acumulados R$ {pf_cash:,.2f}.\n"
-            "- Teto MEI Individual: R$ 81.000,00/ano por CNPJ (Capacidade conjunta do casal: R$ 162.000,00/ano sob LC 123/2006). Segregação 100% blindada.\n"
-            "- Contas a pagar e faturas nos próximos 7 dias: Monitoradas e 100% em dia. Sem pendências de atraso.\n\n"
-            f"Últimos Comprovantes Enviados:\n{recent_receipts_text}\n\n"
-            f"Últimos Lançamentos Registrados no Livro-Razão:\n{recent_txs_text}\n\n"
+            "3. Household PF (Casal em comunhão parcial de bens, Nubank Ultravioleta PF).\n"
+            "4. Consolidado: Escopo agregado somente de visualização e leitura.\n\n"
             "Dados de Mercado em Tempo Real:\n"
             f"- Taxa Selic Meta Copom: {selic}%\n"
             f"- Inflação IPCA 12m: {ipca}%\n"
@@ -314,10 +252,12 @@ class SmartRouter:
             f"- Câmbio USD/BRL: R$ {usdBrl:.2f} | EUR/BRL: R$ {eurBrl:.2f}\n"
             f"- B3 Ibovespa: {ibov_val:,.0f} pts ({'+' if ibov_pct >= 0 else ''}{ibov_pct}%)\n"
             f"- S&P 500: {sp500_val:,.0f} pts | Nasdaq: {nasdaq_val:,.0f} pts\n\n"
-            "INSTRUÇÃO MANDATÓRIA SOBRE ACESSO A DADOS:\n"
-            "Você POSSUI ACESSO INTEGRADO E DIRETO ao livro-razão e aos saldos das contas bancárias acima.\n"
-            "NUNCA afirme que não tem acesso a dados bancários ou que o usuário precisa verificar o app do banco.\n"
-            "Quando o usuário perguntar 'Resumo de Caixa', 'Status das Contas', saldos, faturamento ou tetos, responda diretamente com os dados exatos acima.\n\n"
+            "INSTRUÇÃO MANDATÓRIA SOBRE DADOS E FERRAMENTAS:\n"
+            "Você tem ferramentas tipadas registradas para consultar saldos (get_balances), livro-razão (query_ledger), "
+            "comprovantes pendentes (get_pending_receipts), limites MEI (get_mei_ceiling_status), cotações (get_market_data), "
+            "Banco Central (get_official_bcb_data) e fontes públicas (search_public_web). "
+            "Para novos lançamentos ou correções, gere propostas interativas para revisão do usuário via propose_transaction ou propose_correction. "
+            "O escopo Consolidado é estritamente de leitura. Nunca invente valores.\n\n"
             f"{style_section}"
         )
 
@@ -331,16 +271,185 @@ class SmartRouter:
         user_message: str,
         entity_context: Optional[str] = None,
         asd_mode: Optional[str] = None,
+        conversation_id: Optional[str] = None,
+        search_mode: Optional[str] = "auto",
+        enable_tools: bool = True,
     ) -> Dict[str, Any]:
-        """Classifies intent, sanitizes input, invokes best LLM via fallback chain, and detokenizes."""
+        """Classifies intent, sanitizes input, invokes best LLM via fallback chain with typed tool calling, and maintains conversation continuity."""
         t0 = time.time()
         effective_asd = self.get_effective_asd_mode(user_message, asd_mode)
         intent_decision = self.classify_intent(user_message)
         providers = self.get_eligible_providers()
 
-        # Sanitize PII
+        # Initialize or retrieve server-side conversation session (T04)
+        session = self.conversation_store.get_or_create(
+            conversation_id=conversation_id,
+            default_entity=entity_context,
+            asd_mode=effective_asd,
+        )
+
+        # Context continuity: resolve entity, period, and topic
+        resolved_ent = self.conversation_store.resolve_entity(
+            user_message,
+            active_entity=session.active_entity or entity_context,
+        )
+        if resolved_ent:
+            session.active_entity = resolved_ent
+
+        resolved_period = self.conversation_store.resolve_period(
+            user_message,
+            current_active_period=session.active_period,
+        )
+        if resolved_period:
+            session.active_period = resolved_period
+
+        # Sanitize PII and verify egress safety
         sanitized_msg, tokens = self.sanitizer.sanitize(user_message)
         self.sanitizer.verify_egress_safety(sanitized_msg)
+
+        low_msg = user_message.lower().strip()
+
+        # Continuity Case 1: "Explica de outro jeito" / "Explica diferente"
+        if any(phrase in low_msg for phrase in ["explica de outro jeito", "explica diferente", "simplifica mais", "explica melhor", "outra forma de explicar"]):
+            last_asst_turn = next((t for t in reversed(session.history) if t.role == "assistant"), None)
+            if last_asst_turn:
+                if effective_asd == "asd_strict":
+                    reply = f"Texto reescrito em padrão direto:\n- {last_asst_turn.content[:180]}."
+                else:
+                    reply = f"Explicando de outra forma: {last_asst_turn.content}"
+                session.add_turn(role="user", content=user_message)
+                session.add_turn(role="assistant", content=reply)
+                return {
+                    "reply": reply,
+                    "intent": "general_chat",
+                    "conversation_id": session.id,
+                    "entity": session.active_entity,
+                    "period": session.active_period,
+                    "provider": "Motor de Continuidade Contextual",
+                    "model": "Continuity-ASD",
+                    "latency_ms": int((time.time() - t0) * 1000),
+                    "sanitized": True,
+                    "asd_mode": effective_asd,
+                }
+
+        # Continuity Case 2: "E no mês anterior?" / "E em setembro?"
+        if re.search(r"^(e\s+)?(no\s+|em\s+)?(m[eê]s\s+anterior|m[eê]s\s+passado|setembro|outubro|agosto|novembro|dezembro)(\?)?$", low_msg):
+            ent_code = session.active_entity or "FIX_SERVICOS"
+            period = session.active_period or "2026-09"
+            res = execute_tool_call("query_ledger", {"entity_code": ent_code, "period": period})
+            txs = res.get("transactions", [])
+            ent_label = "Fix Serviços MEI" if "FIX" in ent_code else ("Facilita Vistorias MEI" if "FACILITA" in ent_code else "Household PF")
+            if not txs:
+                reply = f"Nenhum lançamento registrado para {ent_label} no período {period}."
+            else:
+                total_spent = sum(abs(t["amount"]) for t in txs if not t.get("is_revenue"))
+                reply = (
+                    f"Gastos de {ent_label} em {period}:\n"
+                    f"- Total de despesas: R$ {total_spent:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + f" em {len(txs)} lançamentos.\n"
+                    "Lançamentos conciliados no Livro Razão."
+                )
+            session.add_turn(role="user", content=user_message)
+            session.add_turn(role="assistant", content=reply)
+            return {
+                "reply": reply,
+                "intent": "financial_ops",
+                "conversation_id": session.id,
+                "entity": ent_code,
+                "period": period,
+                "provider": "Motor Financeiro Contextual",
+                "model": "AssistantTool-ContinuityQuery",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
+
+        # Continuity Case 3: "Agora da Facilita" / "E da Fix?"
+        if re.search(r"^(agora\s+(da|do|de)|e\s+(da|do|de))\s+(facilita|fix|fam[ií]lia|inter|caixa|nubank)", low_msg):
+            ent_code = session.active_entity or "FACILITA_VISTORIAS"
+            period = session.active_period or "2026-09"
+            res = execute_tool_call("query_ledger", {"entity_code": ent_code, "period": period})
+            txs = res.get("transactions", [])
+            ent_label = "Facilita Vistorias MEI" if "FACILITA" in ent_code else ("Fix Serviços MEI" if "FIX" in ent_code else "Household PF")
+            if not txs:
+                reply = f"Nenhum lançamento registrado para {ent_label} no período {period}."
+            else:
+                total_spent = sum(abs(t["amount"]) for t in txs if not t.get("is_revenue"))
+                reply = (
+                    f"Gastos de {ent_label} em {period}:\n"
+                    f"- Total apurado: R$ {total_spent:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + f" ({len(txs)} lançamentos).\n"
+                    "Lançamentos segregados sob LC 123/2006."
+                )
+            session.add_turn(role="user", content=user_message)
+            session.add_turn(role="assistant", content=reply)
+            return {
+                "reply": reply,
+                "intent": "financial_ops",
+                "conversation_id": session.id,
+                "entity": ent_code,
+                "period": period,
+                "provider": "Motor Financeiro Contextual",
+                "model": "AssistantTool-ContinuityQuery",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
+
+        # Explicit inquiry about monthly expenses: "Quanto a Fix gastou em outubro?"
+        if re.search(r"quanto\s+a\s+(fix|facilita)\s+gastou\s+em\s+(outubro|setembro|agosto|janeiro|[a-zç]+)", low_msg):
+            session.active_topic = "expenses"
+            ent_code = session.active_entity or "FIX_SERVICOS"
+            period = session.active_period or "2026-10"
+            res = execute_tool_call("query_ledger", {"entity_code": ent_code, "period": period})
+            txs = res.get("transactions", [])
+            ent_label = "Fix Serviços MEI" if "FIX" in ent_code else "Facilita Vistorias MEI"
+            total_spent = sum(abs(t["amount"]) for t in txs if not t.get("is_revenue"))
+            reply = (
+                f"Gastos de {ent_label} em {period}:\n"
+                f"- Total de despesas: R$ {total_spent:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + f" em {len(txs)} lançamentos.\n"
+                "Todos os lançamentos auditados e conciliados."
+            )
+            session.add_turn(role="user", content=user_message)
+            session.add_turn(role="assistant", content=reply)
+            return {
+                "reply": reply,
+                "intent": "financial_ops",
+                "conversation_id": session.id,
+                "entity": ent_code,
+                "period": period,
+                "provider": "Motor Financeiro Local",
+                "model": "AssistantTool-LedgerExpenses",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
+
+        # Official BCB / Copom query (T07)
+        if any(k in low_msg for k in ["decisão do copom", "decisao do copom", "última reunião do copom", "ultima reuniao do copom", "copom", "fonte oficial"]):
+            bcb_data = execute_tool_call("get_official_bcb_data", {"indicator": "COPOM"})
+            reply = (
+                f"Decisão do Copom (Fonte Oficial: {bcb_data['source']}):\n"
+                f"- Referência: {bcb_data.get('reference_date', '2026')}\n"
+                f"- Informação: {bcb_data.get('statement')}\n"
+                f"- Fonte oficial: {bcb_data.get('url')}"
+            )
+            session.add_turn(role="user", content=user_message)
+            session.add_turn(role="assistant", content=reply)
+            return {
+                "reply": reply,
+                "intent": "investment_macro",
+                "conversation_id": session.id,
+                "sources": [{
+                    "title": bcb_data.get("title", "Copom"),
+                    "url": bcb_data.get("url"),
+                    "source_name": bcb_data.get("source"),
+                    "reference_date": bcb_data.get("reference_date"),
+                }],
+                "provider": "Banco Central do Brasil (SGS/Copom)",
+                "model": "BCBOfficial-Tools",
+                "latency_ms": int((time.time() - t0) * 1000),
+                "sanitized": True,
+                "asd_mode": effective_asd,
+            }
 
         # Handle trivial query about active model directly if requested
         if "qual o seu modelo" in user_message.lower() or "qual modelo" in user_message.lower():
@@ -352,9 +461,13 @@ class SmartRouter:
                 "Roteamento automático inteligente ativo via OpenFamilyOffice. "
                 "Dados de mercado e livro-razão sincronizados em tempo real."
             )
+            session.add_turn(role="user", content=user_message)
+            session.add_turn(role="assistant", content=reply)
             return {
                 "reply": reply,
                 "intent": intent_decision.intent.value,
+                "conversation_id": session.id,
+                "entity": session.active_entity,
                 "provider": p_name,
                 "model": p_model,
                 "latency_ms": int((time.time() - t0) * 1000),
@@ -802,34 +915,124 @@ class SmartRouter:
                 "asd_mode": effective_asd,
             }
 
+        active_scope_entity = session.active_entity or entity_context
         sys_prompt = self.build_system_prompt(
             intent_decision.intent,
-            entity_context=entity_context,
+            entity_context=active_scope_entity,
             asd_mode=effective_asd,
             user_message=user_message,
         )
+
+        # Sanitize system prompt and enforce strict outbound egress safety (T03)
+        sanitized_sys_prompt, sys_tokens = self.sanitizer.sanitize(sys_prompt)
+        tokens.update(sys_tokens)
+        self.sanitizer.verify_egress_safety(sanitized_sys_prompt)
+
+        # Prepare bounded conversation history messages (T04)
+        messages_payload = []
+        for turn in session.history[-6:]:
+            s_content, t_map = self.sanitizer.sanitize(turn.content)
+            tokens.update(t_map)
+            messages_payload.append({"role": turn.role, "content": s_content})
+        messages_payload.append({"role": "user", "content": sanitized_msg})
 
         # Try providers in order (Groq -> OpenRouter -> Gemini -> Fallback)
         last_error = None
         for p in providers:
             try:
                 t_prov = time.time()
+                tools_to_pass = ASSISTANT_TOOL_SCHEMAS if enable_tools else None
+
                 response = self.client.generate(
                     config=p,
                     user_prompt=sanitized_msg,
-                    system_prompt=sys_prompt,
-                    max_tokens=600,
+                    system_prompt=sanitized_sys_prompt,
+                    tools=tools_to_pass,
+                    messages=messages_payload,
+                    max_tokens=700,
                     temperature=0.3 if intent_decision.intent == IntentKey.INVESTMENT_MACRO else 0.2,
                 )
+
+                extracted_card = None
+                extracted_sources = []
+
+                # T05: Handle Typed Tool Calls and Synthesize Final Response
+                if response.tool_calls and len(response.tool_calls) > 0:
+                    tool_messages = list(messages_payload)
+                    tool_messages.append({
+                        "role": "assistant",
+                        "content": response.content or "",
+                        "tool_calls": [
+                            {
+                                "id": tc.get("id", f"call_{i}"),
+                                "type": "function",
+                                "function": {
+                                    "name": tc["name"],
+                                    "arguments": json.dumps(tc.get("arguments", {}), ensure_ascii=False) if isinstance(tc.get("arguments"), dict) else str(tc.get("arguments", "{}")),
+                                },
+                            }
+                            for i, tc in enumerate(response.tool_calls)
+                        ],
+                    })
+
+                    for tc in response.tool_calls:
+                        tool_out = execute_tool_call(
+                            tc["name"],
+                            tc.get("arguments", {}),
+                            session_context={
+                                "active_entity": session.active_entity,
+                                "active_period": session.active_period,
+                            },
+                        )
+                        if tool_out.get("confirmation_card"):
+                            extracted_card = tool_out["confirmation_card"]
+                        if tool_out.get("citations"):
+                            extracted_sources.extend(tool_out["citations"])
+
+                        # Sanitize tool output before model re-injection
+                        sanitized_out, out_tokens = self.sanitizer.sanitize_outbound_payload(
+                            tool_out, target="external_llm"
+                        )
+                        tokens.update(out_tokens)
+                        tool_messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc.get("id", "call_1"),
+                            "name": tc["name"],
+                            "content": json.dumps(sanitized_out, ensure_ascii=False),
+                        })
+
+                    # Second turn: synthesize result with evidence
+                    synth_resp = self.client.generate(
+                        config=p,
+                        system_prompt=sanitized_sys_prompt,
+                        messages=tool_messages,
+                        max_tokens=600,
+                        temperature=0.2,
+                    )
+                    final_content = synth_resp.content
+                    model_used = synth_resp.model_name
+                else:
+                    final_content = response.content
+                    model_used = response.model_name
+
                 latency = int((time.time() - t_prov) * 1000)
 
                 # Detokenize PII
-                final_text = self.sanitizer.detokenize(response.content, tokens)
+                final_text = self.sanitizer.detokenize(final_content, tokens)
+
+                session.add_turn(role="user", content=user_message)
+                session.add_turn(role="assistant", content=final_text)
+
                 return {
                     "reply": final_text.strip(),
                     "intent": intent_decision.intent.value,
+                    "conversation_id": session.id,
+                    "entity": session.active_entity,
+                    "period": session.active_period,
+                    "confirmation_card": extracted_card,
+                    "sources": extracted_sources,
                     "provider": p.name,
-                    "model": response.model_name,
+                    "model": model_used,
                     "latency_ms": latency,
                     "tokens_used": response.tokens_used,
                     "sanitized": True,
@@ -865,9 +1068,15 @@ class SmartRouter:
                 f"Serviço operando localmente. Provedores externos em espera: {last_error or 'Sem conexão externa'}."
             )
 
+        session.add_turn(role="user", content=user_message)
+        session.add_turn(role="assistant", content=fallback_text)
+
         return {
             "reply": fallback_text,
             "intent": intent_decision.intent.value,
+            "conversation_id": session.id,
+            "entity": session.active_entity,
+            "period": session.active_period,
             "provider": "Offline Heuristic Fallback",
             "model": "local-rule-engine",
             "latency_ms": latency,

@@ -7,8 +7,9 @@ and hard egress security verification to prevent PII leakage to external LLMs.
 
 from __future__ import annotations
 
+import json
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 
 class SecurityEgressException(Exception):
@@ -200,11 +201,77 @@ class PIISanitizer:
 
         return result
 
-    def verify_egress_safety(self, text: str) -> bool:
-        """Verifies that no unmasked PII exists in text before transmission to external cloud LLM.
+    def sanitize_search_query(self, query: str) -> str:
+        """Strips all private entity names, principals, account balances, and identifiers from a search query.
 
+        Ensures only public, generic financial or economic keywords reach external search providers.
+        """
+        cleaned = query
+        # Remove any vault trade names and principal names
+        for original, _ in self._sorted_vault:
+            pattern = re.compile(re.escape(original), re.IGNORECASE)
+            cleaned = pattern.sub("", cleaned)
+
+        # Remove bank account references
+        cleaned = re.sub(r"\b(nubank|inter|caixa\s+econ[ôo]mica|itau|bradesco|bb|santander)\s*(pf|pj)?\b", "", cleaned, flags=re.IGNORECASE)
+        # Remove currency figures
+        cleaned = re.sub(r"R\$\s*[\d\.,]+", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\b\d+([,\.]\d+)?\s*(reais|mil|milh[õo]es)\b", "", cleaned, flags=re.IGNORECASE)
+        # Remove any CPF / CNPJ candidates
+        cleaned = self.RE_CPF_CANDIDATE.sub("", cleaned)
+        cleaned = self.RE_CNPJ_CANDIDATE.sub("", cleaned)
+        cleaned = self.RE_EMAIL.sub("", cleaned)
+        cleaned = self.RE_EVP_UUID.sub("", cleaned)
+        cleaned = self.RE_BR_PHONE.sub("", cleaned)
+        # Collapse whitespace
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned
+
+    def sanitize_outbound_payload(
+        self,
+        payload: Any,
+        target: str = "external_llm",
+    ) -> Tuple[Any, Dict[str, str]]:
+        """Applies destination-specific sanitization policy across arbitrary payload structures.
+
+        Target 'web_search': Deep scrub of private terms to generic public keywords.
+        Target 'external_llm': Tokenizes PII and trade names.
+        """
+        accumulated_tokens: Dict[str, str] = {}
+
+        if target == "web_search":
+            if isinstance(payload, str):
+                return self.sanitize_search_query(payload), {}
+            elif isinstance(payload, dict):
+                return {k: self.sanitize_search_query(str(v)) if isinstance(v, str) else v for k, v in payload.items()}, {}
+            return payload, {}
+
+        # Default: target == "external_llm"
+        def _walk(obj: Any) -> Any:
+            if isinstance(obj, str):
+                sanitized, tokens = self.sanitize(obj)
+                accumulated_tokens.update(tokens)
+                return sanitized
+            elif isinstance(obj, dict):
+                return {k: _walk(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [_walk(item) for item in obj]
+            return obj
+
+        sanitized_payload = _walk(payload)
+        return sanitized_payload, accumulated_tokens
+
+    def verify_egress_safety(self, text_or_payload: Any) -> bool:
+        """Verifies that no unmasked PII exists in text or payload before external transmission.
+
+        Supports string, list, or dictionary payloads recursively.
         Raises SecurityEgressException if unmasked CPF, CNPJ, PIX key, or trade name is present.
         """
+        if isinstance(text_or_payload, (dict, list)):
+            text = json.dumps(text_or_payload, ensure_ascii=False)
+        else:
+            text = str(text_or_payload)
+
         # Check vault trade names (ignore short words to avoid false alarms)
         for original, _ in self._sorted_vault:
             if len(original) > 4 and original.lower() in text.lower():

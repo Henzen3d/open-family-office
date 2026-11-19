@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
@@ -58,7 +59,8 @@ export interface LedgerTransaction {
   suggested_action?: string;
 }
 
-export default function LedgerPage() {
+function LedgerView() {
+  const searchParams = useSearchParams();
   const [transactions, setTransactions] = useState<LedgerTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [estimating, setEstimating] = useState(false);
@@ -68,6 +70,23 @@ export default function LedgerPage() {
   const [accountFilter, setAccountFilter] = useState<'all' | 'inter' | 'caixa' | 'nubank'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'inflows' | 'outflows' | 'transfers' | 'receipts' | 'estimated' | 'pending_receipts' | 'segregation_risk'>('all');
   const [dateRangeFilter, setDateRangeFilter] = useState<'all' | '2026' | '2025' | 'recent_90'>('all');
+
+  // Handle URL search params on mount
+  useEffect(() => {
+    const typeParam = searchParams.get('type');
+    if (typeParam && ['all', 'inflows', 'outflows', 'transfers', 'receipts', 'estimated', 'pending_receipts', 'segregation_risk'].includes(typeParam)) {
+      setTypeFilter(typeParam as any);
+    }
+    const acctParam = searchParams.get('account');
+    if (acctParam && ['all', 'inter', 'caixa', 'nubank'].includes(acctParam)) {
+      setAccountFilter(acctParam as any);
+    }
+    const searchParam = searchParams.get('search');
+    if (searchParam) {
+      setSearchTerm(searchParam);
+      setDebouncedSearch(searchParam);
+    }
+  }, [searchParams]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -667,6 +686,23 @@ export default function LedgerPage() {
         onClose={() => setIsClosingModalOpen(false)}
       />
     </div>
+  );
+}
+
+export default function LedgerPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 dark:bg-[#0c1017] p-8 text-slate-500 flex items-center justify-center">
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+            Carregando Livro Razão...
+          </div>
+        </div>
+      }
+    >
+      <LedgerView />
+    </Suspense>
   );
 }
 

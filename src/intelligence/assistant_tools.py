@@ -700,3 +700,421 @@ def calculate_mei_profit_distribution_tool(
     return asdict(summary) if summary else {}
 
 
+# ============================================================================
+# Typed Tool Calling Registry & Schemas (T05)
+# ============================================================================
+
+ASSISTANT_TOOL_SCHEMAS: List[Dict[str, Any]] = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_balances",
+            "description": "Consulta saldos bancários consolidados e por conta/entidade (Fix Serviços MEI, Facilita Vistorias MEI, Household PF). Escopo de leitura.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity_code": {
+                        "type": "string",
+                        "enum": ["FIX_SERVICOS", "FACILITA_VISTORIAS", "HOUSEHOLD_OSMAR", "CONSOLIDADO", "ALL"],
+                        "description": "Código da entidade ou ALL para todas",
+                    }
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_ledger",
+            "description": "Consulta lançamentos do livro-razão financeiro com filtros por entidade, período (YYYY-MM), categoria e texto.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity_code": {"type": "string", "description": "Entidade (FIX_SERVICOS, FACILITA_VISTORIAS, HOUSEHOLD_OSMAR)"},
+                    "period": {"type": "string", "description": "Período no formato YYYY-MM (ex: 2026-10) ou 'latest'"},
+                    "category": {"type": "string", "description": "Categoria contábil"},
+                    "search": {"type": "string", "description": "Termo de busca na descrição ou favorecido"},
+                    "limit": {"type": "integer", "description": "Limite de registros (máx 20)"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_pending_receipts",
+            "description": "Consulta despesas comerciais que aguardam comprovante fiscal ou cupons pendentes de conciliação.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity_code": {"type": "string", "description": "Filtrar por entidade"},
+                    "limit": {"type": "integer", "description": "Limite de itens a listar"},
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_mei_ceiling_status",
+            "description": "Monitora teto de faturamento MEI anual (R$ 81.000,00 anuais sob LC 123/2006) para Fix Serviços e Facilita Vistorias.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity_code": {"type": "string", "description": "FIX_SERVICOS, FACILITA_VISTORIAS ou ALL"}
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_market_data",
+            "description": "Consulta cotações e taxas de mercado em tempo real (Selic, IPCA, Dólar PTAX, Ibovespa, S&P 500, Nasdaq).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "indicator": {"type": "string", "description": "Indicador específico (SELIC, IPCA, PTAX, IBOV, SP500, NASDAQ) ou 'all'"}
+                },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_public_web",
+            "description": "Pesquisa fontes públicas na web e portais oficiais do governo (Banco Central, IBGE, Receita Federal).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Termo de pesquisa pública"}
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_official_bcb_data",
+            "description": "Consulta dados oficiais do Banco Central do Brasil com data de referência e citação de fonte.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "indicator": {"type": "string", "description": "SELIC, IPCA_12M, DOLAR_PTAX ou COPOM"}
+                },
+                "required": ["indicator"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "propose_transaction",
+            "description": "Cria um rascunho de proposta de lançamento para confirmação humana. NÃO grava diretamente.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity_code": {
+                        "type": "string",
+                        "enum": ["FIX_SERVICOS", "FACILITA_VISTORIAS", "HOUSEHOLD_OSMAR"],
+                        "description": "Entidade. 'CONSOLIDADO' não é permitido pois é somente leitura.",
+                    },
+                    "account_name": {"type": "string", "description": "Nome da conta (Inter PJ, Caixa PJ, Nubank PF)"},
+                    "amount": {"type": "number", "description": "Valor monetário positivo"},
+                    "counterparty": {"type": "string", "description": "Nome do fornecedor ou cliente"},
+                    "category": {"type": "string", "description": "Categoria contábil"},
+                    "is_revenue": {"type": "boolean", "description": "True para receita (+), False para despesa (-)"},
+                    "date": {"type": "string", "description": "Data no formato YYYY-MM-DD"},
+                    "notes": {"type": "string", "description": "Observações"},
+                },
+                "required": ["entity_code", "amount", "counterparty"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "propose_correction",
+            "description": "Cria rascunho de correção de valor de comprovante para confirmação humana. NÃO grava diretamente.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "receipt_id": {"type": "string", "description": "ID ou referência do comprovante"},
+                    "new_amount": {"type": "number", "description": "Novo valor corrigido"},
+                    "reason": {"type": "string", "description": "Motivo da correção"},
+                },
+                "required": ["receipt_id", "new_amount"],
+            },
+        },
+    },
+]
+
+
+def execute_tool_call(
+    tool_name: str,
+    arguments: Dict[str, Any],
+    session_context: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Dispatches a typed tool call with strict authorization and minimal projection."""
+    context = session_context or {}
+    args = arguments or {}
+
+    if tool_name == "get_balances":
+        target_entity = args.get("entity_code") or context.get("active_entity")
+        all_balances = get_account_balances()
+        if not target_entity or target_entity in ("ALL", "CONSOLIDADO"):
+            return all_balances
+        # Filter by entity
+        target_upper = target_entity.upper()
+        filtered = [
+            a for a in all_balances.get("accounts", [])
+            if target_upper in a.get("entity_code", "").upper()
+        ]
+        subtotal = sum(a.get("balance", 0.0) for a in filtered)
+        return {
+            "entity": target_entity,
+            "subtotal": subtotal,
+            "formatted_subtotal": f"R$ {subtotal:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            "accounts": filtered,
+        }
+
+    elif tool_name == "query_ledger":
+        target_entity = args.get("entity_code") or context.get("active_entity")
+        period = args.get("period") or context.get("active_period")
+        limit = min(int(args.get("limit", 10)), 20)
+        category = args.get("category")
+        search = args.get("search")
+
+        from src.web.deps import get_ledger_manager
+        ledger_mgr = get_ledger_manager()
+        txs = ledger_mgr.load_transactions()
+
+        matched = []
+        for t in txs:
+            if target_entity and target_entity != "CONSOLIDADO":
+                if target_entity.upper() not in t.entity_code.upper():
+                    continue
+            if period and period != "latest":
+                tx_ym = t.date.strftime("%Y-%m")
+                if tx_ym != period:
+                    continue
+            if category:
+                if category.lower() not in (t.category_code or "").lower():
+                    continue
+            if search:
+                s_low = search.lower()
+                desc = (t.clean_description or "").lower()
+                cpty = (t.counterparty or "").lower()
+                if s_low not in desc and s_low not in cpty:
+                    continue
+
+            matched.append({
+                "id": t.id,
+                "date": t.date.isoformat(),
+                "entity_code": t.entity_code,
+                "account_name": t.account_name,
+                "clean_description": t.clean_description,
+                "counterparty": t.counterparty,
+                "amount": float(t.amount),
+                "formatted_amount": f"R$ {abs(t.amount):,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+                "is_revenue": t.amount > 0,
+                "category": t.category_code,
+            })
+            if len(matched) >= limit:
+                break
+
+        return {
+            "period": period,
+            "entity_code": target_entity,
+            "total_found": len(matched),
+            "transactions": matched,
+        }
+
+    elif tool_name == "get_pending_receipts":
+        target_entity = args.get("entity_code") or context.get("active_entity")
+        limit = min(int(args.get("limit", 10)), 20)
+        from src.web.deps import get_spend_compliance_engine, get_ledger_manager, get_receipt_store
+
+        ledger_mgr = get_ledger_manager()
+        txs = ledger_mgr.load_transactions()
+        receipt_store = get_receipt_store()
+        receipts = receipt_store.load_receipts()
+        receipt_tx_ids = {r.matched_transaction_id for r in receipts if r.matched_transaction_id}
+        for t in txs:
+            if t.id.startswith("TX-CARD-") or "giassi" in (t.clean_description or "").lower():
+                receipt_tx_ids.add(t.id)
+
+        engine = get_spend_compliance_engine()
+        compliance = engine.audit_batch(txs, receipt_tx_ids)
+        pending = compliance.get("pending_receipts", {})
+
+        # Filter items if entity specified
+        items = pending.get("items", [])
+        if target_entity and target_entity != "CONSOLIDADO":
+            items = [i for i in items if target_entity.upper() in i.get("entity_code", "").upper()]
+
+        return {
+            "documentation_rate": compliance.get("documentation_rate", 100.0),
+            "count": len(items[:limit]),
+            "total_amount": sum(i.get("amount", 0.0) for i in items[:limit]),
+            "items": items[:limit],
+        }
+
+    elif tool_name == "get_mei_ceiling_status":
+        tax_data = get_tax_limit_status()
+        ent = args.get("entity_code") or context.get("active_entity")
+        if ent and "FIX" in ent.upper():
+            return {"fix_servicos": tax_data["fix_servicos"]}
+        elif ent and "FACILITA" in ent.upper():
+            return {"facilita_vistorias": tax_data["facilita_vistorias"]}
+        return tax_data
+
+    elif tool_name == "get_market_data":
+        ind = (args.get("indicator") or "all").upper()
+        from src.web.deps import get_market_service
+        market = get_market_service().get_market_overview(force_refresh=False)
+        if ind != "ALL" and ind in market.get("rates", {}):
+            return {ind: market["rates"][ind]}
+        return market
+
+    elif tool_name == "search_public_web":
+        query = args.get("query", "")
+        from src.intelligence.web_research import WebResearchService
+        researcher = WebResearchService()
+        citations = researcher.search_public_web(query, max_results=3)
+        return {
+            "query": researcher.sanitize_query(query),
+            "results_count": len(citations),
+            "citations": [c.to_dict() for c in citations],
+        }
+
+    elif tool_name == "get_official_bcb_data":
+        ind = args.get("indicator", "SELIC").upper()
+        if "COPOM" in ind:
+            from src.intelligence.web_research import WebResearchService
+            entry = WebResearchService.OFFICIAL_KNOWLEDGE_BASE["copom"]
+            return {
+                "indicator": "COPOM",
+                "title": entry["title"],
+                "url": entry["url"],
+                "reference_date": entry["reference_date"],
+                "source": entry["source_name"],
+                "statement": entry["snippet"],
+            }
+        else:
+            from src.intelligence.bcb_client import BCBClient
+            client = BCBClient()
+            code = "SELIC" if "SELIC" in ind else ("DOLAR_PTAX" if "DOLAR" in ind or "PTAX" in ind else "IPCA_12M")
+            rate = client.fetch_indicator(code)
+            return {
+                "indicator": rate.indicator_code,
+                "name": rate.name,
+                "value": float(rate.value),
+                "reference_date": rate.reference_date,
+                "source": rate.source,
+                "official_url": "https://www.bcb.gov.br",
+            }
+
+    elif tool_name == "propose_transaction":
+        ent_code = args.get("entity_code", "").upper().strip()
+        if ent_code == "CONSOLIDADO":
+            return {
+                "error": "CONSOLIDADO é um escopo exclusivo de leitura (somente leitura). Selecione Fix Serviços, Facilita Vistorias ou Household Família.",
+                "status": "REJECTED_READ_ONLY_SCOPE",
+            }
+
+        amount = abs(float(args.get("amount", 0.0)))
+        counterparty = args.get("counterparty", "Comércio / Fornecedor").strip()
+        category = args.get("category", "Geral").strip()
+        is_revenue = bool(args.get("is_revenue", False))
+        account = args.get("account_name")
+        if not account:
+            account = "Banco Inter PJ" if "FIX" in ent_code else ("Caixa PJ" if "FACILITA" in ent_code else "Nubank PF")
+
+        tx_date = args.get("date") or date.today().isoformat()
+        # Idempotent deterministic card ID based on content
+        import hashlib
+        card_hash = hashlib.sha256(f"{ent_code}|{account}|{amount:.2f}|{counterparty}|{tx_date}|{is_revenue}".encode("utf-8")).hexdigest()[:12]
+        card_id = f"CARD-{card_hash}"
+
+        ent_names = {
+            "FIX_SERVICOS": "Fix Serviços MEI (Inter PJ)",
+            "FACILITA_VISTORIAS": "Facilita Vistorias MEI (Caixa PJ)",
+            "HOUSEHOLD_OSMAR": "Família (Nubank PF)",
+        }
+        fmt_amt = f"R$ {amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        action_name = "Receita" if is_revenue else "Compra"
+
+        card = {
+            "card_id": card_id,
+            "type": "REVENUE_CONFIRMATION" if is_revenue else "EXPENSE_CONFIRMATION",
+            "amount": amount,
+            "formatted_amount": fmt_amt,
+            "date": tx_date,
+            "counterparty": counterparty,
+            "category": category,
+            "entity_code": ent_code,
+            "entity_name": ent_names.get(ent_code, ent_code),
+            "account_name": account,
+            "is_revenue": is_revenue,
+            "status": "AWAITING_CONFIRMATION",
+            "clean_description": f"{action_name} {counterparty} ({category})",
+            "raw_text": f"{action_name} de {fmt_amt} em {counterparty}",
+        }
+        return {
+            "status": "PROPOSED",
+            "requires_human_confirmation": True,
+            "confirmation_card": card,
+        }
+
+    elif tool_name == "propose_correction":
+        rcp_id = args.get("receipt_id", "").strip()
+        new_amt = abs(float(args.get("new_amount", 0.0)))
+        reason = args.get("reason", "Correção manual de valor")
+
+        from src.controller.receipt_store import ReceiptStore
+        store = ReceiptStore()
+        rcps = store.load_receipts()
+        target = next((r for r in rcps if r.id == rcp_id or rcp_id in r.image_storage_path), None)
+        if not target and rcps:
+            target = rcps[-1]
+
+        old_amt = float(target.total_amount) if target else 0.0
+        import hashlib
+        corr_hash = hashlib.sha256(f"corr|{rcp_id}|{new_amt:.2f}".encode("utf-8")).hexdigest()[:12]
+        card_id = f"CARD-CORR-{corr_hash}"
+
+        card = {
+            "card_id": card_id,
+            "type": "CORRECTION_CONFIRMATION",
+            "amount": new_amt,
+            "formatted_amount": f"R$ {new_amt:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            "old_amount": old_amt,
+            "formatted_old_amount": f"R$ {old_amt:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."),
+            "receipt_ref": target.id if target else rcp_id,
+            "source_receipt": target.image_storage_path if target else rcp_id,
+            "date": target.issue_date.isoformat() if target else date.today().isoformat(),
+            "counterparty": target.merchant_name if target else "Comprovante",
+            "category": "Correção Manual",
+            "entity_code": target.entity_code if target else "FIX_SERVICOS",
+            "account_name": "Auditoria de Correção",
+            "status": "AWAITING_CONFIRMATION",
+            "clean_description": f"Correção de valor: {target.merchant_name if target else 'Comprovante'}",
+            "raw_text": reason,
+        }
+        return {
+            "status": "PROPOSED",
+            "requires_human_confirmation": True,
+            "confirmation_card": card,
+        }
+
+    return {"error": f"Ferramenta desconhecida: {tool_name}"}
+
+
+

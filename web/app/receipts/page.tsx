@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import {
   ArrowLeft,
@@ -38,18 +39,36 @@ export interface ReceiptItem {
   status?: string;
 }
 
-export default function ReceiptsPage() {
+function ReceiptsView() {
+  const searchParams = useSearchParams();
   const [receipts, setReceipts] = useState<ReceiptItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [entityFilter, setEntityFilter] = useState<'all' | 'fix' | 'facilita' | 'pf'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'reconciled'>('all');
   const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Read URL search params
+  useEffect(() => {
+    const entity = searchParams.get('entity');
+    if (entity && ['all', 'fix', 'facilita', 'pf'].includes(entity)) {
+      setEntityFilter(entity as any);
+    }
+    const status = searchParams.get('status');
+    if (status && ['all', 'pending', 'reconciled'].includes(status)) {
+      setStatusFilter(status as any);
+    }
+    const search = searchParams.get('search');
+    if (search) {
+      setSearchTerm(search);
+    }
+  }, [searchParams]);
 
   const fetchReceipts = async () => {
     try {
@@ -122,6 +141,9 @@ export default function ReceiptsPage() {
     if (entityFilter === 'fix' && r.entity_code !== 'FIX_SERVICOS') return false;
     if (entityFilter === 'facilita' && r.entity_code !== 'FACILITA_VISTORIAS') return false;
     if (entityFilter === 'pf' && r.entity_code !== 'HOUSEHOLD_OSMAR') return false;
+
+    if (statusFilter === 'pending' && r.status === 'RECONCILED') return false;
+    if (statusFilter === 'reconciled' && r.status !== 'RECONCILED') return false;
 
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
@@ -370,6 +392,23 @@ export default function ReceiptsPage() {
         receiptId={selectedReceiptId || ''}
       />
     </div>
+  );
+}
+
+export default function ReceiptsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 dark:bg-[#0c1017] p-8 text-slate-500 flex items-center justify-center">
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
+            Carregando Comprovantes...
+          </div>
+        </div>
+      }
+    >
+      <ReceiptsView />
+    </Suspense>
   );
 }
 

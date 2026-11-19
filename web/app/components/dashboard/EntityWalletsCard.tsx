@@ -51,73 +51,79 @@ export default function EntityWalletsCard({
 
         {/* Entity Accounts List - Dynamically rendered with reactive activeTab context */}
         <div className="divide-y divide-slate-100 dark:divide-white/5">
-          {accounts.map((acct) => {
-            const isAcctActive =
-              (activeTab === 'fix' && (acct.entity_code === 'FIX_SERVICOS' || acct.id.includes('inter'))) ||
-              (activeTab === 'facilita' && (acct.entity_code === 'FACILITA_VISTORIAS' || acct.id.includes('caixa'))) ||
-              (activeTab === 'pf' && (acct.entity_code === 'HOUSEHOLD_OSMAR' || acct.id.includes('nubank')));
+          {accounts.length > 0 ? (
+            accounts.map((acct) => {
+              const isAcctActive =
+                (activeTab === 'fix' && (acct.entity_code === 'FIX_SERVICOS' || acct.id.includes('inter'))) ||
+                (activeTab === 'facilita' && (acct.entity_code === 'FACILITA_VISTORIAS' || acct.id.includes('caixa'))) ||
+                (activeTab === 'pf' && (acct.entity_code === 'HOUSEHOLD_OSMAR' || acct.id.includes('nubank')));
 
-            return (
-              <div
-                key={acct.id}
-                onClick={() => {
-                  if (acct.id.includes('inter')) {
-                    if (setActiveTab) setActiveTab('fix');
-                    setLedgerFilter('inter');
-                  } else if (acct.id.includes('caixa')) {
-                    if (setActiveTab) setActiveTab('facilita');
-                    setLedgerFilter('caixa');
-                  } else if (acct.id.includes('nubank')) {
-                    if (setActiveTab) setActiveTab('pf');
-                    setLedgerFilter('nubank');
-                  } else {
-                    setLedgerFilter('all');
-                  }
-                  document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                title={`Filtrar lançamentos de ${acct.name} (${acct.holder})`}
-                className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between transition cursor-pointer ${
-                  isAcctActive
-                    ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 shadow-xs'
-                    : 'hover:bg-slate-50 dark:hover:bg-white/[0.04]'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                      acct.color === 'indigo'
-                        ? 'bg-indigo-500'
-                        : acct.color === 'amber'
-                        ? 'bg-amber-500'
-                        : acct.color === 'purple'
-                        ? 'bg-purple-500'
-                        : acct.color === 'rose'
-                        ? 'bg-rose-500'
-                        : acct.color === 'emerald'
-                        ? 'bg-emerald-500'
-                        : 'bg-blue-500'
-                    }`}
-                  />
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white block">{acct.name}</span>
-                      {isAcctActive && (
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-extrabold uppercase bg-indigo-600 text-white dark:bg-indigo-500">
-                          Filtro Ativo
-                        </span>
-                      )}
+              return (
+                <div
+                  key={acct.id}
+                  onClick={() => {
+                    if (acct.id.includes('inter')) {
+                      if (setActiveTab) setActiveTab('fix');
+                      setLedgerFilter('inter');
+                    } else if (acct.id.includes('caixa')) {
+                      if (setActiveTab) setActiveTab('facilita');
+                      setLedgerFilter('caixa');
+                    } else if (acct.id.includes('nubank')) {
+                      if (setActiveTab) setActiveTab('pf');
+                      setLedgerFilter('nubank');
+                    } else {
+                      setLedgerFilter('all');
+                    }
+                    document.getElementById('ledger-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  title={`Filtrar lançamentos de ${acct.name} (${acct.holder})`}
+                  className={`w-full px-3 py-2.5 rounded-xl flex items-center justify-between transition cursor-pointer ${
+                    isAcctActive
+                      ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-500/30 shadow-xs'
+                      : 'hover:bg-slate-50 dark:hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                        acct.color === 'indigo'
+                          ? 'bg-indigo-500'
+                          : acct.color === 'amber'
+                          ? 'bg-amber-500'
+                          : acct.color === 'purple'
+                          ? 'bg-purple-500'
+                          : acct.color === 'rose'
+                          ? 'bg-rose-500'
+                          : acct.color === 'emerald'
+                          ? 'bg-emerald-500'
+                          : 'bg-blue-500'
+                      }`}
+                    />
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white block">{acct.name}</span>
+                        {isAcctActive && (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-extrabold uppercase bg-indigo-600 text-white dark:bg-indigo-500">
+                            Filtro Ativo
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        {acct.holder} • {acct.bank_name}
+                      </span>
                     </div>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      {acct.holder} • {acct.bank_name}
-                    </span>
                   </div>
+                  <span className="font-mono text-sm font-bold text-slate-900 dark:text-white tabular-nums">
+                    {formatBRL(acct.balance)}
+                  </span>
                 </div>
-                <span className="font-mono text-sm font-bold text-slate-900 dark:text-white tabular-nums">
-                  {formatBRL(acct.balance)}
-                </span>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="py-6 text-center text-xs text-slate-400">
+              Nenhuma conta bancária sincronizada no momento.
+            </div>
+          )}
         </div>
 
         {/* Sub-header status bar */}

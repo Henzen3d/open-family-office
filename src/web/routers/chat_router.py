@@ -92,12 +92,36 @@ class ChatMessageRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=4000)
     context_entity: Optional[str] = Field(default=None, description="Optional entity tag, e.g. inter_cnpj, nubank_pf")
     stream: bool = Field(default=True, description="Whether to stream via SSE")
-    asd_mode: Optional[str] = Field(default=None, description="Optional ASD mode: 'none', 'asd_80', 'asd_strict'")
+    asd_mode: Optional[str] = Field(default=None, description="Optional ASD mode: 'natural', 'none', 'asd_80', 'asd_strict'")
+    conversation_id: Optional[str] = Field(default=None, description="Conversation session ID for continuity (T04)")
+    search_mode: Optional[str] = Field(default="auto", description="Web search mode: 'auto', 'web', 'local'")
 
 
 class SimulateRequest(BaseModel):
     artifact_type: str = Field(..., description="Tipo do artefato: compound_interest, purchase_opportunity, real_vs_nominal")
     params: dict[str, Any] = Field(default_factory=dict, description="Parâmetros de cálculo")
+
+
+@router.get("/api/chat/conversations/{conversation_id}")
+@router.get("/chat/conversations/{conversation_id}")
+async def get_conversation_endpoint(conversation_id: str):
+    """Retrieves server-side conversation session state and history (T04)."""
+    from src.intelligence.conversation_store import ConversationStore
+    store = ConversationStore.get_instance()
+    session = store.get_session(conversation_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Sessão de conversa não encontrada.")
+    return session.to_dict()
+
+
+@router.delete("/api/chat/conversations/{conversation_id}")
+@router.delete("/chat/conversations/{conversation_id}")
+async def delete_conversation_endpoint(conversation_id: str):
+    """Deletes/resets server-side conversation state (T04)."""
+    from src.intelligence.conversation_store import ConversationStore
+    store = ConversationStore.get_instance()
+    deleted = store.delete_session(conversation_id)
+    return {"deleted": deleted, "conversation_id": conversation_id}
 
 
 @router.post("/api/chat/simulate")
@@ -173,12 +197,14 @@ async def chat_endpoint(request: ChatMessageRequest):
     configured_asd = request.asd_mode
     if not configured_asd:
         gen = await get_general_settings()
-        configured_asd = gen.get("asd_mode", "asd_80")
+        configured_asd = gen.get("asd_mode", "natural")
 
     result = smart_router.execute_chat(
         request.message,
         entity_context=request.context_entity,
         asd_mode=configured_asd,
+        conversation_id=request.conversation_id,
+        search_mode=request.search_mode,
     )
 
     clean_reply, artifact = _extract_interactive_artifact(result["reply"], request.message)
@@ -186,17 +212,16 @@ async def chat_endpoint(request: ChatMessageRequest):
     if request.stream:
         async def stream_generator() -> AsyncGenerator[str, None]:
             event_id = 1
-            yield f"id: {event_id}\ndata: {json.dumps({'type': 'start', 'timestamp': datetime.now(timezone.utc).isoformat()}, ensure_ascii=False)}\n\n"
+            yield f"id: {event_id}\ndata: {json.dumps({'type': 'start', 'timestamp': datetime.now(timezone.utc).isoformat(), 'conversation_id': result.get('conversation_id')}, ensure_ascii=False)}\n\n"
             words = clean_reply.split(" ")
-            for i in range(0, len(words), 3):
+            for i in range(0, len(words), 4):
                 event_id += 1
-                chunk = " ".join(words[i : i + 3]) + " "
+                chunk = " ".join(words[i : i + 4]) + " "
                 yield f"id: {event_id}\ndata: {json.dumps({'type': 'chunk', 'text': chunk}, ensure_ascii=False)}\n\n"
-                await asyncio.sleep(0.04)
             if artifact:
                 event_id += 1
                 yield f"id: {event_id}\ndata: {json.dumps({'type': 'artifact', 'artifact': artifact}, ensure_ascii=False)}\n\n"
-            yield f"id: {event_id + 1}\ndata: {json.dumps({'type': 'done', 'provider': result.get('provider'), 'model': result.get('model'), 'latency_ms': result.get('latency_ms'), 'confirmation_card': result.get('confirmation_card'), 'artifact': artifact, 'asd_mode': result.get('asd_mode'), 'status': 'completed'}, ensure_ascii=False)}\n\n"
+            yield f"id: {event_id + 1}\ndata: {json.dumps({'type': 'done', 'conversation_id': result.get('conversation_id'), 'entity': result.get('entity'), 'period': result.get('period'), 'sources': result.get('sources', []), 'provider': result.get('provider'), 'model': result.get('model'), 'latency_ms': result.get('latency_ms'), 'confirmation_card': result.get('confirmation_card'), 'artifact': artifact, 'asd_mode': result.get('asd_mode'), 'status': 'completed'}, ensure_ascii=False)}\n\n"
 
         return StreamingResponse(
             stream_generator(),
@@ -211,7 +236,10 @@ async def chat_endpoint(request: ChatMessageRequest):
     return {
         "reply": clean_reply,
         "received": request.message,
-        "entity": request.context_entity,
+        "conversation_id": result.get("conversation_id"),
+        "entity": result.get("entity") or request.context_entity,
+        "period": result.get("period"),
+        "sources": result.get("sources", []),
         "provider": result.get("provider"),
         "model": result.get("model"),
         "latency_ms": result.get("latency_ms"),
@@ -226,7 +254,14 @@ async def chat_endpoint(request: ChatMessageRequest):
 @router.post("/api/ledger/confirm-card")
 @router.post("/ledger/confirm-card")
 async def confirm_ledger_card(request: ConfirmCardRequest):
-    """Commits an interactive confirmation card into the permanent ledger (Phase 8)."""
+    """Commits an interactive confirmation card into the permanent ledger with idempotency (Phase 8 / T05)."""
+    # Enforce read-only scope boundary on Consolidado (T03)
+    if request.entity_code.upper() in ("CONSOLIDADO", "CONSOLIDADO (LEITURA)"):
+        raise HTTPException(
+            status_code=400,
+            detail="CONSOLIDADO é um escopo exclusivo de leitura. Selecione Fix Serviços, Facilita Vistorias ou Household Família.",
+        )
+
     if (
         request.card_type == "CORRECTION_CONFIRMATION"
         and request.corrects_receipt
@@ -251,7 +286,36 @@ async def confirm_ledger_card(request: ConfirmCardRequest):
         }
 
     ledger_mgr = get_ledger_manager()
-    tx_id = f"TX-CARD-{int(time.time() * 1000)}"
+    existing = ledger_mgr.load_transactions()
+
+    # Idempotency check: if card was already confirmed, do not create duplicate
+    existing_tx = next(
+        (t for t in existing if f"card {request.card_id}" in (t.notes or "") or t.id == f"TX-CARD-{request.card_id}"),
+        None,
+    )
+    if existing_tx:
+        return {
+            "status": "CONFIRMED",
+            "idempotent": True,
+            "card_id": request.card_id,
+            "transaction_id": existing_tx.id,
+            "transaction": {
+                "id": existing_tx.id,
+                "date": existing_tx.date.isoformat(),
+                "entity_code": existing_tx.entity_code,
+                "account_name": existing_tx.account_name,
+                "clean_description": existing_tx.clean_description,
+                "counterparty": existing_tx.counterparty,
+                "amount": float(existing_tx.amount),
+                "is_transfer": False,
+                "notes": existing_tx.notes,
+                "status": "CONFIRMED",
+            },
+            "receipt_correction": None,
+            "message": "Lançamento confirmado com sucesso no Livro Razão.",
+        }
+
+    tx_id = f"TX-CARD-{request.card_id}"
     try:
         tx_date = datetime.strptime(request.date, "%Y-%m-%d").date()
     except ValueError:
@@ -287,9 +351,23 @@ async def confirm_ledger_card(request: ConfirmCardRequest):
         notes=request.notes or f"Lançamento aprovado no card {request.card_id}",
     )
 
-    existing = ledger_mgr.load_transactions()
     existing.insert(0, new_tx)
     ledger_mgr.save_transactions(existing)
+
+    # Log to confirmed_cards audit trail
+    try:
+        audit_path = get_data_dir() / "governance" / "confirmed_cards.jsonl"
+        audit_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(audit_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps({
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "card_id": request.card_id,
+                "transaction_id": tx_id,
+                "amount": float(signed_amount),
+                "entity": request.entity_code,
+            }, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
 
     receipt_correction = None
     if request.corrects_receipt:
