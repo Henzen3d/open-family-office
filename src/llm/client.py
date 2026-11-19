@@ -1,4 +1,5 @@
 """Universal Multi-Protocol HTTP Client supporting OpenAI, Anthropic, and Gemini formats."""
+from __future__ import annotations
 import base64
 from dataclasses import dataclass
 import json
